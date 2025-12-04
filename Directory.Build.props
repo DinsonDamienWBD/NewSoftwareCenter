@@ -1,8 +1,8 @@
 <Project>
 	<PropertyGroup>
-		<!-- Define the root artifacts base path once -->
-		<ArtifactsBasePath>C:\Users\ddamien\Downloads\Upgrade scripts\C# ASP.NET Kestrel Version\SoftwareCenterRefactored\</ArtifactsBasePath>
-
+		<!-- Define the root artifacts base path to be a sibling folder to the source directory -->
+		<ArtifactsBasePath>$(MSBuildThisFileDirectory)..\SoftwareCenter.Artifacts\</ArtifactsBasePath>
+		
 		<!-- 
 		Set these properties to false to stop MSBuild from adding \Debug\net8.0\ etc. 
 		This is required for exact path control.

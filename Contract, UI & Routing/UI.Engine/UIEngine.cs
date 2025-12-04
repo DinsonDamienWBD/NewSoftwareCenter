@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Logging;
 using SoftwareCenter.Core.UI;
 using SoftwareCenter.Core.UI.Client;
 using SoftwareCenter.Core.UI.Requests;
@@ -11,11 +12,13 @@ namespace SoftwareCenter.UI.Engine;
 public class UIEngine : IUIEngine
 {
     private readonly IHubContext<UIHub> _hubContext;
+    private readonly ILogger<UIEngine> _logger;
     private readonly ConcurrentDictionary<string, UIElement> _uiState = new();
 
-    public UIEngine(IHubContext<UIHub> hubContext)
+    public UIEngine(IHubContext<UIHub> hubContext, ILogger<UIEngine> logger)
     {
         _hubContext = hubContext;
+        _logger = logger;
     }
 
     public async Task<string> RequestNavButtonAsync(NavButtonRequest request)
@@ -40,7 +43,8 @@ public class UIEngine : IUIEngine
         // Ensure the associated nav button exists and is owned by the requestor
         if (!_uiState.TryGetValue(request.AssociatedNavButtonId, out var navButton) || navButton.OwnerId != request.OwnerId)
         {
-            throw new InvalidOperationException("The associated navigation button does not exist or is not owned by the requester.");
+            _logger.LogError("Request for content container from owner {OwnerId} failed. Associated nav button {NavButtonId} does not exist or is not owned by the requester.", request.OwnerId, request.AssociatedNavButtonId);
+            return string.Empty; // Return empty string to indicate failure without crashing the caller.
         }
 
         var container = new ClientContentContainer
@@ -59,24 +63,26 @@ public class UIEngine : IUIEngine
         return container.Id;
     }
 
-    public async Task UpdateUIElementAsync(UIUpdateRequest request)
+    public async Task<bool> UpdateUIElementAsync(UIUpdateRequest request)
     {
         // Ensure the element exists and is owned by the requestor
         if (!_uiState.TryGetValue(request.TargetElementId, out var element) || element.OwnerId != request.OwnerId)
         {
-            // Or log a warning, depending on desired strictness
-            return;
+            _logger.LogWarning("Unauthorized attempt to update UI element {ElementId} by owner {OwnerId}.", request.TargetElementId, request.OwnerId);
+            return false;
         }
 
         await _hubContext.Clients.All.SendAsync("UpdateElementContent", request.TargetElementId, request.CustomHtmlContent ?? string.Empty);
+        return true;
     }
 
-    public async Task RemoveUIElementAsync(string elementId, string ownerId)
+    public async Task<bool> RemoveUIElementAsync(string elementId, string ownerId)
     {
         // Ensure the element exists and is owned by the requestor
         if (!_uiState.TryGetValue(elementId, out var element) || element.OwnerId != ownerId)
         {
-            return;
+            _logger.LogWarning("Unauthorized attempt to remove UI element {ElementId} by owner {OwnerId}.", elementId, ownerId);
+            return false;
         }
 
         if (_uiState.TryRemove(elementId, out _))
@@ -102,5 +108,6 @@ public class UIEngine : IUIEngine
                 }
             }
         }
+        return true;
     }
 }

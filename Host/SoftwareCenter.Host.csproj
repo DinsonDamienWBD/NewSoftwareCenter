@@ -19,11 +19,5 @@
     No <Content> items for wwwroot are needed. The Web SDK handles this.
     No <FrameworkReference> or <PackageReference> for Microsoft.AspNetCore.App is needed. The Web SDK handles this.
   -->
-	<!-- 
-  <ItemGroup>
-    <ProjectReference Include="..\Contract, UI & Routing\Kernel\SoftwareCenter.Kernel.csproj" />
-    <ProjectReference Include="..\Contract, UI & Routing\UI.Engine\SoftwareCenter.UI.Engine.csproj" />
-  </ItemGroup>
-  -->
 
 </Project>

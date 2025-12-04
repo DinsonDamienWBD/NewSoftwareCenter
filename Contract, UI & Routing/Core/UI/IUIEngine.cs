@@ -29,13 +29,14 @@ public interface IUIEngine
     /// This can be used to add, remove, or modify controls within a container or card.
     /// </summary>
     /// <param name="request">The request object containing the details of the update.</param>
-    /// <returns>A task representing the asynchronous operation.</returns>
-    Task UpdateUIElementAsync(UIUpdateRequest request);
+    /// <returns>A task that resolves to true if the update was successfully sent to the client, otherwise false.</returns>
+    Task<bool> UpdateUIElementAsync(UIUpdateRequest request);
 
     /// <summary>
     /// Asynchronously removes a UI element (and its children) from the UI.
     /// </summary>
     /// <param name="elementId">The unique identifier of the element to remove.</param>
     /// <param name="ownerId">The ID of the owner requesting the removal, for validation.</param>
-    Task RemoveUIElementAsync(string elementId, string ownerId);
+    /// <returns>A task that resolves to true if the removal was successfully sent to the client, otherwise false.</returns>
+    Task<bool> RemoveUIElementAsync(string elementId, string ownerId);
 }

@@ -25,15 +25,18 @@ public class UIInteractionCommand : ICommand
     /// </summary>
     public string Action { get; }
 
+    /// <summary>
+    /// A dictionary containing any additional data attributes sent from the client.
+    /// </summary>
     public Dictionary<string, object> Parameters { get; }
     public Guid TraceId { get; } = Guid.NewGuid();
     public List<TraceHop> History { get; } = new();
 
-    public UIInteractionCommand(string ownerId, string action, Dictionary<string, object> parameters)
+    public UIInteractionCommand(string ownerId, string action, Dictionary<string, object> additionalData)
     {
         OwnerId = ownerId;
         Action = action;
         Name = $"{ownerId}.UI.{action}";
-        Parameters = parameters;
+        Parameters = additionalData;
     }
 }
