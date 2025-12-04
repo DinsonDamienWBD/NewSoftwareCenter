@@ -76,9 +76,9 @@ namespace SoftwareCenter.Kernel
                         await DataStore.StoreAsync("Settings.VerboseLogging", verbose, DataPolicy.Persistent);
                         // Invalidate local cache
                         _logger.RefreshSettings();
-                        return Result.SuccessResult(verbose, $"Verbose Logging set to {verbose}");
+                        return Result.FromSuccess(verbose, $"Verbose Logging set to {verbose}");
                     }
-                    return Result.FailureResult("Invalid Parameters. Expected 'Verbose' (bool).");
+                    return Result.FromFailure("Invalid Parameters. Expected 'Verbose' (bool).");
                 },
                 new RouteMetadata
                 {
@@ -96,7 +96,7 @@ namespace SoftwareCenter.Kernel
                 (cmd) =>
                 {
                     var manifest = _registry.GetRegistryManifest();
-                    return Task.FromResult<IResult>(Result.SuccessResult(manifest));
+                    return Task.FromResult<IResult>(Result.FromSuccess(manifest));
                 },
                 new RouteMetadata
                 {

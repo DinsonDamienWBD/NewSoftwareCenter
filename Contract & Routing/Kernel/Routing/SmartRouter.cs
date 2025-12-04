@@ -54,25 +54,25 @@ namespace SoftwareCenter.Kernel.Routing
                 {
                     // Fallback logic could go here (e.g. check legacy PowerShell maps)
                     // For now, strict failure.
-                    return Result.FailureResult($"Command '{command.Name}' not found in Registry.");
+                    return Result.FromFailure($"Command '{command.Name}' not found in Registry.");
                 }
 
                 var handler = entry.Handler;
                 var metadata = entry.Metadata;
 
-                // 4. Metadata Gates (The "Traffic Cop" Logic)
+                // 4. Metadata Gates (The "Traffic Cop")
 
                 // A. Obsolete Check (Blocker)
                 if (metadata.Status == RouteStatus.Obsolete)
                 {
                     var msg = $"Blocked Obsolete Command: {command.Name}. {metadata.DeprecationMessage}";
-                    return Result.FailureResult(msg);
+                    return Result.FromFailure(msg);
                 }
 
                 // B. Deprecation Check (Warning)
                 if (metadata.Status == RouteStatus.Deprecated)
                 {
-                    // Warn but proceed. Fire-and-forget warning event.
+                    // Fire-and-forget warning event
                     _ = _eventBus.PublishAsync(new SystemEvent(
                         "System.Warning",
                         new Dictionary<string, object>
@@ -104,7 +104,7 @@ namespace SoftwareCenter.Kernel.Routing
                 {
                     // 7. Safety Net: Prevent App Crash
                     command.History.Add(new TraceHop("Kernel", $"Crash: {ex.Message}"));
-                    return Result.FailureResult($"Kernel trapped error in '{command.Name}': {ex.Message}");
+                    return Result.FromFailure($"Kernel trapped error in '{command.Name}': {ex.Message}");
                 }
 
                 stopwatch.Stop();
@@ -113,7 +113,7 @@ namespace SoftwareCenter.Kernel.Routing
             catch (Exception ex)
             {
                 // Catastrophic Router Failure
-                return Result.FailureResult($"Critical Router Error: {ex.Message}");
+                return Result.FromFailure($"Critical Router Error: {ex.Message}");
             }
         }
 
@@ -123,8 +123,8 @@ namespace SoftwareCenter.Kernel.Routing
             public string Name { get; }
             public Dictionary<string, object> Data { get; }
             public DateTime Timestamp { get; } = DateTime.UtcNow;
-            public string SourceId { get; } = "Kernel";
-            public Guid? TraceId { get; } = TraceContext.CurrentTraceId;
+            public string SourceId => "Kernel";
+            public Guid? TraceId => TraceContext.CurrentTraceId;
 
             public SystemEvent(string name, Dictionary<string, object> data)
             {
