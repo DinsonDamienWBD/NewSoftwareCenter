@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<!-- Persistence -->
+		<PackageReference Include="LiteDB" Version="5.0.19" />
+		<!-- Logging Abstractions (for ILogger) -->
+		<PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\Core\SoftwareCenter.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Contexts\" />
+		<Folder Include="Contracts\" />
+		<Folder Include="Data\" />
+		<Folder Include="Engine\" />
+		<Folder Include="Logic\" />
+		<Folder Include="Routing\" />
+		<Folder Include="Services\" />
+	</ItemGroup>
+</Project>

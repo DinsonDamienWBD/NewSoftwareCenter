@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<IsPackable>false</IsPackable>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<Content Include="UI/**" CopyToOutputDirectory="PreserveNewest" LinkBase="Modules/CredManager/UI" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\..\Contract &amp; Routing\Core\SoftwareCenter.Core.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<Folder Include="Interfaces\" />
+		<Folder Include="Models\" />
+		<Folder Include="Services\" />
+		<Folder Include="UI\Html\" />
+		<Folder Include="UI\Script\" />
+		<Folder Include="UI\Style\" />
+	</ItemGroup>
+
+</Project>

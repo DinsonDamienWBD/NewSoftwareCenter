@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "SoftwareCenter.Host": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:58633;http://localhost:58634"
+    }
+  }
+}

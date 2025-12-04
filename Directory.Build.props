@@ -1,0 +1,36 @@
+<Project>
+	<PropertyGroup>
+		<!-- Define the root artifacts base path once -->
+		<ArtifactsBasePath>C:\Users\ddamien\Downloads\Upgrade scripts\C# ASP.NET Kestrel Version\SoftwareCenterRefactored\</ArtifactsBasePath>
+
+		<!-- 
+		Set these properties to false to stop MSBuild from adding \Debug\net8.0\ etc. 
+		This is required for exact path control.
+		-->
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
+
+		<!-- 
+		Set the default final output path for most projects (Host, Core, Kernel, Launcher). 
+		We manually include $(Configuration)\ since it is no longer automatic.
+		-->
+		<OutputPath>$(ArtifactsBasePath)bin\$(Configuration)\SoftwareCenter.Host\</OutputPath>
+		<IntermediateOutputPath>$(ArtifactsBasePath)obj\$(Configuration)\SoftwareCenter.Host\</IntermediateOutputPath>
+	</PropertyGroup>
+
+	<!-- Conditional overrides: -->
+
+	<!-- 1. Handle Module projects -->
+	<PropertyGroup Condition="$(MSBuildProjectName.StartsWith('SoftwareCenter.Module'))">
+		<!-- Append modules path to the existing OutputPath -->
+		<OutputPath>$(OutputPath)Modules\$(MSBuildProjectName)\</OutputPath>
+		<IntermediateOutputPath>$(IntermediateOutputPath)Modules\$(MSBuildProjectName)\</IntermediateOutputPath>
+	</PropertyGroup>
+
+	<!-- 2. Handle the InstallerService project -->
+	<PropertyGroup Condition="'$(MSBuildProjectName)' == 'SoftwareCenter.InstallerService'">
+		<!-- Override the path completely to place it in its own top-level folder -->
+		<OutputPath>$(ArtifactsBasePath)bin\$(Configuration)\SoftwareCenter.InstallerService\</OutputPath>
+		<IntermediateOutputPath>$(ArtifactsBasePath)obj\$(Configuration)\SoftwareCenter.InstallerService\</IntermediateOutputPath>
+	</PropertyGroup>
+</Project>
