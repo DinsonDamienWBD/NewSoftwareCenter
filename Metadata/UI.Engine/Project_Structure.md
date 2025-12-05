@@ -1,34 +1,24 @@
-# Project: SoftwareCenter.UI.Engine - Structure
+# SoftwareCenter.UI.Engine - Project Structure
 
-## High-Level Architecture
+This document outlines the structure and purpose of the `SoftwareCenter.UI.Engine` project. This project acts as the bridge between the backend C# Kernel/Modules and the frontend JavaScript client. It translates UI requests from modules into SignalR messages that the browser can understand and render.
 
-`SoftwareCenter.UI.Engine` is a mandatory, core component of the SoftwareCenter application, functioning as a "UI-Kernel". It is responsible for the composition, state management, and rendering logic of the entire user interface. It provides a centralized, backend-driven UI service to the `Host` and all loaded modules.
+## Project Purpose
 
-This project follows a backend-driven UI approach. The server-side engine maintains a complete model of the UI, and the frontend (a browser client) acts as a thin rendering layer that displays the UI based on real-time instructions from the server.
+- **Implements `IUIEngine`**: Provides the concrete implementation for the `IUIEngine` interface defined in `SoftwareCenter.Core`.
+- **Hosts SignalR Hub**: Contains the SignalR hub (`/ui-hub`) that the frontend connects to.
+- **Translates Commands to Events**: Receives method calls (e.g., `CreateCard`) and broadcasts messages to the connected client(s) (e.g., `RenderCard`).
 
-## Core Components
+## Key Components
 
-1.  **`IUiCompositionService` (Interface)**:
-    *   The primary contract for interacting with the UI Engine.
-    *   Exposes methods for creating, updating, and removing UI elements (Navigation Buttons, Content Containers, Cards, Controls).
-    *   Provides a mechanism for components to request UI real estate and define ownership and permissions.
+### `SoftwareCenter.UI.Engine.Hubs`
+- **/UIHub.cs**: The main SignalR hub class. It exposes methods that the frontend client can listen to, such as `RenderNavButton`, `RenderContentContainer`, and `UpdateElementContent`.
 
-2.  **`UiCompositionService` (Implementation)**:
-    *   The server-side implementation of `IUiCompositionService`.
-    *   Maintains an in-memory, tree-like representation of the application's complete UI state.
-    *   Manages the lifecycle of all UI elements, including generating unique IDs and enforcing ownership/permission rules.
+### `SoftwareCenter.UI.Engine.Services`
+- **/SignalRUIEngine.cs**: The concrete implementation of `IUIEngine`. This service is registered with the `IKernel`'s service locator. When a module calls `kernel.GetService<IUIEngine>().CreateCard(...)`, this class's method is invoked. It then uses the `IHubContext<UIHub>` to send the appropriate message to the client.
 
-3.  **UI Element Models (Data Contracts)**:
-    *   A set of C# classes/records that define the structure and properties of all available UI components (e.g., `NavigationButton`, `Card`, `Label`, `Button`). These models are serialized and sent to the client for rendering.
+## Frontend Interaction (`site.js`)
 
-4.  **`UiHub` (SignalR Hub)**:
-    *   The real-time communication bridge between the `UiCompositionService` and the browser client.
-    *   When the UI state changes on the server, the `UiCompositionService` invokes methods on the `UiHub`.
-    *   The `UiHub` pushes these changes to all connected clients, instructing them to add, remove, or update DOM elements.
-    *   It also receives messages from the client, such as user interaction events (e.g., a button click), and forwards them to the appropriate backend service via the Kernel.
-
-## Relationship with Other Projects
-
-*   **`Host`**: The Host project starts the Kestrel web server and registers the `UiCompositionService` and `UiHub`. It serves the initial `index.html` and JavaScript files that form the client-side rendering shell. The Host itself uses the `IUiCompositionService` to render its own basic UI components.
-*   **`Kernel`**: The Kernel ensures the `UI.Engine` is loaded and makes the `IUiCompositionService` available to all other modules via dependency injection.
-*   **Modules**: Any module that requires a user interface will get an instance of `IUiCompositionService` from the Kernel and use it to request and manage its UI elements.
+The `wwwroot/js/site.js` file contains the client-side logic for the UI shell.
+- It establishes a connection to the `/ui-hub`.
+- It contains handlers (`connection.on(...)`) for each message type sent by the `UIHub` (e.g., `RenderNavButton`). These handlers manipulate the DOM to build the user interface dynamically.
+- It captures user interactions (e.g., button clicks) and sends them back to the server via a standard HTTP POST to an API endpoint (`/api/ui/interact`), which then translates them into `ICommand` objects for the Kernel to process.

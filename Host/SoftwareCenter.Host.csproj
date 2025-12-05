@@ -15,6 +15,12 @@
     <ProjectReference Include="..\Contract, UI &amp; Routing\UI.Engine\SoftwareCenter.UI.Engine.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- These files are conceptually part of the Kernel but are added here for demonstration -->
+    <Compile Include="..\Contract, UI &amp; Routing\Kernel\Services\JobScheduler.cs" />
+    <Compile Include="..\Contract, UI &amp; Routing\Kernel\StandardKernel.cs" />
+  </ItemGroup>
+
   <!-- 
     No <Content> items for wwwroot are needed. The Web SDK handles this.
     No <FrameworkReference> or <PackageReference> for Microsoft.AspNetCore.App is needed. The Web SDK handles this.

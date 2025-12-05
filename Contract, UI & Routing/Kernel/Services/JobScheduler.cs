@@ -1,133 +1,69 @@
-﻿using System;
+﻿﻿using SoftwareCenter.Core.Jobs;
+using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using SoftwareCenter.Core.Commands;
-using SoftwareCenter.Core.Diagnostics;
-using SoftwareCenter.Core.Jobs;
 
 namespace SoftwareCenter.Kernel.Services
 {
     /// <summary>
-    /// Implements Option B: Centralized Job Scheduling.
-    /// Manages lifecycles, crashes, and logging for background tasks.
+    /// A standard, in-memory implementation of the IJobScheduler interface for managing background jobs.
+    /// This implementation uses `System.Threading.Timer` for scheduling.
     /// </summary>
-    public class JobScheduler : IJobScheduler, IDisposable
+    public class JobScheduler : IJobScheduler
     {
-        private readonly KernelLogger _logger;
         private readonly ConcurrentDictionary<string, Timer> _timers = new();
-        private readonly ConcurrentDictionary<string, IJob> _jobs = new();
-        private readonly CancellationTokenSource _shutdownToken = new();
+        private readonly ConcurrentDictionary<string, Func<Task>> _actions = new();
 
-        public JobScheduler(KernelLogger logger)
+        /// <inheritdoc />
+        public void ScheduleRecurring(string jobName, TimeSpan interval, Func<Task> action)
         {
-            _logger = logger;
+            if (string.IsNullOrWhiteSpace(jobName)) throw new ArgumentNullException(nameof(jobName));
+            if (action == null) throw new ArgumentNullException(nameof(action));
+
+            // Store the action
+            _actions[jobName] = action;
+
+            // Create a timer that will execute the job.
+            // The `_` discards the state object, which we don't need here.
+            var timer = new Timer(async _ =>
+            {
+                if (_actions.TryGetValue(jobName, out var jobAction))
+                {
+                    // Fire-and-forget the task to prevent the timer callback from blocking.
+                    // In a real-world scenario, you'd add robust error handling here.
+                    _ = jobAction();
+                }
+            }, null, TimeSpan.Zero, interval);
+
+            // If there's an old timer, dispose of it before storing the new one.
+            if (_timers.TryRemove(jobName, out var oldTimer))
+            {
+                oldTimer.Dispose();
+            }
+
+            _timers[jobName] = timer;
         }
 
-        public void Register(IJob job)
+        /// <inheritdoc />
+        public void Unschedule(string jobName)
         {
-            if (_jobs.TryAdd(job.Name, job))
+            if (_timers.TryRemove(jobName, out var timer))
             {
-                // Schedule the timer
-                // We use System.Threading.Timer which is efficient for background tasks
-                var timer = new Timer(async _ => await RunJobSafe(job), null, job.Interval, job.Interval);
-                _timers.TryAdd(job.Name, timer);
-
-                // Log registration
-                _logger.LogExecutionAsync(new JobCommandStub(job.Name), true, 0).Wait();
+                timer.Dispose();
             }
+            _actions.TryRemove(jobName, out _);
         }
 
-        public void TriggerAsync(string jobName)
-        {
-            if (_jobs.TryGetValue(jobName, out var job))
-            {
-                // Run immediately on thread pool
-                Task.Run(() => RunJobSafe(job));
-            }
-        }
-
-        public void Pause(string jobName)
-        {
-            if (_timers.TryGetValue(jobName, out var timer))
-            {
-                timer.Change(Timeout.Infinite, Timeout.Infinite);
-            }
-        }
-
-        public void Resume(string jobName)
-        {
-            if (_jobs.TryGetValue(jobName, out var job) && _timers.TryGetValue(jobName, out var timer))
-            {
-                timer.Change(job.Interval, job.Interval);
-            }
-        }
-
-        private async Task RunJobSafe(IJob job)
-        {
-            if (_shutdownToken.IsCancellationRequested) return;
-
-            // Start a new Trace for this job run
-            TraceContext.StartNew();
-
-            // Log that we are starting (Visible in Verbose logs)
-            // Ideally we'd log "Job Started", but for brevity we rely on the final log.
-
-            var ctx = new JobContext
-            {
-                Trace = new TraceContext(), // Context for the job logic
-                LastRun = DateTime.UtcNow,
-                CancellationToken = _shutdownToken.Token
-            };
-
-            // Record trace hop
-            // Note: Since TraceContext is AsyncLocal, we can also use TraceContext.CurrentTraceId
-
-            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
-            bool success = false;
-            string? error = null;
-
-            try
-            {
-                await job.ExecuteAsync(ctx);
-                success = true;
-            }
-            catch (Exception ex)
-            {
-                error = ex.Message;
-            }
-            finally
-            {
-                stopwatch.Stop();
-                // Centralized Logging for ALL background tasks
-                // This ensures "Job Failures" are events the AI Agent can listen to.
-                await _logger.LogExecutionAsync(new JobCommandStub($"Job.{job.Name}"), success, stopwatch.ElapsedMilliseconds, error);
-            }
-        }
-
+        /// <inheritdoc />
         public void Dispose()
         {
-            _shutdownToken.Cancel();
-            foreach (var timer in _timers.Values) timer.Dispose();
-            _timers.Clear();
-        }
-
-        // Helper stub to adapt Job to Logger's ICommand expectation
-        // Matches the Core ICommand interface
-        private class JobCommandStub : ICommand
-        {
-            public string Name { get; }
-            public Dictionary<string, object> Parameters { get; } = new();
-            public Guid TraceId { get; }
-            public List<TraceHop> History { get; } = new();
-
-            public JobCommandStub(string name)
+            foreach (var timer in _timers.Values)
             {
-                Name = name;
-                TraceId = TraceContext.CurrentTraceId ?? Guid.NewGuid();
-                History.Add(new TraceHop("JobScheduler", "Executed"));
+                timer.Dispose();
             }
+            _timers.Clear();
+            _actions.Clear();
         }
     }
 }

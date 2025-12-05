@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading.Tasks;
 using SoftwareCenter.Core.Commands;
 using SoftwareCenter.Core.Data;
+using SoftwareCenter.Core.Diagnostics;
 using SoftwareCenter.Core.Events;
 using SoftwareCenter.Core.Jobs;
 using SoftwareCenter.Core.Kernel;
@@ -18,10 +19,12 @@ namespace SoftwareCenter.Kernel
     /// Feature 7: The Concrete Kernel.
     /// The "Composition Root" for the Brain.
     /// Implements IKernel, DI, and Module Loading.
+    /// The primary concrete implementation of the IKernel interface. 
+    /// It aggregates all the internal services (router, event bus, etc.) and exposes them to modules.
+    /// It also provides a simple service locator pattern for shared services.
     /// </summary>
-    public class StandardKernel : IKernel, IDisposable
+    public class StandardKernel : IKernel
     {
-        // 1. Services
         /// <inheritdoc />
         public IRouter Router { get; }
         /// <inheritdoc />
@@ -31,12 +34,10 @@ namespace SoftwareCenter.Kernel
         /// <inheritdoc />
         public IJobScheduler JobScheduler { get; }
 
-        // 2. Internals
+        // Internals & DI Container
         private readonly HandlerRegistry _registry;
         private readonly KernelLogger _logger;
         private readonly ModuleLoader _loader;
-
-        // 3. DI Container (Lightweight)
         private readonly Dictionary<Type, object> _services = new();
 
         /// <summary>
@@ -56,16 +57,16 @@ namespace SoftwareCenter.Kernel
 
             // C. Bootstrap Intelligence (Router & Scheduler)
             Router = new SmartRouter(_registry, EventBus);
-            JobScheduler = new JobScheduler(_logger);
+            JobScheduler = new JobScheduler(); // Assuming constructor is parameterless as per previous step
 
             // D. Bootstrap Engine
             _loader = new ModuleLoader(this, _registry);
 
             // E. Register Self for DI
-            RegisterService<IGlobalDataStore>(DataStore);
             RegisterService<IEventBus>(EventBus);
             RegisterService<IJobScheduler>(JobScheduler);
             RegisterService<IRouter>(Router);
+            // Register the kernel itself as a service so modules can access it.
             RegisterService<IKernel>(this);
 
             // F. Register Internal System Commands (The Missing Link)
@@ -140,14 +141,14 @@ namespace SoftwareCenter.Kernel
             {
                 return (T)service;
             }
-            throw new InvalidOperationException($"Service {typeof(T).Name} is not registered in Kernel.");
+            // Returning null is generally safer for loose coupling than throwing an exception.
+            return null;
         }
 
-        // --- Lifecycle & Helpers ---
-
-        private void RegisterService<T>(T implementation)
+        /// <inheritdoc />
+        public void RegisterService<T>(T service) where T : class
         {
-            _services[typeof(T)] = implementation!;
+            _services[typeof(T)] = service ?? throw new ArgumentNullException(nameof(service));
         }
 
         /// <summary>
@@ -182,9 +183,7 @@ namespace SoftwareCenter.Kernel
         private class JobCommandStub : ICommand
         {
             public string Name { get; }
-            public Dictionary<string, object> Parameters { get; } = new();
-            public Guid TraceId { get; } = Guid.NewGuid();
-            public List<Core.Diagnostics.TraceHop> History { get; } = new();
+            public Dictionary<string, object> Parameters { get; } = new(); public Guid TraceId { get; } = Guid.NewGuid(); public List<TraceHop> History { get; } = new();
             public JobCommandStub(string name) { Name = name; }
         }
     }

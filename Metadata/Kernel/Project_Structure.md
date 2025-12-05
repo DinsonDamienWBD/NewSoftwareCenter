@@ -7,6 +7,11 @@ This document outlines the final, verified structure of the `SoftwareCenter.Kern
 - **SoftwareCenter.Kernel.csproj**: The .NET project file, defining dependencies like `SoftwareCenter.Core`.
 - **StandardKernel.cs**: The primary concrete implementation of the `IKernel` interface. It aggregates all the internal services (router, event bus, etc.) and exposes them to modules.
 
+## Internal System Commands
+The `StandardKernel` pre-registers a set of internal commands essential for system diagnostics and discovery.
+- **System.Help**: Returns a complete manifest of all registered commands in the system. This is the primary discovery mechanism for clients.
+- **System.Log.Config**: Allows runtime configuration of system settings, such as toggling verbose logging.
+
 ## Namespaces & Files
 
 ### `SoftwareCenter.Kernel.Contexts`
