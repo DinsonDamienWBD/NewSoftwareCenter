@@ -1,102 +1,69 @@
-﻿using System;
+﻿using SoftwareCenter.Core.Logging;
 using System.Collections.Generic;
-using System.Threading.Tasks;
-using SoftwareCenter.Core.Commands;
-using SoftwareCenter.Core.Data;
-using SoftwareCenter.Core.Diagnostics;
-using SoftwareCenter.Core.Events;
-using SoftwareCenter.Core.Logging;
+using System.Linq;
+using System.Threading;
 
-namespace SoftwareCenter.Kernel.Services
+namespace SoftwareCenter.Kernel.Services;
+
+/// <summary>
+/// Manages and routes logging requests to registered IScLogger implementations.
+/// This service acts as the central "smart router" for all logging, selecting the
+/// highest priority logger available. It should be registered as a singleton.
+/// </summary>
+public class KernelLogger : IScLogger, IDisposable
 {
-    /// <summary>
-    /// Implements Feature 6: Intelligent Logging Consumer.
-    /// Observes Kernel traffic and broadcasts standardized LogEntry events.
-    /// </summary>
-    public class KernelLogger
+    private readonly List<IScLogger> _loggers = new();
+    private readonly ReaderWriterLockSlim _lock = new();
+    private volatile IScLogger? _activeLogger; // Volatile for thread-safe reads on the hot path (Log method)
+
+    // The KernelLogger itself is a router; it has no priority.
+    public int Priority => int.MinValue;
+
+    public void RegisterLogger(IScLogger logger)
     {
-        private readonly IGlobalDataStore _dataStore;
-        private readonly IEventBus _eventBus;
-
-        // Cache logging setting to avoid DB hits on every log
-        private bool? _verboseCache;
-
-        public KernelLogger(IGlobalDataStore dataStore, IEventBus eventBus)
+        _lock.EnterWriteLock();
+        try
         {
-            _dataStore = dataStore;
-            _eventBus = eventBus;
+            _loggers.Add(logger);
+            UpdateActiveLogger_UNSAFE();
         }
-
-        /// <summary>
-        /// Call this when settings change to invalidate cache.
-        /// </summary>
-        public void RefreshSettings()
+        finally
         {
-            _verboseCache = null;
+            _lock.ExitWriteLock();
         }
+    }
 
-        /// <summary>
-        /// Logs the outcome of a command execution.
-        /// </summary>
-        public async Task LogExecutionAsync(ICommand command, bool success, long durationMs, string? error = null)
+    public void UnregisterLogger(IScLogger logger)
+    {
+        _lock.EnterWriteLock();
+        try
         {
-            // 1. Check Verbosity (Lazy Load)
-            if (_verboseCache == null)
+            if (_loggers.Remove(logger))
             {
-                var setting = await _dataStore.RetrieveAsync<bool>("Settings.VerboseLogging");
-                _verboseCache = setting?.Value ?? false; // Default to false
-            }
-
-            // 2. Construct Standard LogEntry
-            var entry = new LogEntry
-            {
-                Timestamp = DateTime.UtcNow,
-                Level = success ? LogLevel.Info : LogLevel.Error,
-                Message = success
-                    ? $"Command '{command.Name}' executed in {durationMs}ms."
-                    : $"Command '{command.Name}' failed. {error}",
-                Source = "Kernel", // Or command.History.FirstOrDefault()?.EntityId
-                Category = "CommandExecution",
-                TraceId = command.TraceId
-            };
-
-            // 3. Add Extended Data
-            entry.ExtendedData["DurationMs"] = durationMs;
-            entry.ExtendedData["CommandName"] = command.Name;
-
-            if (error != null)
-            {
-                entry.ExtendedData["Error"] = error;
-            }
-
-            // 4. Verbose Mode: Attach Full History
-            if (_verboseCache == true && command.History != null)
-            {
-                entry.ExtendedData["TraceHistory"] = command.History; // Logger module can serialize this
-            }
-
-            // 5. Publish
-            // We publish a concrete "LogEvent" wrapper
-            await _eventBus.PublishAsync(new LogEvent(entry));
-        }
-
-        // --- INTERNAL HELPER ---
-        // Wraps the LogEntry into the IEvent envelope
-        private class LogEvent : IEvent
-        {
-            public string Name => "System.Log.Internal";
-            public DateTime Timestamp { get; } = DateTime.UtcNow;
-            public string SourceId => "KernelLogger";
-            public Guid? TraceId => TraceContext.CurrentTraceId;
-            public Dictionary<string, object> Data { get; }
-
-            public LogEvent(LogEntry entry)
-            {
-                Data = new Dictionary<string, object>
-                {
-                    { "LogEntry", entry }
-                };
+                UpdateActiveLogger_UNSAFE();
             }
         }
+        finally
+        {
+            _lock.ExitWriteLock();
+        }
+    }
+
+    private void UpdateActiveLogger_UNSAFE()
+    {
+        // This method must be called within a write lock.
+        _activeLogger = _loggers.OrderByDescending(x => x.Priority).FirstOrDefault();
+    }
+
+    public void Log(LogEntry entry)
+    {
+        // Reading the volatile field is a thread-safe and highly performant operation.
+        _activeLogger?.Log(entry);
+    }
+
+    public void Dispose()
+    {
+        _lock.Dispose();
+        GC.SuppressFinalize(this);
     }
 }

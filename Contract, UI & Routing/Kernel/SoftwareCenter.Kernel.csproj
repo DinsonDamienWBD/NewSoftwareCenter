@@ -25,6 +25,5 @@
 		<Folder Include="Engine\" />
 		<Folder Include="Logic\" />
 		<Folder Include="Routing\" />
-		<Folder Include="Services\" />
 	</ItemGroup>
 </Project>

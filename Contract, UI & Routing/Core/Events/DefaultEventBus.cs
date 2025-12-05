@@ -1,12 +1,12 @@
 ﻿using SoftwareCenter.Core.Events;
-using SoftwareCenter.Core.Logging;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace SoftwareCenter.Kernel.Events;
+namespace SoftwareCenter.Core.Events;
 
 /// <summary>
 /// A thread-safe, in-memory implementation of the IEventBus interface.
@@ -15,33 +15,23 @@ public class DefaultEventBus : IEventBus
 {
     // Using ConcurrentDictionary for thread-safe additions and removals of event names.
     // The value is a list of handlers. Access to this list must be synchronized.
-    private readonly ConcurrentDictionary<string, List<Func<IEvent, Task>>> _subscriptions = new();
-    private IKernelLogger? _logger;
+    private readonly ConcurrentDictionary<string, List<Func<IEvent, Task>>> _subscriptions = [];
+    private readonly ILogger<DefaultEventBus> _logger;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="DefaultEventBus"/> class.
     /// </summary>
-    /// <param name="logger">The kernel logger for logging event activity. Can be null initially.</param>
-    public DefaultEventBus(IKernelLogger? logger = null)
+    /// <param name="logger">The kernel logger for logging all event bus activity.</param>
+    public DefaultEventBus(ILogger<DefaultEventBus> logger)
     {
-        _logger = logger;
-    }
-
-    /// <summary>
-    /// Sets the logger instance after construction to resolve circular dependencies.
-    /// </summary>
-    /// <param name="logger">The kernel logger.</param>
-    public void SetLogger(IKernelLogger logger)
-    {
-        _logger = logger;
+        _logger = logger ?? throw new ArgumentNullException(nameof(logger));
     }
 
     /// <inheritdoc />
     public async Task PublishAsync(IEvent systemEvent)
     {
-        if (systemEvent == null) return;
-
-        _logger?.Log($"Publishing event: {systemEvent.Name}");
+        ArgumentNullException.ThrowIfNull(systemEvent);
+        _logger.LogInformation("Publishing event: {EventName}", systemEvent.Name);
 
         if (_subscriptions.TryGetValue(systemEvent.Name, out var handlers))
         {
@@ -62,7 +52,7 @@ public class DefaultEventBus : IEventBus
                 }
                 catch (Exception ex)
                 {
-                    _logger?.Log($"Event handler for '{systemEvent.Name}' failed: {ex.Message}");
+                    _logger.LogError(ex, "Event handler for '{EventName}' failed.", systemEvent.Name);
                 }
             }
         }
@@ -71,7 +61,7 @@ public class DefaultEventBus : IEventBus
     /// <inheritdoc />
     public void Subscribe(string eventName, Func<IEvent, Task> handler)
     {
-        var handlers = _subscriptions.GetOrAdd(eventName, _ => new List<Func<IEvent, Task>>());
+        var handlers = _subscriptions.GetOrAdd(eventName, _ => []);
         lock (handlers)
         {
             handlers.Add(handler);
@@ -86,6 +76,13 @@ public class DefaultEventBus : IEventBus
             lock (handlers)
             {
                 handlers.Remove(handler);
+
+                // If the list becomes empty after removal, we should remove the event name
+                // from the dictionary to prevent a memory leak of empty lists.
+                if (handlers.Count == 0)
+                {
+                    _subscriptions.TryRemove(eventName, out _);
+                }
             }
         }
     }

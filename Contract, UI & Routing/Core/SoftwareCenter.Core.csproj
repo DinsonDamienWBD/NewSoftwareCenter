@@ -34,7 +34,6 @@
 		<Folder Include="Events\" />
 		<Folder Include="Jobs\" />
 		<Folder Include="Kernel\" />
-		<Folder Include="Logging\" />
 		<Folder Include="Modules\" />
 		<Folder Include="Routing\" />
 		<Folder Include="UI\" />

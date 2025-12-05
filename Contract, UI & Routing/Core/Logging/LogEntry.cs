@@ -27,6 +27,8 @@ namespace SoftwareCenter.Core.Logging
         /// </summary>
         public Guid? TraceId { get; set; }
 
+        public Exception Ex { get; set; }
+
         /// <summary>
         /// Extra data for structured logging.
         /// Traceability details (like the full hop history) can be stored here 
