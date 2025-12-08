@@ -363,4 +363,9 @@ MigrationBackup/
 FodyWeavers.xsd
 
 # Ignore all desktop.ini files in all folders
-desktop.ini
+**/desktop.ini
+.git/desktop.ini
+.git/refs/desktop.ini
+.git/refs/heads/desktop.ini
+.git/refs/remotes/desktop.ini
+.git/refs/tags/desktop.ini
