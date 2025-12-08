@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Software Center</title>
+    <link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+    <h1>Software Center Host</h1>
+
+    <div class="container">
+        <div class="controls">
+            <h2>Controls</h2>
+            <button id="btnCreatePanel">Create Main Panel</button>
+            <button id="btnCreateButton">Add Button to Panel</button>
+            <button id="btnGetManifest">Get Registry Manifest</button>
+        </div>
+        <div class="ui-view">
+            <h2>Live UI View</h2>
+            <div id="ui-root"></div>
+        </div>
+        <div class="output">
+            <h2>Output / Manifest</h2>
+            <pre id="output-pre"></pre>
+        </div>
+    </div>
+
+    <script src="js/site.js"></script>
+</body>
+</html>

@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using SoftwareCenter.Kernel.Data; // Added for AccessPermissions
 
 namespace SoftwareCenter.Kernel.Data
 {
@@ -27,6 +29,11 @@ namespace SoftwareCenter.Kernel.Data
         /// Only the owner can update or delete the data.
         /// </summary>
         public string OwnerModuleId { get; set; }
+
+        /// <summary>
+        /// Gets or sets a dictionary of module IDs and the access permissions they have been granted for this item.
+        /// </summary>
+        public Dictionary<string, AccessPermissions> SharedPermissions { get; set; } = new Dictionary<string, AccessPermissions>();
 
         /// <summary>
         /// Gets or sets the trace ID of the operation that created this data.

@@ -11,34 +11,23 @@ namespace SoftwareCenter.Kernel.Services
     /// </summary>
     public class CommandBus : ICommandBus
     {
-        private readonly IServiceProvider _serviceProvider;
+        private readonly ISmartCommandRouter _router;
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="CommandBus"/> class.
-        /// </summary>
-        /// <param name="serviceProvider">The service provider used to resolve handlers.</param>
-        public CommandBus(IServiceProvider serviceProvider)
+        public CommandBus(ISmartCommandRouter router)
         {
-            _serviceProvider = serviceProvider;
+            _router = router;
         }
 
-        /// <inheritdoc />
+        public Task Dispatch(ICommand command, ITraceContext traceContext = null)
+        {
+            var context = traceContext ?? new TraceContext();
+            return _router.Route(command, context);
+        }
+
         public Task<TResult> Dispatch<TResult>(ICommand<TResult> command, ITraceContext traceContext = null)
         {
-            var commandType = command.GetType();
-            var handlerType = typeof(ICommandHandler<,>).MakeGenericType(commandType, typeof(TResult));
-            var handler = _serviceProvider.GetService(handlerType);
-
-            if (handler == null)
-            {
-                throw new InvalidOperationException($"No handler found for command type {commandType.Name}");
-            }
-
-            // Create a new trace context if one is not provided.
             var context = traceContext ?? new TraceContext();
-
-            // Use dynamic invocation to call the Handle method with the command and context.
-            return (Task<TResult>)((dynamic)handler).Handle((dynamic)command, context);
+            return _router.Route<TResult>(command, context);
         }
     }
 }

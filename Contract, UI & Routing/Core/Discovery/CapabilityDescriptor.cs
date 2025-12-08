@@ -29,6 +29,12 @@ namespace SoftwareCenter.Core.Discovery
         public CapabilityStatus Status { get; }
 
         /// <summary>
+        /// Gets the priority of the handler associated with this capability.
+        /// Higher values indicate higher priority.
+        /// </summary>
+        public int Priority { get; }
+
+        /// <summary>
         /// Gets the full .NET type name of the primary contract (e.g., the ICommand class).
         /// </summary>
         public string ContractTypeName { get; }
@@ -56,6 +62,7 @@ namespace SoftwareCenter.Core.Discovery
             string description,
             CapabilityType type,
             CapabilityStatus status,
+            int priority,
             string contractTypeName,
             string handlerTypeName,
             string owningModuleId,
@@ -65,6 +72,7 @@ namespace SoftwareCenter.Core.Discovery
             Description = description;
             Type = type;
             Status = status;
+            Priority = priority;
             ContractTypeName = contractTypeName;
             HandlerTypeName = handlerTypeName;
             OwningModuleId = owningModuleId;
