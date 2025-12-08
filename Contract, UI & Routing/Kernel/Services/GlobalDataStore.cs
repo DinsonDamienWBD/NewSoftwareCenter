@@ -1,206 +1,57 @@
-﻿using System;
-using System.Collections.Concurrent;
+using SoftwareCenter.Kernel.Contracts;
+using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading.Tasks;
-using LiteDB;
-using SoftwareCenter.Core.Data;
-using SoftwareCenter.Core.Diagnostics;
 
 namespace SoftwareCenter.Kernel.Services
 {
-    /// <summary>
-    /// Implements Feature 5: Global Data Store.
-    /// A Hybrid Store: Uses RAM for Transient data and LiteDB for Persistent data.
-    /// Thread-safe and Async.
-    /// </summary>
-    public class GlobalDataStore : IGlobalDataStore, IDisposable
+    public class GlobalDataStore : IGlobalDataStore
     {
-        // 1. Persistent Layer (LiteDB)
-        private readonly LiteDatabase _db;
-        private readonly object _dbLock = new(); // LiteDB single-writer lock
-
-        // 2. Transient Layer (RAM)
-        // Key -> DataEntry<object>
-        private readonly ConcurrentDictionary<string, object> _memoryStore = new();
-
-        public GlobalDataStore()
-        {
-            // Path: %AppData%/SoftwareCenter/GlobalDataStore.db
-            var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-            var folder = Path.Combine(appData, "SoftwareCenter");
-            Directory.CreateDirectory(folder);
-
-            var dbPath = Path.Combine(folder, "GlobalDataStore.db");
-
-            // Open Database (Shared connection)
-            _db = new LiteDatabase($"Filename={dbPath};Connection=Shared");
-
-            // Configure Mapper
-            BsonMapper.Global.IncludeFields = true;
-        }
-
-        public Task<bool> StoreAsync<T>(string key, T data, DataPolicy policy = DataPolicy.Transient)
-        {
-            return Task.Run(() =>
-            {
-                // 1. Create the Metadata Wrapper
-                // Use TraceContext.Current to link this data to the active operation
-                var entry = new DataEntry<T>
-                {
-                    Value = data,
-                    LastUpdated = DateTime.UtcNow,
-                    DataType = typeof(T).FullName ?? "Unknown",
-                    TraceId = TraceContext.CurrentTraceId ?? Guid.Empty,
-                    SourceId = "System" // Ideally passed via context
-                };
-
-                // 2. Store based on Policy
-                if (policy == DataPolicy.Transient)
-                {
-                    _memoryStore[key] = entry;
-                    return true;
-                }
-                else
-                {
-                    lock (_dbLock)
-                    {
-                        // FIX for CS1503: 
-                        // Use non-generic GetCollection to work with BsonDocument directly
-                        var col = _db.GetCollection("GlobalData");
-
-                        var doc = BsonMapper.Global.ToDocument(entry);
-                        doc["_id"] = key; // Manually force the Key as the Database ID
-
-                        return col.Upsert(doc);
-                    }
-                }
-            });
-        }
-
-        public Task<DataEntry<T>?> RetrieveAsync<T>(string key)
-        {
-            return Task.Run(() =>
-            {
-                // 1. Check RAM first (Fastest)
-                if (_memoryStore.TryGetValue(key, out var memObj))
-                {
-                    if (memObj is DataEntry<T> typedEntry) return typedEntry;
-                }
-
-                // 2. Check Disk
-                lock (_dbLock)
-                {
-                    var col = _db.GetCollection("GlobalData");
-                    var doc = col.FindById(key);
-
-                    if (doc != null)
-                    {
-                        // Deserialize back to DataEntry<T>
-                        return BsonMapper.Global.ToObject<DataEntry<T>>(doc);
-                    }
-                }
-
-                return null;
-            });
-        }
+        private readonly Dictionary<string, object> _transientStore = new Dictionary<string, object>();
 
         public Task<bool> ExistsAsync(string key)
         {
-            return Task.Run(() =>
-            {
-                if (_memoryStore.ContainsKey(key)) return true;
-
-                lock (_dbLock)
-                {
-                    return _db.GetCollection("GlobalData").Exists(Query.EQ("_id", key));
-                }
-            });
-        }
-
-        public Task<bool> RemoveAsync(string key)
-        {
-            return Task.Run(() =>
-            {
-                bool removedFromMem = _memoryStore.TryRemove(key, out _);
-
-                lock (_dbLock)
-                {
-                    // Use non-generic collection for deletion by ID
-                    bool removedFromDb = _db.GetCollection("GlobalData").Delete(key);
-                    return removedFromMem || removedFromDb;
-                }
-            });
+            return Task.FromResult(_transientStore.ContainsKey(key));
         }
 
         public Task<DataEntry<object>?> GetMetadataAsync(string key)
         {
-            return Task.Run(async () =>
-            {
-                // For simplicity, we reuse Retrieve. 
-                // Optimization: In the future, fetch BsonDocument and map only metadata fields.
-                var result = await RetrieveAsync<object>(key);
-                return result;
-            });
+            throw new NotImplementedException();
         }
 
-        public void Dispose()
+        public Task<bool> RemoveAsync(string key)
         {
-            _db?.Dispose();
+            return Task.FromResult(_transientStore.Remove(key));
+        }
+
+        public Task<DataEntry<T>?> RetrieveAsync<T>(string key)
+        {
+            if (_transientStore.TryGetValue(key, out var value))
+            {
+                return Task.FromResult(new DataEntry<T>
+                {
+                    Value = (T)value,
+                    DataType = typeof(T).Name,
+                    SourceId = "Kernel",
+                    LastUpdated = DateTime.UtcNow
+                });
+            }
+            return Task.FromResult<DataEntry<T>?>(null);
+        }
+
+        public Task<bool> StoreAsync<T>(string key, T data, DataPolicy policy = DataPolicy.Transient)
+        {
+            _transientStore[key] = data;
+            return Task.FromResult(true);
         }
 
         public Task<bool> StoreBulkAsync<T>(IDictionary<string, T> items, DataPolicy policy = DataPolicy.Transient)
         {
-            return Task.Run(() =>
+            foreach (var item in items)
             {
-                if (policy == DataPolicy.Transient)
-                {
-                    foreach (var kvp in items)
-                    {
-                        var entry = new DataEntry<T>
-                        {
-                            Value = kvp.Value,
-                            LastUpdated = DateTime.UtcNow,
-                            DataType = typeof(T).FullName ?? "Unknown",
-                            TraceId = TraceContext.CurrentTraceId ?? Guid.Empty,
-                            SourceId = "System" // Ideally passed via context
-                        };
-                        _memoryStore[kvp.Key] = entry;
-                    }
-                    return true;
-                }
-                else
-                {
-                    lock (_dbLock)
-                    {
-                        var col = _db.GetCollection("GlobalData");
-                        _db.BeginTrans();
-                        try
-                        {
-                            foreach (var kvp in items)
-                            {
-                                var entry = new DataEntry<T>
-                                {
-                                    Value = kvp.Value,
-                                    LastUpdated = DateTime.UtcNow,
-                                    DataType = typeof(T).FullName ?? "Unknown",
-                                    TraceId = TraceContext.CurrentTraceId ?? Guid.Empty,
-                                    SourceId = "System" // Ideally passed via context
-                                };
-                                var doc = BsonMapper.Global.ToDocument(entry);
-                                doc["_id"] = kvp.Key;
-                                col.Upsert(doc);
-                            }
-                            return _db.Commit();
-                        }
-                        catch
-                        {
-                            _db.Rollback();
-                            return false;
-                        }
-                    }
-                }
-            });
+                _transientStore[item.Key] = item.Value;
+            }
+            return Task.FromResult(true);
         }
     }
 }
