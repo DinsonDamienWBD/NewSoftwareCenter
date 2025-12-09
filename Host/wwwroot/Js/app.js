@@ -121,17 +121,23 @@ function handleNavClick(navButtonId) {
     document.querySelectorAll('#content-zone .content-container').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('#nav-zone .nav-button').forEach(b => b.classList.remove('active'));
     
-    // Activate the target content container and nav button
-    const contentId = navButtonId.replace('-nav-button', '-content');
-    const contentContainer = document.getElementById(contentId);
     const navButton = document.getElementById(navButtonId);
+    if (!navButton) {
+        console.error(`Nav button with ID '${navButtonId}' not found.`);
+        return;
+    }
+
+    // Activate the target content container and nav button
+    const contentId = navButton.dataset.targetContainer; // Use the data attribute
+    const contentContainer = document.getElementById(contentId);
 
     if (contentContainer) {
         contentContainer.classList.add('active');
+    } else {
+        console.error(`Content container with ID '${contentId}' not found.`);
     }
-    if(navButton) {
-        navButton.classList.add('active');
-    }
+
+    navButton.classList.add('active');
 }
 
 

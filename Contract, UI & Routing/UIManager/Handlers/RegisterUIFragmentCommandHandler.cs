@@ -1,6 +1,5 @@
 using SoftwareCenter.Core.Commands;
 using SoftwareCenter.Core.Commands.UI;
-using SoftwareCenter.Core.Data.UI;
 using SoftwareCenter.Core.Diagnostics;
 using SoftwareCenter.UIManager.Services;
 using System;
@@ -8,57 +7,43 @@ using System.Threading.Tasks;
 
 namespace SoftwareCenter.UIManager.Handlers
 {
+    /// <summary>
+    /// Handles the command to register a new UI fragment by directly providing its HTML, CSS, and JS content.
+    /// </summary>
     public class RegisterUIFragmentCommandHandler : ICommandHandler<RegisterUIFragmentCommand, string>
     {
         private readonly UIStateService _uiStateService;
-        private readonly IUIHubNotifier _hubNotifier;
 
-        public RegisterUIFragmentCommandHandler(UIStateService uiStateService, IUIHubNotifier hubNotifier)
+        public RegisterUIFragmentCommandHandler(UIStateService uiStateService)
         {
             _uiStateService = uiStateService;
-            _hubNotifier = hubNotifier;
         }
 
-        public async Task<string> Handle(RegisterUIFragmentCommand command, TraceContext traceContext)
+        public Task<string> Handle(RegisterUIFragmentCommand command, ITraceContext traceContext)
         {
-            var elementId = $"el_{Guid.NewGuid().ToString("N")}";
-            var ownerId = traceContext.ModuleId; // Assuming ModuleId identifies the owner
-
-            var slotName = command.SlotName;
-            
-            var uiElement = new UIElement(elementId, ownerId, "Fragment");
-            
-            var fragment = new UIFragment
+            if (!traceContext.Items.TryGetValue("ModuleId", out var ownerModuleIdObj) || !(ownerModuleIdObj is string ownerModuleId))
             {
-                Id = elementId,
-                OwnerId = ownerId,
-                HtmlContent = command.HtmlContent,
-                Priority = command.Priority,
-                SlotName = slotName,
-                Element = uiElement
-            };
-            
-            if (_uiStateService.TryAddFragment(fragment))
-            {
-                var activeFragment = _uiStateService.GetActiveFragmentForSlot(slotName);
-                
-                // If the newly added fragment is the highest priority one, notify the client to add it.
-                if(activeFragment?.Id == fragment.Id)
-                {
-                    await _hubNotifier.ElementAdded(new
-                    {
-                        ElementId = fragment.Id,
-                        ParentId = command.ParentId, // The logical parent from the client's perspective
-                        HtmlContent = fragment.HtmlContent,
-                        CssContent = command.CssContent,
-                        JsContent = command.JsContent
-                    });
-                }
-                
-                return elementId;
+                throw new InvalidOperationException("Could not determine the owner module from the trace context.");
             }
-            // Handle failure case
-            return null; 
+
+            // The UIStateService will create the element and publish the event.
+            var element = _uiStateService.CreateElement(
+                ownerModuleId,
+                Core.UI.ElementType.Fragment, // Assuming "Fragment" is a valid ElementType
+                command.ParentId,
+                command.HtmlContent,
+                command.CssContent,
+                command.JsContent,
+                command.Priority,
+                command.SlotName
+            );
+
+            if (element == null)
+            {
+                throw new InvalidOperationException("Failed to create UI fragment.");
+            }
+
+            return Task.FromResult(element.Id);
         }
     }
 }

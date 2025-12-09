@@ -6,8 +6,6 @@ This document outlines the key components, namespaces, and contracts within the 
 
 ### `SoftwareCenter.Core.Commands`
 - **ICommand.cs**: Marker interface for commands.
-- **IResult.cs**: Interface for command results.
-- **Result.cs**: A concrete implementation of `IResult`.
 
 ### `SoftwareCenter.Core.Events`
 - **IEvent.cs**: Marker interface for domain events.
@@ -15,25 +13,11 @@ This document outlines the key components, namespaces, and contracts within the 
 ### `SoftwareCenter.Core.Modules`
 - **IModule.cs**: The primary interface for all dynamically-loaded modules.
 
-### `SoftwareCenter.Core.Kernel`
-- **IKernel.cs**: The contract for the application kernel, defining methods for routing and module management.
-- **New Additions (Phase 3):**
-    - `void RegisterService<T>(T service);`
-    - `T GetService<T>();`
+### `SoftwareCenter.Core.UI`
+This namespace houses contracts for UI elements and related operations, not the UI Engine itself.
 
-### `SoftwareCenter.Core.UI` (New - Phase 3)
-This new namespace will house all contracts related to the UI Engine.
-
-- **IUIEngine.cs**: The main interface for the UI Composition Engine.
-    - `Guid RequestNavigation(NavigationRequest request);`
-    - `Guid CreateCard(Guid containerId, CardConfiguration config);`
-    - `void RenderElements(Guid parentId, IEnumerable<UIElement> elements);`
-    - `void UpdateElement(Guid elementId, ElementUpdatePayload payload);`
-    - `void RemoveElement(Guid elementId);`
-
-- **`SoftwareCenter.Core.UI.Contracts`** (Sub-namespace)
-    - **NavigationRequest.cs**: Class for requesting top-level navigation.
-    - **CardConfiguration.cs**: Class for defining a card's initial state.
-    - **UIElement.cs**: Abstract base class for all UI controls.
-    - **Button.cs, Label.cs, etc.**: Concrete `UIElement` implementations.
-    - **ElementUpdatePayload.cs**: Class for packaging property updates for an element.
+- **UIElement.cs**: Abstract base class for all UI controls. (Actual definition of UI elements in this project like `CreateElementCommand`, `UIElementRegisteredEvent` and `UIElement` record class.)
+- **ElementType.cs**: Enum for different types of UI elements.
+- **UIAccessControl.cs**: Class for managing UI element access.
+- **ITemplateService.cs**: Interface for templating services.
+- Other UI related Commands and Events are also defined here.

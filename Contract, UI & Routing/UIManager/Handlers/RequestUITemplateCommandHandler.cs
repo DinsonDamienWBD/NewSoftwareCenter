@@ -1,61 +1,82 @@
 using SoftwareCenter.Core.Commands;
 using SoftwareCenter.Core.Commands.UI;
-using SoftwareCenter.Core.Data.UI;
 using SoftwareCenter.Core.Diagnostics;
-using SoftwareCenter.Core.Routing;
+using SoftwareCenter.Core.UI; // For ITemplateService
 using SoftwareCenter.UIManager.Services;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace SoftwareCenter.UIManager.Handlers
 {
+    /// <summary>
+    /// Handles the command to request a UI template and create a new UI element from it.
+    /// </summary>
     public class RequestUITemplateCommandHandler : ICommandHandler<RequestUITemplateCommand, string>
     {
         private readonly UIStateService _uiStateService;
-        private readonly IUIHubNotifier _hubNotifier;
+        private readonly ITemplateService _templateService;
 
-        public RequestUITemplateCommandHandler(UIStateService uiStateService, IUIHubNotifier hubNotifier)
+        public RequestUITemplateCommandHandler(UIStateService uiStateService, ITemplateService templateService)
         {
             _uiStateService = uiStateService;
-            _hubNotifier = hubNotifier;
+            _templateService = templateService;
         }
 
-        public async Task<string> Handle(RequestUITemplateCommand command, TraceContext traceContext)
+        public async Task<string> Handle(RequestUITemplateCommand command, ITraceContext traceContext)
         {
-            if (command.TemplateType.Equals("Card", StringComparison.OrdinalIgnoreCase))
+            if (!traceContext.Items.TryGetValue("ModuleId", out var ownerModuleIdObj) || !(ownerModuleIdObj is string ownerModuleId))
             {
-                var elementId = $"card_{Guid.NewGuid().ToString("N")}";
-                var ownerId = traceContext.ModuleId;
+                throw new InvalidOperationException("Could not determine the owner module from the trace context.");
+            }
 
-                var cardHtml = @"<div class=""card""></div>";
+            // Prepare parameters for the template service.
+            // These will include the element's ID (to be generated) and any other properties
+            // the template might need for rendering.
+            var templateParameters = new Dictionary<string, object>
+            {
+                { "Id", Guid.NewGuid().ToString("N") } // Generate ID here for template rendering
+            };
 
-                var uiElement = new UIElement(elementId, ownerId, "Card", command.ParentId);
-
-                var fragment = new UIFragment
+            // Merge initial properties from the command into template parameters.
+            // This allows modules to pass custom data to the template.
+            if (command.InitialProperties != null)
+            {
+                foreach (var prop in command.InitialProperties)
                 {
-                    Id = elementId,
-                    OwnerId = ownerId,
-                    HtmlContent = cardHtml,
-                    Priority = HandlerPriority.Normal, 
-                    SlotName = null, // Cards don't override each other, they are added to a parent
-                    Element = uiElement
-                };
-
-                if (_uiStateService.TryAddFragment(fragment))
-                {
-                    await _hubNotifier.ElementAdded(new
-                    {
-                        ElementId = fragment.Id,
-                        ParentId = command.ParentId,
-                        HtmlContent = fragment.HtmlContent,
-                    });
-
-                    return elementId;
+                    templateParameters[prop.Key] = prop.Value;
                 }
             }
+
+            // Get the HTML content from the template service.
+            var htmlContent = await _templateService.GetTemplateHtml(command.TemplateType, templateParameters);
+
+            if (string.IsNullOrEmpty(htmlContent))
+            {
+                throw new InvalidOperationException($"Could not retrieve HTML for template type: {command.TemplateType}");
+            }
             
-            // Handle other template types or failure
-            return null;
+            // Extract the generated ID from the templateParameters to use for the UIElement.
+            var elementId = templateParameters["Id"].ToString();
+
+            // The UIStateService will create the element and publish the event.
+            var element = _uiStateService.CreateElement(
+                ownerModuleId,
+                (Core.UI.ElementType)Enum.Parse(typeof(Core.UI.ElementType), command.TemplateType, true), // Assuming TemplateType maps to ElementType
+                command.ParentId,
+                htmlContent,
+                priority: command.InitialProperties.TryGetValue("Priority", out var priorityObj) && priorityObj is int priority ? priority : 0,
+                slotName: command.InitialProperties.TryGetValue("SlotName", out var slotNameObj) ? slotNameObj as string : null,
+                properties: templateParameters, // Pass all template parameters as element properties
+                id: elementId // Pass the generated ID explicitly
+            );
+
+            if (element == null)
+            {
+                throw new InvalidOperationException("Failed to create UI element from template.");
+            }
+
+            return element.Id;
         }
     }
 }

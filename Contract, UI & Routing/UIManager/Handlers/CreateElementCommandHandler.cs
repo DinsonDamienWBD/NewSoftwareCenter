@@ -1,14 +1,16 @@
+using SoftwareCenter.Core.Commands.UI;
+using SoftwareCenter.Core.Diagnostics;
+using SoftwareCenter.UIManager.Services;
 using System;
 using System.Threading.Tasks;
 using SoftwareCenter.Core.Commands;
-using SoftwareCenter.Core.Commands.UI;
-using SoftwareCenter.Core.Diagnostics;
-using SoftwareCenter.Core.UI;
-using SoftwareCenter.UIManager.Services;
 
 namespace SoftwareCenter.UIManager.Handlers
 {
-    public class CreateElementCommandHandler : ICommandHandler<CreateElementCommand, Guid>
+    /// <summary>
+    /// Handles the command to create a new UI element.
+    /// </summary>
+    public class CreateElementCommandHandler : ICommandHandler<CreateUIElementCommand, string>
     {
         private readonly UIStateService _uiStateService;
 
@@ -17,31 +19,33 @@ namespace SoftwareCenter.UIManager.Handlers
             _uiStateService = uiStateService;
         }
 
-        public Task<Guid> Handle(CreateElementCommand command, ITraceContext traceContext)
+        public Task<string> Handle(CreateUIElementCommand command, ITraceContext traceContext)
         {
-            // The owner module should be passed in the trace context.
             if (!traceContext.Items.TryGetValue("ModuleId", out var ownerModuleIdObj) || !(ownerModuleIdObj is string ownerModuleId))
             {
                 throw new InvalidOperationException("Could not determine the owner module from the trace context.");
             }
 
-            var newElementId = Guid.NewGuid();
-            var element = new UIElement(newElementId, command.ElementType, ownerModuleId)
-            {
-                ParentId = command.ParentId
-            };
+            // The UIStateService will create the element and publish the event.
+            // We need to determine the priority and slot from the command's properties.
+            command.InitialProperties.TryGetValue("Priority", out var priorityObj);
+            command.InitialProperties.TryGetValue("SlotName", out var slotNameObj);
 
-            foreach (var prop in command.InitialProperties)
+            var element = _uiStateService.CreateElement(
+                ownerModuleId,
+                (Core.UI.ElementType)Enum.Parse(typeof(Core.UI.ElementType), command.ElementType, true),
+                command.ParentId,
+                priorityObj is int priority ? priority : 0,
+                slotNameObj as string,
+                command.InitialProperties
+            );
+
+            if (element == null)
             {
-                element.Properties[prop.Key] = prop.Value;
+                throw new InvalidOperationException("Failed to create UI element.");
             }
 
-            if (!_uiStateService.TryAddElement(element))
-            {
-                throw new InvalidOperationException($"An element with ID {newElementId} already exists.");
-            }
-
-            return Task.FromResult(newElementId);
+            return Task.FromResult(element.Id);
         }
     }
 }

@@ -37,6 +37,98 @@ SoftwareCenter.Host/
 - `SoftwareCenter.Kernel`
 - `SoftwareCenter.UIManager`
 
+## Detailed API/Component List
+
+### `Host/InteractionRequest.cs`
+- **Class Name:** `InteractionRequest`
+- **Properties:**
+    - `OwnerId` (string, get; set;)
+    - `Action` (string, get; set;)
+    - `AdditionalData` (Dictionary<string, object>, get; set;)
+
+### `Host/Program.cs`
+- **`WebApplication` builder setup:**
+    - `builder.Services.AddKernel()`
+    - `builder.Services.AddUIManager()`
+    - `builder.Services.AddSignalR()`
+    - `builder.Services.AddSingleton<ITemplateService, HostTemplateService>()`
+- **API Endpoints:**
+    - `app.MapPost("/api/dispatch/{commandName}", ...)`
+        - **Endpoint:** `/api/dispatch/{commandName}`
+        - **Method:** `POST`
+        - **Parameters:** `commandName` (string, from route), `payload` (JsonElement, from body), `commandBus` (ICommandBus, from DI), `commandFactory` (CommandFactory, from DI)
+        - **Returns:** `Results.NotFound`, `Results.BadRequest`, `Results.Ok`, `Results.Problem`
+- **Frontend Hosting:**
+    - `app.UseDefaultFiles()`
+    - `app.UseStaticFiles()`
+    - Dynamic `app.UseStaticFiles()` for module `wwwroot` directories.
+    - `app.MapHub<UIHub>("/uihub")`
+- **Host UI Initialization Logic:**
+    - Creates `nav-button` for "Applications" using `RequestUITemplateCommand`.
+    - Creates `content-zone` for "Applications" using `CreateUIElementCommand`.
+    - Injects default HTML using `RegisterUIFragmentCommand`.
+
+### `Host/SoftwareCenter.Host.csproj`
+- **Project References:**
+    - `..\Contract, UI & Routing\Kernel\SoftwareCenter.Kernel.csproj`
+    - `..\Contract, UI & Routing\UIManager\SoftwareCenter.UIManager.csproj`
+
+### `Host/UIHub.cs`
+- **Class Name:** `UIHub`
+- **Inherits from:** `Hub`
+
+### `Host/Middleware/ErrorHandlingMiddleware.cs`
+- **Class Name:** `ErrorHandlingMiddleware`
+- **Constructor:**
+    - `ErrorHandlingMiddleware(RequestDelegate next)`
+- **Functions:**
+    - `Task InvokeAsync(HttpContext context, IErrorHandler errorHandler)`
+        - **Parameters:** `context` (`HttpContext`), `errorHandler` (`IErrorHandler`)
+        - **Returns:** `Task`
+
+### `Host/Services/HostLogger.cs`
+- **Class Name:** `HostLogger`
+- **Implements:** `IScLogger`, `IDisposable`
+- **Properties:**
+    - `Priority` (int, read-only)
+- **Constructor:**
+    - `HostLogger(string logDirectory)`
+- **Functions:**
+    - `void Log(LogEntry entry)`
+        - **Parameters:** `entry` (`LogEntry`)
+        - **Returns:** `void`
+    - `void Dispose()`
+        - **Returns:** `void`
+
+### `Host/Services/HostTemplateService.cs`
+- **Class Name:** `HostTemplateService`
+- **Implements:** `ITemplateService`
+- **Constructor:**
+    - `HostTemplateService(IWebHostEnvironment webHostEnvironment)`
+- **Functions:**
+    - `Task<string> GetTemplateHtml(string templateType, Dictionary<string, object> parameters)`
+        - **Parameters:** `templateType` (`string`), `parameters` (`Dictionary<string, object>`)
+        - **Returns:** `Task<string>`
+    - `string ProcessConditionalStatements(string html, Dictionary<string, object> parameters)` (private)
+        - **Parameters:** `html` (`string`), `parameters` (`Dictionary<string, object>`)
+        - **Returns:** `string`
+
+### `Host/Services/UIHubNotifier.cs`
+- **Class Name:** `UIHubNotifier`
+- **Implements:** `IEventHandler<UIElementRegisteredEvent>`, `IEventHandler<UIElementUnregisteredEvent>`, `IEventHandler<UIElementUpdatedEvent>`
+- **Constructor:**
+    - `UIHubNotifier(IHubContext<UIHub> hubContext)`
+- **Functions:**
+    - `Task Handle(UIElementRegisteredEvent anEvent)`
+        - **Parameters:** `anEvent` (`UIElementRegisteredEvent`)
+        - **Returns:** `Task`
+    - `Task Handle(UIElementUnregisteredEvent anEvent)`
+        - **Parameters:** `anEvent` (`UIElementUnregisteredEvent`)
+        - **Returns:** `Task`
+    - `Task Handle(UIElementUpdatedEvent anEvent)`
+        - **Parameters:** `anEvent` (`UIElementUpdatedEvent`)
+        - **Returns:** `Task`
+
 ---
 
 ## UI Architecture & Flow (As of 2025-12-09)

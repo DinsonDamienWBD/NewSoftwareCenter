@@ -35,9 +35,155 @@ SoftwareCenter.UIManager/
 ## Dependencies
 - `SoftwareCenter.Core`
 
----
+## Detailed API/Component List
 
-## UI Architecture & Flow (As of 2025-12-09)
+### `Contract, UI & Routing/UIManager/METADATA.MD`
+- Project metadata file.
+
+### `Contract, UI & Routing/UIManager/SoftwareCenter.UIManager.csproj`
+- **Project References:**
+    - `..\Core\SoftwareCenter.Core.csproj`
+
+### `Contract, UI & Routing/UIManager/UIManagerServiceCollectionExtensions.cs`
+- **Static Class Name:** `UIManagerServiceCollectionExtensions`
+- **Extension Methods:**
+    - `IServiceCollection AddUIManager(this IServiceCollection services)`
+        - **Parameters:** `services` (`IServiceCollection`)
+        - **Returns:** `IServiceCollection`
+
+### `Contract, UI & Routing/UIManager/Handlers/CreateElementCommandHandler.cs`
+- **Class Name:** `CreateElementCommandHandler`
+- **Implements:** `ICommandHandler<CreateUIElementCommand, string>`
+- **Constructor:**
+    - `CreateElementCommandHandler(UIStateService uiStateService)`
+- **Functions:**
+    - `Task<string> Handle(CreateUIElementCommand command, ITraceContext traceContext)`
+        - **Parameters:** `command` (`CreateUIElementCommand`), `traceContext` (`ITraceContext`)
+        - **Returns:** `Task<string>`
+
+### `Contract, UI & Routing/UIManager/Handlers/RegisterUIFragmentCommandHandler.cs`
+- **Class Name:** `RegisterUIFragmentCommandHandler`
+- **Implements:** `ICommandHandler<RegisterUIFragmentCommand, string>`
+- **Constructor:**
+    - `RegisterUIFragmentCommandHandler(UIStateService uiStateService)`
+- **Functions:**
+    - `Task<string> Handle(RegisterUIFragmentCommand command, ITraceContext traceContext)`
+        - **Parameters:** `command` (`RegisterUIFragmentCommand`), `traceContext` (`ITraceContext`)
+        - **Returns:** `Task<string>`
+
+### `Contract, UI & Routing/UIManager/Handlers/RequestUITemplateCommandHandler.cs`
+- **Class Name:** `RequestUITemplateCommandHandler`
+- **Implements:** `ICommandHandler<RequestUITemplateCommand, string>`
+- **Constructor:**
+    - `RequestUITemplateCommandHandler(UIStateService uiStateService, ITemplateService templateService)`
+- **Functions:**
+    - `Task<string> Handle(RequestUITemplateCommand command, ITraceContext traceContext)`
+        - **Parameters:** `command` (`RequestUITemplateCommand`), `traceContext` (`ITraceContext`)
+        - **Returns:** `Task<string>`
+
+### `Contract, UI & Routing/UIManager/Handlers/SetElementPropertiesCommandHandler.cs`
+- **Class Name:** `SetElementPropertiesCommandHandler`
+- **Implements:** `ICommandHandler<SetElementPropertiesCommand>`
+- **Constructor:**
+    - `SetElementPropertiesCommandHandler(UIStateService uiStateService)`
+- **Functions:**
+    - `Task Handle(SetElementPropertiesCommand command, ITraceContext traceContext)`
+        - **Parameters:** `command` (`SetElementPropertiesCommand`), `traceContext` (`ITraceContext`)
+        - **Returns:** `Task`
+
+### `Contract, UI & Routing/UIManager/Handlers/ShareUIElementOwnershipCommandHandler.cs`
+- **Class Name:** `ShareUIElementOwnershipCommandHandler`
+- **Implements:** `ICommandHandler<ShareUIElementOwnershipCommand>`
+- **Constructor:**
+    - `ShareUIElementOwnershipCommandHandler(UIStateService uiStateService)`
+- **Functions:**
+    - `Task Handle(ShareUIElementOwnershipCommand command, ITraceContext traceContext)`
+        - **Parameters:** `command` (`ShareUIElementOwnershipCommand`), `traceContext` (`ITraceContext`)
+        - **Returns:** `Task`
+
+### `Contract, UI & Routing/UIManager/Handlers/UnregisterUIElementCommandHandler.cs`
+- **Class Name:** `UnregisterUIElementCommandHandler`
+- **Implements:** `ICommandHandler<UnregisterUIElementCommand>`
+- **Constructor:**
+    - `UnregisterUIElementCommandHandler(UIStateService uiStateService)`
+- **Functions:**
+    - `Task Handle(UnregisterUIElementCommand command, ITraceContext traceContext)`
+        - **Parameters:** `command` (`UnregisterUIElementCommand`), `traceContext` (`ITraceContext`)
+        - **Returns:** `Task`
+
+### `Contract, UI & Routing/UIManager/Handlers/UpdateUIElementCommandHandler.cs`
+- **Class Name:** `UpdateUIElementCommandHandler`
+- **Implements:** `ICommandHandler<UpdateUIElementCommand>`
+- **Constructor:**
+    - `UpdateUIElementCommandHandler(UIStateService uiStateService)`
+- **Functions:**
+    - `Task Handle(UpdateUIElementCommand command, ITraceContext traceContext)`
+        - **Parameters:** `command` (`UpdateUIElementCommand`), `traceContext` (`ITraceContext`)
+        - **Returns:** `Task`
+
+### `Contract, UI & Routing/UIManager/Services/IUIHubNotifier.cs`
+- **Interface Name:** `IUIHubNotifier`
+- **Functions:**
+    - `Task ElementAdded(object elementData)`
+        - **Parameters:** `elementData` (`object`)
+        - **Returns:** `Task`
+    - `Task ElementUpdated(object elementData)`
+        - **Parameters:** `elementData` (`object`)
+        - **Returns:** `Task`
+    - `Task ElementRemoved(object elementData)`
+        - **Parameters:** `elementData` (`object`)
+        - **Returns:** `Task`
+
+### `Contract, UI & Routing/UIManager/Services/UIFragment.cs`
+- **Class Name:** `UIFragment`
+- **Properties:**
+    - `Id` (string, get; set;)
+    - `OwnerId` (string, get; set;)
+    - `Priority` (HandlerPriority, get; set;)
+    - `HtmlContent` (string, get; set;)
+    - `SlotName` (string, get; set;)
+    - `Element` (UIElement, get; set;)
+    - `Attributes` (Dictionary<string, string>, get; set;, initialized)
+
+### `Contract, UI & Routing/UIManager/Services/UIStateService.cs`
+- **Class Name:** `UIStateService`
+- **Constructor:**
+    - `UIStateService(IEventBus eventBus)`
+- **Functions:**
+    - `UIElement CreateElement(string ownerId, ElementType elementType, string parentId, string htmlContent, string? cssContent = null, string? jsContent = null, int priority = 0, string? slotName = null, Dictionary<string, object>? properties = null, string? id = null)`
+        - **Parameters:** `ownerId` (`string`), `elementType` (`ElementType`), `parentId` (`string`), `htmlContent` (`string`), `cssContent` (`string?`, optional), `jsContent` (`string?`, optional), `priority` (`int`, optional), `slotName` (`string?`, optional), `properties` (`Dictionary<string, object>?`, optional), `id` (`string?`, optional)
+        - **Returns:** `UIElement`
+    - `UIElement GetElement(string id)`
+        - **Parameters:** `id` (`string`)
+        - **Returns:** `UIElement`
+    - `bool DeleteElement(string id)`
+        - **Parameters:** `id` (`string`)
+        - **Returns:** `bool`
+    - `UIElement GetActiveElementForSlot(string slotName)`
+        - **Parameters:** `slotName` (`string`)
+        - **Returns:** `UIElement`
+    - `IEnumerable<UIElement> GetAllElements()`
+        - **Returns:** `IEnumerable<UIElement>`
+    - `bool UpdateElement(string id, Dictionary<string, object> propertiesToUpdate)`
+        - **Parameters:** `id` (`string`), `propertiesToUpdate` (`Dictionary<string, object>`)
+        - **Returns:** `bool`
+    - `bool SetAccessControl(string id, UIAccessControl newAccessControl)`
+        - **Parameters:** `id` (`string`), `newAccessControl` (`UIAccessControl`)
+        - **Returns:** `bool`
+- **Nested Class Name:** `ElementPriorityComparer` (file-scoped internal class)
+    - **Implements:** `IComparer<UIElement>`
+    - **Functions:**
+        - `int Compare(UIElement x, UIElement y)`
+            - **Parameters:** `x` (`UIElement`), `y` (`UIElement`)
+            - **Returns:** `int`
+
+### `Contract, UI & Routing/UIManager/Validation/CreateElementCommandValidator.cs`
+- **Class Name:** `CreateElementCommandValidator`
+- **Implements:** `ICommandValidator<CreateElementCommand>`
+- **Functions:**
+    - `Task Validate(CreateElementCommand command, ITraceContext traceContext)`
+        - **Parameters:** `command` (`CreateElementCommand`), `traceContext` (`ITraceContext`)
+        - **Returns:** `Task`
 
 ### Core Concepts
 The UI is a composite Single Page Application (SPA) built dynamically from UI fragments. The **`Host`** is the "SOMEBODY" that provides the static base UI framework (the shell `index.html`, main CSS, and main JS). The **`UIManager`** is the "SOMEBODY" that acts as the central service layer or "backend for the frontend," orchestrating the entire UI state and all dynamic modifications. Modules and the Host **do not** manipulate the UI directly; they send commands to the `UIManager` to request UI changes. All UI is provided by the Host and modules as raw HTML, CSS, and JS files, allowing for dynamic updates without recompilation.

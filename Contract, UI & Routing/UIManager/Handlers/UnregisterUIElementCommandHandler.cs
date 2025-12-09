@@ -1,61 +1,44 @@
-using SoftwareCenter.Core.Commands;
 using SoftwareCenter.Core.Commands.UI;
 using SoftwareCenter.Core.Diagnostics;
 using SoftwareCenter.UIManager.Services;
 using System.Threading.Tasks;
+using SoftwareCenter.Core.Commands;
+using System;
 
 namespace SoftwareCenter.UIManager.Handlers
 {
     public class UnregisterUIElementCommandHandler : ICommandHandler<UnregisterUIElementCommand>
     {
         private readonly UIStateService _uiStateService;
-        private readonly IUIHubNotifier _hubNotifier;
 
-        public UnregisterUIElementCommandHandler(UIStateService uiStateService, IUIHubNotifier hubNotifier)
+        public UnregisterUIElementCommandHandler(UIStateService uiStateService)
         {
             _uiStateService = uiStateService;
-            _hubNotifier = hubNotifier;
         }
 
-        public async Task Handle(UnregisterUIElementCommand command, TraceContext traceContext)
+        public Task Handle(UnregisterUIElementCommand command, ITraceContext traceContext)
         {
-            var fragmentToRemove = _uiStateService.GetFragment(command.ElementId);
-            if (fragmentToRemove == null)
+            var element = _uiStateService.GetElement(command.ElementId);
+            if (element == null)
             {
-                return;
+                return Task.CompletedTask; // Or handle error: element not found
+            }
+
+            if (!traceContext.Items.TryGetValue("ModuleId", out var ownerModuleIdObj) || !(ownerModuleIdObj is string ownerModuleId))
+            {
+                throw new InvalidOperationException("Could not determine the owner module from the trace context.");
             }
 
             // Basic ownership check
-            if (fragmentToRemove.OwnerId != traceContext.ModuleId)
+            if (element.OwnerModuleId != ownerModuleId)
             {
-                return;
+                // Or handle error: not the owner
+                return Task.CompletedTask;
             }
 
-            var slotName = fragmentToRemove.SlotName;
-            var wasActive = _uiStateService.GetActiveFragmentForSlot(slotName)?.Id == fragmentToRemove.Id;
+            _uiStateService.DeleteElement(command.ElementId);
 
-            if (_uiStateService.TryRemoveFragment(command.ElementId))
-            {
-                // If the removed fragment was the active one, we need to notify the client.
-                if (wasActive)
-                {
-                    // First, notify of the removal.
-                    await _hubNotifier.ElementRemoved(new { ElementId = command.ElementId });
-
-                    // Then, check for a new fragment to take its place.
-                    var newActiveFragment = _uiStateService.GetActiveFragmentForSlot(slotName);
-                    if (newActiveFragment != null)
-                    {
-                        // A new fragment is now the highest priority, tell the client to add it.
-                        await _hubNotifier.ElementAdded(new
-                        {
-                            ElementId = newActiveFragment.Id,
-                            ParentId = newActiveFragment.Element.ParentId, // Assuming this is stored
-                            HtmlContent = newActiveFragment.HtmlContent,
-                        });
-                    }
-                }
-            }
+            return Task.CompletedTask;
         }
     }
 }

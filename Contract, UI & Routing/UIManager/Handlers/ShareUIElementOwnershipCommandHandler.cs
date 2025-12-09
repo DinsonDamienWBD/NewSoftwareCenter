@@ -1,11 +1,17 @@
-using SoftwareCenter.Core.Commands;
 using SoftwareCenter.Core.Commands.UI;
 using SoftwareCenter.Core.Diagnostics;
 using SoftwareCenter.UIManager.Services;
 using System.Threading.Tasks;
+using SoftwareCenter.Core.Commands;
+using SoftwareCenter.Core.UI;
+using System;
+using System.Linq;
 
 namespace SoftwareCenter.UIManager.Handlers
 {
+    /// <summary>
+    /// Handles the command to share ownership or grant permissions for a UI element to another module.
+    /// </summary>
     public class ShareUIElementOwnershipCommandHandler : ICommandHandler<ShareUIElementOwnershipCommand>
     {
         private readonly UIStateService _uiStateService;
@@ -15,35 +21,38 @@ namespace SoftwareCenter.UIManager.Handlers
             _uiStateService = uiStateService;
         }
 
-        public Task Handle(ShareUIElementOwnershipCommand command, TraceContext traceContext)
+        public Task Handle(ShareUIElementOwnershipCommand command, ITraceContext traceContext)
         {
-            var fragment = _uiStateService.GetFragment(command.ElementId);
-            if (fragment == null)
+            var element = _uiStateService.GetElement(command.ElementId);
+            if (element == null)
             {
+                // Element not found
                 return Task.CompletedTask;
             }
 
-            // Only the owner can share.
-            if (fragment.OwnerId != traceContext.ModuleId)
+            if (!traceContext.Items.TryGetValue("ModuleId", out var ownerModuleIdObj) || !(ownerModuleIdObj is string ownerModuleId))
             {
+                throw new InvalidOperationException("Could not determine the owner module from the trace context.");
+            }
+
+            // Only the current owner can share or modify ownership.
+            if (element.AccessControl.OwnerId != ownerModuleId)
+            {
+                // Not the owner, or no sufficient permissions
                 return Task.CompletedTask;
             }
 
-            // This is not ideal as it modifies a 'supposedly' immutable object.
-            // A better implementation would involve a more structured permissions model.
-            // For now, we'll just update the property on the existing element.
-            // To do this properly, UIElement should probably be a class or we need a different state update mechanism.
+            // Create a copy of the existing access control and update it.
+            var newAccessControl = new UIAccessControl
+            {
+                OwnerId = element.AccessControl.OwnerId,
+                SharedAccess = element.AccessControl.SharedAccess.ToDictionary(entry => entry.Key, entry => entry.Value) // Deep copy
+            };
 
-            var currentElement = fragment.Element;
-            var newPermissions = currentElement.Permissions | command.Permissions; // Add new permissions
+            // Add or update the target module's permissions.
+            newAccessControl.SharedAccess[command.TargetModuleId] = command.Permissions;
 
-            // Since UIElement is a record, we create a new one.
-            var updatedElement = currentElement with { Permissions = newPermissions };
-
-            // And we update the fragment.
-            fragment.Element = updatedElement;
-
-            // Note: This change is only in memory. We are not notifying the client as ownership is a backend concept.
+            _uiStateService.SetAccessControl(command.ElementId, newAccessControl);
 
             return Task.CompletedTask;
         }

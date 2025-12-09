@@ -1,101 +1,155 @@
-using SoftwareCenter.Core.Data.UI;
-using SoftwareCenter.Core.Routing;
+using SoftwareCenter.Core.Events;
+using SoftwareCenter.Core.UI;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System;
 
 namespace SoftwareCenter.UIManager.Services
 {
     /// <summary>
     /// Manages the in-memory state of all UI elements. This service is the single source of truth for the UI's structure.
     /// It handles the registration, retrieval, and removal of UI elements, and manages priority-based overrides.
+    /// NOTE: This file should be renamed to UIManagerService.cs
     /// </summary>
     public class UIStateService
     {
-        // Main dictionary storing all registered UI fragments, keyed by their unique ID.
-        private readonly ConcurrentDictionary<string, UIFragment> _fragments = new();
+        private readonly IEventBus _eventBus;
+        private readonly ConcurrentDictionary<string, UIElement> _elements = new();
+        private readonly ConcurrentDictionary<string, SortedSet<UIElement>> _elementSlots = new();
 
-        // A lookup to track which fragments are associated with a given "slot" or parent.
-        // This allows for efficient priority-based lookups. The string key is a conceptual "slot" name.
-        private readonly ConcurrentDictionary<string, SortedSet<UIFragment>> _fragmentSlots = new();
-
-
-        public bool TryAddFragment(UIFragment fragment)
+        public UIStateService(IEventBus eventBus)
         {
-            if (!_fragments.TryAdd(fragment.Id, fragment))
+            _eventBus = eventBus;
+        }
+
+        /// <summary>
+        /// Creates a new UI element, stores it, and publishes an event.
+        /// </summary>
+        public UIElement CreateElement(string ownerId, ElementType elementType, string parentId, string htmlContent, string? cssContent = null, string? jsContent = null, int priority = 0, string? slotName = null, Dictionary<string, object>? properties = null, string? id = null)
+        {
+            var element = new UIElement
+            {
+                Id = id ?? Guid.NewGuid().ToString("N"),
+                OwnerModuleId = ownerId,
+                ElementType = elementType,
+                ParentId = parentId,
+                Priority = priority,
+                SlotName = slotName,
+                Properties = properties ?? new Dictionary<string, object>()
+            };
+
+            if (!_elements.TryAdd(element.Id, element))
+            {
+                // Handle error: could not add element
+                return null;
+            }
+
+            if (!string.IsNullOrEmpty(element.SlotName))
+            {
+                var slot = _elementSlots.GetOrAdd(element.SlotName, _ => new SortedSet<UIElement>(new ElementPriorityComparer()));
+                slot.Add(element);
+            }
+
+            _eventBus.Publish(new UIElementRegisteredEvent(element, htmlContent, cssContent, jsContent));
+
+            return element;
+        }
+
+        public UIElement GetElement(string id)
+        {
+            _elements.TryGetValue(id, out var element);
+            return element;
+        }
+
+        /// <summary>
+        /// Removes an element and publishes an event.
+        /// </summary>
+        public bool DeleteElement(string id)
+        {
+            if (!_elements.TryRemove(id, out var element))
             {
                 return false;
             }
 
-            // If the fragment has a slot name, add it to the priority-sorted set for that slot.
-            if (!string.IsNullOrEmpty(fragment.SlotName))
+            if (!string.IsNullOrEmpty(element.SlotName) && _elementSlots.TryGetValue(element.SlotName, out var slot))
             {
-                var slot = _fragmentSlots.GetOrAdd(fragment.SlotName, _ => new SortedSet<UIFragment>(new FragmentPriorityComparer()));
-                slot.Add(fragment);
-            }
-            return true;
-        }
-
-        public UIFragment GetFragment(string id)
-        {
-            _fragments.TryGetValue(id, out var fragment);
-            return fragment;
-        }
-
-        public bool TryRemoveFragment(string id)
-        {
-            if (!_fragments.TryRemove(id, out var fragment))
-            {
-                return false;
+                slot.Remove(element);
             }
 
-            // Also remove from the priority slot if it exists there.
-            if (!string.IsNullOrEmpty(fragment.SlotName) && _fragmentSlots.TryGetValue(fragment.SlotName, out var slot))
-            {
-                slot.Remove(fragment);
-            }
+            _eventBus.Publish(new UIElementUnregisteredEvent(id));
             return true;
         }
 
         /// <summary>
-        /// Gets the highest-priority, active fragment for a given slot name.
+        /// Gets the highest-priority, active element for a given slot name.
         /// </summary>
-        /// <param name="slotName">The name of the slot (e.g., "SourceManagement.MainView").</param>
-        /// <returns>The highest priority UIFragment, or null if none are found.</returns>
-        public UIFragment GetActiveFragmentForSlot(string slotName)
+        public UIElement GetActiveElementForSlot(string slotName)
         {
-            if (_fragmentSlots.TryGetValue(slotName, out var slot))
+            if (_elementSlots.TryGetValue(slotName, out var slot))
             {
-                // The SortedSet ensures the first element is the one with the highest priority.
                 return slot.FirstOrDefault();
             }
             return null;
         }
 
-        public IEnumerable<UIFragment> GetAllFragments()
+        public IEnumerable<UIElement> GetAllElements()
         {
-            return _fragments.Values;
+            return _elements.Values;
+        }
+
+        /// <summary>
+        /// Updates an element's properties and publishes an event.
+        /// </summary>
+        public bool UpdateElement(string id, Dictionary<string, object> propertiesToUpdate)
+        {
+            if (!_elements.TryGetValue(id, out var element))
+            {
+                return false;
+            }
+
+            foreach (var prop in propertiesToUpdate)
+            {
+                element.Properties[prop.Key] = prop.Value;
+            }
+
+            _eventBus.Publish(new UIElementUpdatedEvent(id, propertiesToUpdate));
+            return true;
+        }
+
+        /// <summary>
+        /// Sets the access control for a UI element and publishes an event.
+        /// </summary>
+        public bool SetAccessControl(string id, UIAccessControl newAccessControl)
+        {
+            if (!_elements.TryGetValue(id, out var element))
+            {
+                return false;
+            }
+
+            element.AccessControl = newAccessControl;
+
+            _eventBus.Publish(new UIOwnershipChangedEvent(id, newAccessControl));
+            return true;
         }
     }
 
     /// <summary>
-    /// Comparer to sort UIFragments by priority, with higher priority values coming first.
+    /// Comparer to sort UIElements by priority, with higher priority values coming first.
     /// </summary>
-    file class FragmentPriorityComparer : IComparer<UIFragment>
+    file class ElementPriorityComparer : IComparer<UIElement>
     {
-        public int Compare(UIFragment x, UIFragment y)
+        public int Compare(UIElement x, UIElement y)
         {
             if (x == null || y == null) return 0;
 
-            // Higher priority enum values should come first.
             int priorityComparison = y.Priority.CompareTo(x.Priority);
             if (priorityComparison != 0)
             {
                 return priorityComparison;
             }
-
-            // As a tie-breaker, use the ID.
-            return string.Compare(x.Id, y.Id, System.StringComparison.Ordinal);
+            
+            return string.Compare(x.Id, y.Id, StringComparison.Ordinal);
         }
     }
 }

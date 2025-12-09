@@ -1,70 +1,49 @@
-using SoftwareCenter.Core.Commands;
 using SoftwareCenter.Core.Commands.UI;
 using SoftwareCenter.Core.Diagnostics;
 using SoftwareCenter.UIManager.Services;
 using System.Threading.Tasks;
+using SoftwareCenter.Core.Commands;
+using System;
+using System.Collections.Generic;
 
 namespace SoftwareCenter.UIManager.Handlers
 {
+    /// <summary>
+    /// Handles the command to update an existing UI element's properties.
+    /// </summary>
     public class UpdateUIElementCommandHandler : ICommandHandler<UpdateUIElementCommand>
     {
         private readonly UIStateService _uiStateService;
-        private readonly IUIHubNotifier _hubNotifier;
 
-        public UpdateUIElementCommandHandler(UIStateService uiStateService, IUIHubNotifier hubNotifier)
+        public UpdateUIElementCommandHandler(UIStateService uiStateService)
         {
             _uiStateService = uiStateService;
-            _hubNotifier = hubNotifier;
         }
 
-        public async Task Handle(UpdateUIElementCommand command, TraceContext traceContext)
+        public Task Handle(UpdateUIElementCommand command, ITraceContext traceContext)
         {
-            var fragment = _uiStateService.GetFragment(command.ElementId);
-            if (fragment == null)
+            var element = _uiStateService.GetElement(command.ElementId);
+            if (element == null)
             {
-                // Element not found
-                return;
+                // Element not found, or not owned by this module
+                return Task.CompletedTask;
+            }
+
+            if (!traceContext.Items.TryGetValue("ModuleId", out var ownerModuleIdObj) || !(ownerModuleIdObj is string ownerModuleId))
+            {
+                throw new InvalidOperationException("Could not determine the owner module from the trace context.");
             }
 
             // Basic ownership check
-            if (fragment.OwnerId != traceContext.ModuleId)
+            if (element.OwnerModuleId != ownerModuleId)
             {
-                // Or check for shared permissions
-                // For now, only the owner can update.
-                return; 
+                // Not the owner, or no sufficient permissions
+                return Task.CompletedTask;
             }
 
-            if(command.HtmlContent != null)
-            {
-                fragment.HtmlContent = command.HtmlContent;
-            }
-            
-            if (command.AttributesToSet != null)
-            {
-                foreach (var attribute in command.AttributesToSet)
-                {
-                    fragment.Attributes[attribute.Key] = attribute.Value;
-                }
-            }
-            
-            if (command.AttributesToRemove != null)
-            {
-                foreach (var attributeName in command.AttributesToRemove)
-                {
-                    fragment.Attributes.Remove(attributeName);
-                }
-            }
-            
-            // We only notify if the updated fragment is the currently active one for its slot.
-            var activeFragment = _uiStateService.GetActiveFragmentForSlot(fragment.SlotName);
-            if (activeFragment?.Id == fragment.Id)
-            {
-                await _hubNotifier.ElementUpdated(new
-                {
-                    ElementId = fragment.Id,
-                    HtmlContent = fragment.HtmlContent,
-                    Attributes = fragment.Attributes
-                });
-            }        }
+            _uiStateService.UpdateElement(command.ElementId, command.UpdatedProperties);
+
+            return Task.CompletedTask;
+        }
     }
 }

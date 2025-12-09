@@ -28,6 +28,11 @@ namespace SoftwareCenter.Core.UI
         /// <summary>
         /// A generic container for displaying a card-like element.
         /// </summary>
-        Card
+        Card,
+
+        /// <summary>
+        /// A generic UI fragment provided with direct HTML, CSS, and JS content.
+        /// </summary>
+        Fragment
     }
 }

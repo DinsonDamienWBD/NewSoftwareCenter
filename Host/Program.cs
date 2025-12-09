@@ -23,9 +23,10 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddKernel();
 builder.Services.AddUIManager();
 builder.Services.AddSignalR(); 
+builder.Services.AddSingleton<ITemplateService, HostTemplateService>();
 
 // Register the notifier service that allows UIManager to talk to the hub
-builder.Services.AddTransient<IUIHubNotifier, UIHubNotifier>();
+
 
 var app = builder.Build();
 
@@ -103,27 +104,44 @@ if (Directory.Exists(modulesPath))
 
 app.MapHub<UIHub>("/uihub");
 
-// --- Initialize Host UI ---
-using (var scope = app.Services.CreateScope())
-{
-    var commandBus = scope.ServiceProvider.GetRequiredService<ICommandBus>();
-    var hostTraceContext = new TraceContext { Items = { ["ModuleId"] = "Host" } };
+    // Initialize Host UI
+    using (var scope = app.Services.CreateScope())
+    {
+        var commandBus = scope.ServiceProvider.GetRequiredService<ICommandBus>();
+        var hostTraceContext = new TraceContext { Items = { ["ModuleId"] = "Host" } };
 
-    // Register Nav buttons and content containers for default Host services
-    await commandBus.Dispatch(
-        new RegisterUIFragmentCommand(
-            "<button id=\"host-apps-nav-button\" class=\"nav-button\">Applications</button>",
-            parentId: "nav-zone",
-            priority: HandlerPriority.Low),
-        hostTraceContext);
-        
-    await commandBus.Dispatch(
-        new RegisterUIFragmentCommand(
-            "<div id=\"host-apps-content\" class=\"content-container\"><h1>Applications</h1></div>",
-            parentId: "content-zone",
-            priority: HandlerPriority.Low),
-        hostTraceContext);
-}
+        // 1. Create Nav Button for "Applications"
+        var navButtonId = await commandBus.Dispatch(
+            new RequestUITemplateCommand(
+                templateType: "nav-button",
+                parentId: "nav-zone",
+                initialProperties: new Dictionary<string, object>
+                {
+                    { "Label", "Applications" },
+                    { "TargetContainerId", "host-apps-content" },
+                    { "Priority", -10 }
+                }),
+            hostTraceContext);
 
+        // 2. Create Content Container for "Applications"
+        var contentContainerId = await commandBus.Dispatch(
+            new CreateUIElementCommand(
+                parentId: "content-zone",
+                elementType: Core.UI.ElementType.Panel.ToString(), // Use Panel for a generic container
+                initialProperties: new Dictionary<string, object>
+                {
+                    { "Id", "host-apps-content" }, // Explicitly set ID for easy targeting
+                    { "Priority", -10 }
+                }),
+            hostTraceContext);
+
+        // 3. Inject default HTML into the "Applications" content container
+        await commandBus.Dispatch(
+            new RegisterUIFragmentCommand(
+                htmlContent: "<h1>Applications</h1>",
+                parentId: contentContainerId, // Use the ID of the newly created container
+                priority: -10),
+            hostTraceContext);
+    }
 
 app.Run();
