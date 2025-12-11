@@ -131,6 +131,7 @@ namespace SoftwareCenter.Kernel.Services
 
                     var moduleInfo = new ModuleInfo(moduleId, assembly, loadContext);
                     _loadedModules.Add(moduleId, moduleInfo);
+                    DiscoverAndRegisterHandlers(moduleInfo);
                     
                     var message = $"Module '{moduleId}' discovered and services configured.";
                     _errorHandler.HandleError(new InvalidOperationException(message), new TraceContext(), message, isCritical: false);

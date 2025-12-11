@@ -36,7 +36,7 @@ namespace SoftwareCenter.Kernel.Services
             var capabilities = new List<CapabilityDescriptor>();
 
             // Discover all handlers (Commands, Events, Jobs)
-            var handlers = _moduleLoader.GetDiscoveredHandlers();
+            var handlers = _moduleLoader.GetLoadedModules().SelectMany(m => m.Handlers);
             foreach (var handlerInfo in handlers)
             {
                 var assembly = handlerInfo.ContractType.Assembly;
@@ -99,40 +99,40 @@ namespace SoftwareCenter.Kernel.Services
             }
 
             // Discover API Endpoints
-            var apiEndpoints = _moduleLoader.GetDiscoveredApiEndpoints();
-            foreach (var apiEndpoint in apiEndpoints)
-            {
-                var assembly = apiEndpoint.GetType().Assembly;
-                if (!_xmlParsers.ContainsKey(assembly))
-                {
-                    XmlDocumentationParser.TryCreateForAssembly(assembly, out var parser);
-                    _xmlParsers[assembly] = parser;
-                }
-                var xmlParser = _xmlParsers[assembly];
-                var description = xmlParser?.GetTypeSummary(apiEndpoint.GetType()) ?? apiEndpoint.Description ?? string.Empty; // Use explicit description if available
-                var status = !string.IsNullOrEmpty(description) ? CapabilityStatus.Available : CapabilityStatus.MetadataMissing;
+            //var apiEndpoints = _moduleLoader.GetDiscoveredApiEndpoints();
+            //foreach (var apiEndpoint in apiEndpoints)
+            //{
+            //    var assembly = apiEndpoint.GetType().Assembly;
+            //    if (!_xmlParsers.ContainsKey(assembly))
+            //    {
+            //        XmlDocumentationParser.TryCreateForAssembly(assembly, out var parser);
+            //        _xmlParsers[assembly] = parser;
+            //    }
+            //    var xmlParser = _xmlParsers[assembly];
+            //    var description = xmlParser?.GetTypeSummary(apiEndpoint.GetType()) ?? apiEndpoint.Description ?? string.Empty; // Use explicit description if available
+            //    var status = !string.IsNullOrEmpty(description) ? CapabilityStatus.Available : CapabilityStatus.MetadataMissing;
 
-                // API endpoints might have method parameters, but for now, we'll just describe the endpoint itself.
-                var parameters = new List<ParameterDescriptor>
-                {
-                    new ParameterDescriptor("HttpMethod", typeof(string).FullName, "The HTTP method (GET, POST, etc.)"),
-                    new ParameterDescriptor("Path", typeof(string).FullName, "The API endpoint path")
-                };
+            //    // API endpoints might have method parameters, but for now, we'll just describe the endpoint itself.
+            //    var parameters = new List<ParameterDescriptor>
+            //    {
+            //        new ParameterDescriptor("HttpMethod", typeof(string).FullName, "The HTTP method (GET, POST, etc.)"),
+            //        new ParameterDescriptor("Path", typeof(string).FullName, "The API endpoint path")
+            //    };
 
 
-                var descriptor = new CapabilityDescriptor(
-                    name: $"{apiEndpoint.HttpMethod} {apiEndpoint.Path}",
-                    description: description,
-                    type: CapabilityType.ApiEndpoint,
-                    status: status,
-                    priority: 0, // API Endpoints don't currently have a priority attribute
-                    contractTypeName: typeof(IApiEndpoint).FullName,
-                    handlerTypeName: apiEndpoint.GetType().FullName,
-                    owningModuleId: apiEndpoint.OwningModuleId,
-                    parameters: parameters
-                );
-                capabilities.Add(descriptor);
-            }
+            //    var descriptor = new CapabilityDescriptor(
+            //        name: $"{apiEndpoint.HttpMethod} {apiEndpoint.Path}",
+            //        description: description,
+            //        type: CapabilityType.ApiEndpoint,
+            //        status: status,
+            //        priority: 0, // API Endpoints don't currently have a priority attribute
+            //        contractTypeName: typeof(IApiEndpoint).FullName,
+            //        handlerTypeName: apiEndpoint.GetType().FullName,
+            //        owningModuleId: apiEndpoint.OwningModuleId,
+            //        parameters: parameters
+            //    );
+            //    capabilities.Add(descriptor);
+            //}
 
             return new RegistryManifest(capabilities);
         }
