@@ -18,7 +18,7 @@ namespace SoftwareCenter.UIManager.Handlers
 
         public Task Handle(SetElementPropertiesCommand command, ITraceContext traceContext)
         {
-            var element = _uiStateService.GetElement(command.ElementId);
+            var element = _uiStateService.GetElement(command.ElementId.ToString());
             if (element == null)
             {
                 throw new InvalidOperationException($"Element with ID {command.ElementId} not found.");
@@ -34,7 +34,7 @@ namespace SoftwareCenter.UIManager.Handlers
                 throw new InvalidOperationException($"Module '{ownerModuleId}' does not have ownership of element '{element.Id}'.");
             }
 
-            _uiStateService.UpdateElement(command.ElementId, command.PropertiesToSet);
+            _uiStateService.UpdateElement(command.ElementId.ToString(), command.PropertiesToSet);
 
             return Task.CompletedTask;
         }
