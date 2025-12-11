@@ -1,14 +1,14 @@
 <Project>
     <PropertyGroup>
         <!-- 1. Define the external artifacts path, sibling to the source code folder -->
-        <ArtifactsBasePath>$(MSBuildThisFileDirectory)..\SoftwareCenter.Artifacts\</ArtifactsBasePath>
+        <ArtifactsBasePath>C:\Temp\SoftwareCenter.Artifacts\</ArtifactsBasePath>
         
         <!-- 2. Define the base path for bin and obj, including configuration and target framework -->
         <BaseOutputPath>$(ArtifactsBasePath)bin\$(Configuration)\net8.0\</BaseOutputPath>
         <BaseIntermediateOutputPath>$(ArtifactsBasePath)obj\$(Configuration)\net8.0\</BaseIntermediateOutputPath>
 
         <!-- 3. Define the main application output directory name (your "folder A") -->
-        <AppOutputDirName>App</AppOutputDirName>
+        <AppOutputDirName>Host</AppOutputDirName>
         <AppOutputPath>$(BaseOutputPath)$(AppOutputDirName)\</AppOutputPath>
     </PropertyGroup>
 

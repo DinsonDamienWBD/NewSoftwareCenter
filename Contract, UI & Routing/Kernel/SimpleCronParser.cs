@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Linq;
 
-namespace SoftwareCenter.Kernel.Services
+namespace SoftwareCenter.Kernel
 {
     /// <summary>
     /// A lightweight parser for standard 5-part CRON expressions.

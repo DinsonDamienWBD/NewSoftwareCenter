@@ -29,9 +29,9 @@ namespace SoftwareCenter.Kernel.Models
 
     public enum ModuleState
     {
-        Discovered,
-        Loading,
         Loaded,
+        Initializing,
+        Initialized,
         Unloading,
         Unloaded,
         Error

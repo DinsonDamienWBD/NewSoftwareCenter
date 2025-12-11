@@ -1,17 +1,17 @@
 ﻿using System;
-﻿using System.Collections.Generic;
-﻿using System.Linq;
-﻿using System.Reflection;
-﻿using System.Threading;
-﻿using System.Threading.Tasks;
-﻿using Microsoft.Extensions.DependencyInjection;
-﻿using Microsoft.Extensions.Hosting;
-﻿using Microsoft.Extensions.Logging;
-﻿using SoftwareCenter.Core.Diagnostics;
-﻿using SoftwareCenter.Core.Jobs;
-﻿using SoftwareCenter.Core.Errors; // Added for IErrorHandler
-﻿
-﻿namespace SoftwareCenter.Kernel.Services
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
+using SoftwareCenter.Core.Diagnostics;
+using SoftwareCenter.Core.Jobs;
+using SoftwareCenter.Core.Errors;
+
+namespace SoftwareCenter.Kernel.Services
 ﻿{
 ﻿    public class JobSchedulerService : BackgroundService
 ﻿    {
@@ -153,20 +153,18 @@
 ﻿        {
 ﻿            runner.MarkRunning();
 ﻿
-﻿            using (var scope = _serviceProvider.CreateScope())
-﻿            {
-﻿                var traceId = Guid.NewGuid();
-﻿                var traceContext = new TraceContext { TraceId = traceId };
-﻿
-﻿                try
-﻿                {
-﻿                    _logger.LogInformation($"[Scheduler] Starting job '{runner.JobType.Name}' (TraceId: {traceId})");
-﻿
-﻿                    // Dynamic resolution of IJobHandler<TJob>
-﻿                    var handlerType = typeof(IJobHandler<>).MakeGenericType(runner.JobType);
-﻿                    var handler = scope.ServiceProvider.GetService(handlerType);
-﻿
-﻿                    if (handler != null)
+﻿                        using (var scope = _serviceProvider.CreateScope())
+﻿                        {
+﻿                            var traceContext = new TraceContext();
+﻿            
+﻿                            try
+﻿                            {
+﻿                                _logger.LogInformation($"[Scheduler] Starting job '{runner.JobType.Name}' (TraceId: {traceContext.TraceId})");
+﻿            
+﻿                                // Dynamic resolution of IJobHandler<TJob>
+﻿                                var handlerType = typeof(IJobHandler<>).MakeGenericType(runner.JobType);
+﻿                                var handler = scope.ServiceProvider.GetService(handlerType);
+﻿            ﻿                    if (handler != null)
 ﻿                    {
 ﻿                        // Invoke ExecuteAsync(TJob job, ITraceContext traceContext)
 ﻿                        var method = handlerType.GetMethod("ExecuteAsync");

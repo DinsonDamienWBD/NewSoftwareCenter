@@ -162,7 +162,6 @@ namespace SoftwareCenter.Kernel.Services
                         moduleInfo.State = ModuleState.Initializing;
 
                         await module.Initialize(serviceProvider);
-                        DiscoverAndRegisterHandlers(moduleInfo);
 
                         moduleInfo.State = ModuleState.Initialized;
                         var message = $"Module '{module.Id}' initialized successfully.";

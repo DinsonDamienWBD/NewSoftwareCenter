@@ -13,7 +13,7 @@ namespace SoftwareCenter.Core.Commands
     /// A command is a request to perform an action and change the system state.
     /// </summary>
     /// <typeparam name="TResult">The type of the result returned by the command handler.</typeparam>
-    public interface ICommand<TResult>
+    public interface ICommand<TResult> : ICommand
     {
     }
 }

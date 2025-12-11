@@ -23,8 +23,8 @@
         We include these abstractions to allow for standard DI and Logging patterns 
         without forcing a specific implementation on the Modules.
         -->
-        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.1" />
-        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
+        <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.0" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
     </ItemGroup>
 
     <!-- Added a comment to trigger re-evaluation of dependencies -->

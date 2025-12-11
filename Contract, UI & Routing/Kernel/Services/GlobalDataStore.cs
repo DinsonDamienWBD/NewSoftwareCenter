@@ -1,10 +1,10 @@
 using LiteDB;
+using SoftwareCenter.Core.Data; // Added for IDataAccessManager and AccessPermissions
 using SoftwareCenter.Core.Diagnostics;
 using SoftwareCenter.Kernel.Data;
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
-using SoftwareCenter.Core.Data; // Added for IDataAccessManager and AccessPermissions
 
 namespace SoftwareCenter.Kernel.Services
 {
@@ -52,7 +52,7 @@ namespace SoftwareCenter.Kernel.Services
             var requestingModuleId = GetInitiatingModuleId(traceContext);
             var itemMetadata = new StoreItemMetadata { OwnerModuleId = storeItem.OwnerModuleId, SharedPermissions = storeItem.SharedPermissions };
 
-            if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, AccessPermissions.Read))
+            if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, SoftwareCenter.Core.Data.AccessPermissions.Read))
             {
                 throw new UnauthorizedAccessException($"Module '{requestingModuleId}' does not have read access to key '{key}'.");
             }
@@ -60,7 +60,7 @@ namespace SoftwareCenter.Kernel.Services
             return storeItem.Value;
         }
 
-        public void Set<T>(string key, T value, string ownerModuleId, ITraceContext traceContext, AccessPermissions initialSharedPermissions = AccessPermissions.None)
+        public void Set<T>(string key, T value, string ownerModuleId, ITraceContext traceContext, SoftwareCenter.Core.Data.AccessPermissions initialSharedPermissions = SoftwareCenter.Core.Data.AccessPermissions.None)
         {
             var existingDoc = _dataCollection.FindOne(Query.EQ("Key", key));
             
@@ -72,7 +72,7 @@ namespace SoftwareCenter.Kernel.Services
                 var requestingModuleId = GetInitiatingModuleId(traceContext);
                 var itemMetadata = new StoreItemMetadata { OwnerModuleId = existingItem.OwnerModuleId, SharedPermissions = existingItem.SharedPermissions };
 
-                if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, AccessPermissions.Write))
+                if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, SoftwareCenter.Core.Data.AccessPermissions.Write))
                 {
                     throw new UnauthorizedAccessException($"Module '{requestingModuleId}' does not have write access to key '{key}'.");
                 }
@@ -96,7 +96,7 @@ namespace SoftwareCenter.Kernel.Services
                     LastUpdatedAt = DateTimeOffset.UtcNow,
                     SharedPermissions = new Dictionary<string, AccessPermissions>()
                 };
-                if (initialSharedPermissions != AccessPermissions.None)
+                if (initialSharedPermissions != SoftwareCenter.Core.Data.AccessPermissions.None)
                 {
                     // If initialSharedPermissions are provided, they are for the owner, or a special case.
                     // For simplicity, we can assume these are for future sharing, or just ensure the owner has full access.
@@ -120,7 +120,7 @@ namespace SoftwareCenter.Kernel.Services
             var requestingModuleId = GetInitiatingModuleId(traceContext);
             var itemMetadata = new StoreItemMetadata { OwnerModuleId = storeItem.OwnerModuleId, SharedPermissions = storeItem.SharedPermissions };
 
-            if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, AccessPermissions.Delete))
+            if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, SoftwareCenter.Core.Data.AccessPermissions.Delete))
             {
                 throw new UnauthorizedAccessException($"Module '{requestingModuleId}' does not have delete access to key '{key}'.");
             }
@@ -128,7 +128,7 @@ namespace SoftwareCenter.Kernel.Services
             _dataCollection.Delete(doc["_id"].AsGuid);
         }
 
-        public void ShareData(string key, string targetModuleId, AccessPermissions permissions, ITraceContext traceContext)
+        public void ShareData(string key, string targetModuleId, SoftwareCenter.Core.Data.AccessPermissions permissions, ITraceContext traceContext)
         {
             var doc = _dataCollection.FindOne(Query.EQ("Key", key));
             if (doc == null)
@@ -142,7 +142,7 @@ namespace SoftwareCenter.Kernel.Services
             var requestingModuleId = GetInitiatingModuleId(traceContext);
             var itemMetadata = new StoreItemMetadata { OwnerModuleId = storeItem.OwnerModuleId, SharedPermissions = storeItem.SharedPermissions };
 
-            if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, AccessPermissions.Share))
+            if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, SoftwareCenter.Core.Data.AccessPermissions.Share))
             {
                 throw new UnauthorizedAccessException($"Module '{requestingModuleId}' does not have permission to share key '{key}'.");
             }
@@ -165,7 +165,7 @@ namespace SoftwareCenter.Kernel.Services
             var requestingModuleId = GetInitiatingModuleId(traceContext);
             var itemMetadata = new StoreItemMetadata { OwnerModuleId = storeItem.OwnerModuleId, SharedPermissions = storeItem.SharedPermissions };
 
-            if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, AccessPermissions.TransferOwnership))
+            if (!_dataAccessManager.CheckPermission(itemMetadata, requestingModuleId, SoftwareCenter.Core.Data.AccessPermissions.TransferOwnership))
             {
                 throw new UnauthorizedAccessException($"Module '{requestingModuleId}' does not have permission to transfer ownership of key '{key}'.");
             }
