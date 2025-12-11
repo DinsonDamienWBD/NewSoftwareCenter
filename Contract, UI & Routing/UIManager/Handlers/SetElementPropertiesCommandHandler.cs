@@ -34,12 +34,7 @@ namespace SoftwareCenter.UIManager.Handlers
                 throw new InvalidOperationException($"Module '{ownerModuleId}' does not have ownership of element '{element.Id}'.");
             }
 
-            foreach (var prop in command.PropertiesToSet)
-            {
-                element.Properties[prop.Key] = prop.Value;
-            }
-
-            _uiStateService.UIStateChanged?.Invoke(); // Notify that UI state has changed
+            _uiStateService.UpdateElement(command.ElementId, command.PropertiesToSet);
 
             return Task.CompletedTask;
         }

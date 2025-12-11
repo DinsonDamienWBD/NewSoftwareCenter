@@ -151,6 +151,7 @@ using (var scope = app.Services.CreateScope())
     // 2. Create Content Container for "Applications"
     var contentContainerId = await commandBus.Dispatch(
         new CreateUIElementCommand(
+            ownerModuleId: "Host",
             parentId: "content-zone",
             elementType: Core.UI.ElementType.Panel.ToString(), // Use Panel for a generic container
             initialProperties: new Dictionary<string, object>

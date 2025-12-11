@@ -39,18 +39,19 @@ namespace SoftwareCenter.UIManager.Handlers
                 throw new ValidationException($"Invalid ElementType '{command.ElementType}'.");
             }
 
-            // The UIStateService will create the element and publish the event.
-            // We need to determine the priority and slot from the command's properties.
             command.InitialProperties.TryGetValue("Priority", out var priorityObj);
             command.InitialProperties.TryGetValue("SlotName", out var slotNameObj);
+            command.InitialProperties.TryGetValue("Id", out var idObj);
 
             var element = _uiStateService.CreateElement(
-                command.OwnerModuleId,
-                elementType,
-                command.ParentId,
-                priorityObj is int priority ? priority : 0,
-                slotNameObj as string,
-                command.InitialProperties
+                ownerId: command.OwnerModuleId,
+                elementType: elementType,
+                parentId: command.ParentId,
+                htmlContent: "",
+                priority: priorityObj is int priority ? priority : 0,
+                slotName: slotNameObj as string,
+                properties: command.InitialProperties,
+                id: idObj as string
             );
 
             if (element == null)

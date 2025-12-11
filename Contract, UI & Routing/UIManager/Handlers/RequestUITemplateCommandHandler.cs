@@ -61,10 +61,10 @@ namespace SoftwareCenter.UIManager.Handlers
 
             // The UIStateService will create the element and publish the event.
             var element = _uiStateService.CreateElement(
-                ownerModuleId,
-                (Core.UI.ElementType)Enum.Parse(typeof(Core.UI.ElementType), command.TemplateType, true), // Assuming TemplateType maps to ElementType
-                command.ParentId,
-                htmlContent,
+                ownerId: ownerModuleId,
+                elementType: (Core.UI.ElementType)Enum.Parse(typeof(Core.UI.ElementType), command.TemplateType, true), // Assuming TemplateType maps to ElementType
+                parentId: command.ParentId,
+                htmlContent: htmlContent,
                 priority: command.InitialProperties.TryGetValue("Priority", out var priorityObj) && priorityObj is int priority ? priority : 0,
                 slotName: command.InitialProperties.TryGetValue("SlotName", out var slotNameObj) ? slotNameObj as string : null,
                 properties: templateParameters, // Pass all template parameters as element properties

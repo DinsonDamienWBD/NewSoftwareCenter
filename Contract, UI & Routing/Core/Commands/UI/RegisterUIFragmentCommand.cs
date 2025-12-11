@@ -10,9 +10,9 @@ namespace SoftwareCenter.Core.Commands.UI
         public string HtmlContent { get; }
         public string? CssContent { get; }
         public string? JsContent { get; }
-        public HandlerPriority Priority { get; }
+        public int Priority { get; }
 
-        public RegisterUIFragmentCommand(string htmlContent, string? parentId = null, string? slotName = null, string? cssContent = null, string? jsContent = null, HandlerPriority priority = HandlerPriority.Normal)
+        public RegisterUIFragmentCommand(string htmlContent, string? parentId = null, string? slotName = null, string? cssContent = null, string? jsContent = null, int priority = (int)HandlerPriority.Normal)
         {
             ParentId = parentId;
             SlotName = slotName;
