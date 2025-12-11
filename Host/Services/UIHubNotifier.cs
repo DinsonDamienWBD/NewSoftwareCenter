@@ -31,7 +31,7 @@ namespace SoftwareCenter.Host.Services
         /// <summary>
         /// Handles the event for a new UI element being registered and sends it to clients.
         /// </summary>
-        public Task Handle(UIElementRegisteredEvent anEvent)
+        public Task Handle(UIElementRegisteredEvent anEvent, ITraceContext traceContext)
         {
             var payload = new UIElementInfo
             {
@@ -56,7 +56,7 @@ namespace SoftwareCenter.Host.Services
         /// <summary>
         /// Handles the event for a UI element being removed and sends it to clients.
         /// </summary>
-        public Task Handle(UIElementUnregisteredEvent anEvent)
+        public Task Handle(UIElementUnregisteredEvent anEvent, ITraceContext traceContext)
         {
             // Only the ID is needed to remove an element on the client
             var payload = new UIElementInfo { Id = anEvent.ElementId };
@@ -66,7 +66,7 @@ namespace SoftwareCenter.Host.Services
         /// <summary>
         /// Handles the event for a UI element being updated and sends it to clients.
         /// </summary>
-        public Task Handle(UIElementUpdatedEvent anEvent)
+        public Task Handle(UIElementUpdatedEvent anEvent, ITraceContext traceContext)
         {
             var payload = new UIElementInfo
             {

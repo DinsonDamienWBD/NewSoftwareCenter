@@ -1,53 +1,56 @@
-using SoftwareCenter.Core.Logging;
+using Microsoft.Extensions.Logging;
+using System;
 using System.IO;
 using System.Text;
-using System;
 
-namespace SoftwareCenter.Host.Services;
-
-/// <summary>
-/// A basic, file-based logger that serves as the default logging implementation.
-/// It has a low priority so that it can be overridden by more advanced logging modules.
-/// </summary>
-public class HostLogger : IScLogger, IDisposable
+namespace SoftwareCenter.Host.Services
 {
-    private readonly string _logFilePath;
-    private readonly StreamWriter _streamWriter;
-    private readonly object _lock = new();
-
     /// <summary>
-    /// The priority of this logger. It is set to 0 to be the default.
-    /// Higher numbers will take precedence.
+    /// A basic, file-based logger that serves as the default logging implementation.
     /// </summary>
-    public int Priority => 0;
-
-    public HostLogger(string logDirectory)
+    public class HostLogger : ILogger, IDisposable
     {
-        if (!Directory.Exists(logDirectory))
-        {
-            Directory.CreateDirectory(logDirectory);
-        }
-        _logFilePath = Path.Combine(logDirectory, $"host-log-{DateTime.Now:yyyy-MM-dd}.log");
-        _streamWriter = new StreamWriter(_logFilePath, append: true, Encoding.UTF8) { AutoFlush = true };
-    }
+        private readonly string _logFilePath;
+        private readonly StreamWriter _streamWriter;
+        private readonly object _lock = new();
 
-    /// <summary>
-    /// Logs a message and exception (if present) to a local file.
-    /// It ignores advanced payloads like the 'State' dictionary.
-    /// </summary>
-    public void Log(LogEntry entry)
-    {
-        var message = new StringBuilder();
-        message.Append($"[{DateTime.UtcNow:HH:mm:ss.fff} {entry.Level.ToString().ToUpper()}] ");
-        message.Append(entry.Message);
-
-        if (entry.Exception != null)
+        public HostLogger(string logDirectory)
         {
-            message.AppendLine().Append(entry.Exception);
+            if (!Directory.Exists(logDirectory))
+            {
+                Directory.CreateDirectory(logDirectory);
+            }
+            _logFilePath = Path.Combine(logDirectory, $"host-log-{DateTime.Now:yyyy-MM-dd}.log");
+            _streamWriter = new StreamWriter(_logFilePath, append: true, Encoding.UTF8) { AutoFlush = true };
         }
 
-        lock (_lock) { _streamWriter.WriteLine(message.ToString()); }
-    }
+        public IDisposable BeginScope<TState>(TState state) => null;
 
-    public void Dispose() => _streamWriter.Dispose();
+        public bool IsEnabled(LogLevel logLevel) => true;
+
+        public void Log<TState>(LogLevel logLevel, EventId eventId, TState state, Exception exception, Func<TState, Exception, string> formatter)
+        {
+            if (!IsEnabled(logLevel))
+            {
+                return;
+            }
+
+            var message = new StringBuilder();
+            message.Append($"[{DateTime.UtcNow:HH:mm:ss.fff} {logLevel.ToString().ToUpper()}] ");
+            message.Append(formatter(state, exception));
+
+            if (exception != null)
+            {
+                message.AppendLine().Append(exception);
+            }
+
+            lock (_lock)
+            {
+                _streamWriter.WriteLine(message.ToString());
+            }
+        }
+
+        public void Dispose() => _streamWriter.Dispose();
+    }
 }
+
