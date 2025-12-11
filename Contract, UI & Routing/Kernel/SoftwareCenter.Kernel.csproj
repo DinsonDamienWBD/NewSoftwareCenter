@@ -8,12 +8,12 @@
 	</PropertyGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\Core\SoftwareCenter.Core.csproj" />
-	</ItemGroup>
+    <ProjectReference Include="..\Core\SoftwareCenter.Core.csproj" />
+  </ItemGroup>
 
-	<ItemGroup>
-		<PackageReference Include="LiteDB" Version="5.0.21" />
-		<PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.0" />
-	</ItemGroup>
+  <ItemGroup>
+    <Compile Include="Logging\FileLogger.cs" />
+    <Compile Include="Logging\FileLoggerProvider.cs" />
+  </ItemGroup>
 
 </Project>

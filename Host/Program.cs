@@ -21,6 +21,12 @@ using System.Threading.Tasks;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// --- Logging Configuration ---
+builder.Logging.ClearProviders();
+builder.Logging.AddProvider(new SoftwareCenter.Kernel.Logging.FileLoggerProvider(Path.Combine(AppContext.BaseDirectory, "Logs", "SoftwareCenter.log")));
+builder.Logging.AddConsole();
+
+
 // --- Dependency Injection ---
 
 // Manually trigger module service configuration before building the container
