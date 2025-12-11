@@ -1,45 +1,4 @@
 <Project>
-    <PropertyGroup>
-        <!-- 1. Define the external artifacts path, sibling to the source code folder -->
-        <ArtifactsBasePath>C:\Temp\SoftwareCenter.Artifacts\</ArtifactsBasePath>
-        
-        <!-- 2. Define the base path for bin and obj, including configuration and target framework -->
-        <BaseOutputPath>$(ArtifactsBasePath)bin\$(Configuration)\net8.0\</BaseOutputPath>
-        <BaseIntermediateOutputPath>$(ArtifactsBasePath)obj\$(Configuration)\net8.0\</BaseIntermediateOutputPath>
-
-        <!-- 3. Define the main application output directory name (your "folder A") -->
-        <AppOutputDirName>Host</AppOutputDirName>
-        <AppOutputPath>$(BaseOutputPath)$(AppOutputDirName)\</AppOutputPath>
-    </PropertyGroup>
-
-    <!-- Default settings for ALL projects -->
-    <PropertyGroup>
-        <!-- All projects get their own unique intermediate folder to prevent conflicts -->
-        <IntermediateOutputPath>$(BaseIntermediateOutputPath)$(MSBuildProjectName)\</IntermediateOutputPath>
-        
-        <!-- By default, projects like Core, Kernel, and UI.Engine output to the main App directory -->
-        <OutputPath>$(AppOutputPath)</OutputPath>
-    </PropertyGroup>
-
-    <!-- Conditional Overrides -->
-
-    <!-- Rule for the Host project to also publish its wwwroot folder -->
-    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'SoftwareCenter.Host'">
-      <OutputPath>$(AppOutputPath)</OutputPath>
-      <!-- This property tells the Web SDK to publish web content (like wwwroot) to the OutputPath -->
-      <IsPublishable>true</IsPublishable>
-    </PropertyGroup>
-
-    <!-- Rule for Module projects -->
-    <PropertyGroup Condition="$(MSBuildProjectName.StartsWith('SoftwareCenter.Module'))">
-        <!-- Modules are placed in their own subdirectory under the "Modules" folder -->
-        <OutputPath>$(AppOutputPath)Modules\$(MSBuildProjectName)\</OutputPath>
-    </PropertyGroup>
-
-    <!-- Rule for other standalone executables -->
-    <PropertyGroup Condition="'$(MSBuildProjectName)' == 'SoftwareCenter.InstallerService' or '$(MSBuildProjectName)' == 'SoftwareCenter.Launcher'">
-        <!-- Place them in their own folder, sibling to the "App" directory -->
-        <OutputPath>$(BaseOutputPath)$(MSBuildProjectName)\</OutputPath>
-    </PropertyGroup>
-
+  <!-- This file is intentionally left almost empty to use default build paths. -->
+  <!-- All projects will have their own 'bin' and 'obj' folders. -->
 </Project>
