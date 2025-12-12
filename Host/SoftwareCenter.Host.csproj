@@ -3,7 +3,7 @@
   <PropertyGroup>
     <!-- OutputType as WinExe hides the console window for a desktop-like experience -->
     <OutputType>WinExe</OutputType>
-    <TargetFramework>net8.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>SoftwareCenter.Host</AssemblyName>

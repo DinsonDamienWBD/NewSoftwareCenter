@@ -33,6 +33,21 @@ The `index.html` file does not contain hardcoded IDs for zones. Instead, it uses
 * **Format:** ``
 * **Example:** ``
 
+### 2.3. Internal Addressing (Composite/Molecular Components)
+While "Atomic" components (like a single button) use a unique `data-GUID`, complex "Molecular" components (like a Rich Card with header, content, and action rows) use a relative addressing system to avoid backend overhead.
+
+* **Attribute:** `data-ui-key="[name]"`
+* **Purpose:** Identifies a specific internal sub-element relative to the component's Root GUID.
+* **Scope:** Unique only within the specific template instance.
+* **Usage Pattern:**
+    1.  **Host** defines standard keys in the template (e.g., `close-btn`, `title-label`).
+    2.  **Module** receives the Root GUID.
+    3.  **Module** locates sub-elements using scoped queries:
+        ```javascript
+        const root = document.querySelector(`[data-GUID="${rootGuid}"]`);
+        const closeBtn = root.querySelector('[data-ui-key="close-btn"]');
+        ```
+
 ---
 
 ## 3. Workflow & Composition
@@ -59,6 +74,55 @@ The `index.html` file does not contain hardcoded IDs for zones. Instead, it uses
     * Client `app.js` receives `InjectFragment` event.
     * Finds the DOM element with `data-GUID` matching the Target.
     * Appends the new HTML into the Target's `data-mount-point`.
+
+### 3.3 Workflow Logic for UIManager (Pseudocode)
+To support this, your UIManager logic simply needs a small check during the "Template Lookup" phase.
+```csharp
+// Inside UIManager.cs
+public string ProcessComponent(ComponentJson component)
+{
+    string templateHtml = "";
+
+    // 1. DETERMINE SOURCE
+    if (component.Type == "custom")
+    {
+        // Source A: The Module provided it directly
+        templateHtml = component.RawHtml;
+        
+        // Handle CSS if present
+        if (!string.IsNullOrEmpty(component.RawCss))
+        {
+            _signalRHub.SendStyleInjection(component.RawCss);
+        }
+    }
+    else
+    {
+        // Source B: Look up in Host Library
+        templateHtml = _templateLibrary.GetTemplate(component.Type);
+    }
+
+    // 2. GENERATE IDENTITY
+    string newGuid = Guid.NewGuid().ToString();
+
+    // 3. HYDRATE
+    // This logic is identical for both Standard and Custom types!
+    string processedHtml = templateHtml
+        .Replace("{{UI_COMPONENT_ID}}", newGuid)
+        .Replace("{{CONTENT}}", component.Content);
+
+    // 4. RECURSION (Process Children)
+    if (component.Children != null)
+    {
+        foreach(var child in component.Children)
+        {
+            // Find the mount point in the processed HTML and insert child
+            // (In reality, you'd likely append children to the output string 
+            // and let the client JS handle the DOM nesting, or use an HTML parser here)
+        }
+    }
+
+    return processedHtml;
+}
 
 ---
 
@@ -94,6 +158,13 @@ window.ModuleRegistry["MyModule"] = {
 ---
 
 ## 6. Template Reference LibraryContainers & LayoutTemplate IDDescriptionMount Pointstpl-divGeneric generic wrapperdefaulttpl-sectionSemantic sectiondefaulttpl-panelStyled card/paneldefaulttpl-grid12-column Grid containerdefaulttpl-rowFlex row for griddefaulttpl-col-XColumns (sizes: 12, 6, 4, 3, auto)defaulttpl-detailsExpandable accordion itemdefaultForm InputsTemplate IDDescriptionNotestpl-input-textStandard text boxtpl-input-numberNumeric inputtpl-input-dateDate pickertpl-checkbox2-state CheckboxWrapped in labeltpl-toggleSwitch-style toggleCheckbox hacktpl-selectDropdownOptions injected via JStpl-input-groupInput + Button wrapperMerged bordersInteractive ElementsTemplate IDDescriptionNotestpl-buttonStandard buttontpl-button-groupSegmented buttonsMerged borderstpl-tree-folderExplorer tree parentUses <details>tpl-tree-itemExplorer tree leaftpl-tabsTab containerHas tab-headers & tab-panelstpl-dialogModal dialogNative <dialog>Feedback & VisualsTemplate IDDescriptionNotestpl-progressProgress bartpl-spinnerLoading spinnerCSS animationtpl-toastNotification popupFixed positiontpl-badgeSmall status pilltpl-skeleton-textLoading placeholderPulse animation
+
+### Composite / Rich Templates
+These are "Molecular" structures containing multiple pre-configured controls addressable via `data-ui-key`.
+
+| Template ID | Description | Internal Keys (`data-ui-key`) | Mount Points |
+| :--- | :--- | :--- | :--- |
+| `tpl-card-rich` | 4-Row Source Management Card | `header-row`, `status-indicator`, `title-label`, `close-btn`<br>`content-body` (Scrollable)<br>`link-primary`, `label-secondary`<br>`action-row`, `action-btn-1`...`4`, `action-toggle`<br>`progress-row`, `progress-bar` | `default` (Inside content body) |
 
 ---
 
@@ -154,54 +225,63 @@ While the Host provides a standard library, Modules may need proprietary UI elem
     <canvas id="my-chart"></canvas>
 </div>  
 
-### 3. Workflow Logic for UIManager (Pseudocode)
+---
 
-To support this, your UIManager logic simply needs a small check during the "Template Lookup" phase.
+## 10. Composite Template Strategy (The "Rich" Pattern)
+This strategy allows Modules to request complex, multi-control widgets as a single unit, "hydrating" only the parts they need.
 
-```csharp
-// Inside UIManager.cs
+### 10.1. The Structure (Host Responsibility)
+The Host provides a template with a fixed layout and standard `data-ui-key` attributes on interactive elements.
 
-public string ProcessComponent(ComponentJson component)
+**Example: `tpl-card-rich` Structure**
+1.  **Row 1 (Header):** Status Dot, Title, Close Button.
+2.  **Row 2 (Body):** Scrollable area, Primary Link, Subtext.
+3.  **Row 3 (Actions):** 4 Generic Icon Buttons, 1 Toggle Switch.
+4.  **Row 4 (Footer):** Progress Bar.
+
+### 10.2. The Logic (Module Responsibility)
+Modules request the template by Type, then use Scoped JS to configure it.
+
+**Step 1: The Manifest Request**
+```json
 {
-    string templateHtml = "";
-
-    // 1. DETERMINE SOURCE
-    if (component.Type == "custom")
-    {
-        // Source A: The Module provided it directly
-        templateHtml = component.RawHtml;
-        
-        // Handle CSS if present
-        if (!string.IsNullOrEmpty(component.RawCss))
-        {
-            _signalRHub.SendStyleInjection(component.RawCss);
-        }
-    }
-    else
-    {
-        // Source B: Look up in Host Library
-        templateHtml = _templateLibrary.GetTemplate(component.Type);
-    }
-
-    // 2. GENERATE IDENTITY
-    string newGuid = Guid.NewGuid().ToString();
-
-    // 3. HYDRATE
-    // This logic is identical for both Standard and Custom types!
-    string processedHtml = templateHtml
-        .Replace("{{UI_COMPONENT_ID}}", newGuid)
-        .Replace("{{CONTENT}}", component.Content);
-
-    // 4. RECURSION (Process Children)
-    if (component.Children != null)
-    {
-        foreach(var child in component.Children)
-        {
-            // Find the mount point in the processed HTML and insert child
-            // (In reality, you'd likely append children to the output string 
-            // and let the client JS handle the DOM nesting, or use an HTML parser here)
-        }
-    }
-
-    return processedHtml;
+  "operation": "inject",
+  "targetGuid": "...", 
+  "mountPoint": "default",
+  "rootComponent": {
+    "type": "tpl-card-rich",
+    "content": "Server Name (Default Title)" 
+  }
 }
+
+**Step 2: The Scoped Controller Modules must perform "Cleanup & Wiring" in their Init function.
+Select the Root by GUID.
+Select sub-elements by Key.
+Remove unused placeholders (e.g., if only 2 actions are needed, remove action-btn-3 and 4).
+Configure text/icons/styles.
+Wire events.
+```JavaScript
+window.ModuleRegistry["MyModule"] = {
+    init: function(cardGuid) {
+        const root = document.querySelector(`[data-GUID="${cardGuid}"]`);
+
+        // 1. Configure Title & Progress
+        root.querySelector('[data-ui-key="title-label"]').textContent = "Main Database";
+        root.querySelector('[data-ui-key="progress-bar"]').style.width = "45%";
+
+        // 2. Wire "Close" Button
+        root.querySelector('[data-ui-key="close-btn"]').addEventListener('click', () => {
+             // Dispatch remove command...
+        });
+
+        // 3. Customize Action Buttons
+        const editBtn = root.querySelector('[data-ui-key="action-btn-1"]');
+        editBtn.innerHTML = "✎"; // Set Icon
+        editBtn.addEventListener('click', handleEdit);
+
+        // 4. Cleanup Unused Slots
+        // (Example: We don't need buttons 3 and 4)
+        root.querySelector('[data-ui-key="action-btn-3"]').remove();
+        root.querySelector('[data-ui-key="action-btn-4"]').remove();
+    }
+};

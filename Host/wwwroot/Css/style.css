@@ -1015,3 +1015,137 @@ html, body {
         opacity: 0.6;
     }
 }
+
+/* --- COMPOSITE: RICH CARD --- */
+
+.std-card-rich {
+    display: flex;
+    flex-direction: column;
+    padding: 0; /* Override default card padding to let rows touch edges */
+    height: 180px; /* Fixed height for consistency, or use min-height */
+    overflow: hidden;
+    position: relative;
+    background-color: var(--secondary-bg-color);
+}
+
+/* ROW 1: Header */
+.std-card-rich-header {
+    display: flex;
+    align-items: center;
+    padding: 10px 15px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: rgba(255, 255, 255, 0.03);
+}
+
+.std-card-rich-status {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: #2ecc71; /* Default Green */
+    margin-right: 10px;
+    box-shadow: 0 0 5px rgba(46, 204, 113, 0.5);
+}
+
+.std-card-rich-title {
+    flex-grow: 1;
+    font-weight: bold;
+    font-size: 1.1em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ROW 2: Content */
+.std-card-rich-body {
+    flex-grow: 1;
+    padding: 15px;
+    overflow-y: auto; /* Scrollable */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.std-rich-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    display: block;
+}
+
+    .std-rich-link:hover {
+        text-decoration: underline;
+    }
+
+.std-rich-subtext {
+    font-size: 0.85em;
+    color: #888;
+    line-height: 1.4;
+}
+
+/* ROW 3: Actions */
+.std-card-rich-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Right aligned */
+    gap: 8px;
+    padding: 10px 15px;
+    background-color: rgba(0, 0, 0, 0.1);
+    border-top: 1px solid var(--border-color);
+}
+
+/* ROW 4: Progress Edge */
+.std-card-rich-progress-container {
+    height: 4px;
+    width: 100%;
+    background-color: var(--tertiary-bg-color);
+}
+    /* Re-use standard progress fill style */
+    .std-card-rich-progress-container .std-progress-fill {
+        height: 100%;
+        background-color: var(--accent-color);
+        transition: width 0.3s ease;
+    }
+
+/* --- UTILITY: Icon Only Buttons --- */
+.std-btn-icon-only {
+    background: transparent;
+    border: none;
+    color: var(--primary-text-color);
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    font-size: 1.1em;
+    opacity: 0.7;
+    transition: all 0.2s;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+    .std-btn-icon-only:hover {
+        background-color: var(--tertiary-bg-color);
+        opacity: 1;
+        color: var(--accent-color);
+    }
+
+/* --- UTILITY: On-Demand Scrollbar --- */
+/* Works in Webkit browsers (Chrome/Edge/Safari) */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: transparent; /* Invisible by default */
+    border-radius: 3px;
+}
+
+.custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background-color: var(--border-color); /* Visible on hover */
+}

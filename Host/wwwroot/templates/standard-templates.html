@@ -10,6 +10,41 @@
     </div>
 </template>
 
+<template id="tpl-card-rich">
+    <div class="std-card std-card-rich" data-GUID="{{UI_COMPONENT_ID}}">
+
+        <div class="std-card-rich-header" data-ui-key="header-row">
+            <div class="std-card-rich-status" data-ui-key="status-indicator"></div>
+            <div class="std-card-rich-title" data-ui-key="title-label">{{CONTENT}}</div>
+            <button class="std-btn-icon-only" data-ui-key="close-btn">×</button>
+        </div>
+
+        <div class="std-card-rich-body custom-scrollbar" data-ui-key="content-body" data-mount-point="default">
+            <div class="std-rich-text-group">
+                <a class="std-rich-link" data-ui-key="link-primary">Primary Source Link</a>
+                <div class="std-rich-subtext" data-ui-key="label-secondary">Secondary detail text goes here...</div>
+            </div>
+        </div>
+
+        <div class="std-card-rich-actions" data-ui-key="action-row">
+            <button class="std-btn-icon-only" data-ui-key="action-btn-1">✎</button>
+            <button class="std-btn-icon-only" data-ui-key="action-btn-2">➜</button>
+            <button class="std-btn-icon-only" data-ui-key="action-btn-3">🔗</button>
+            <button class="std-btn-icon-only" data-ui-key="action-btn-4">🗑</button>
+
+            <label class="std-toggle-switch" data-ui-key="action-toggle">
+                <input type="checkbox" checked>
+                <span class="std-slider-track"></span>
+            </label>
+        </div>
+
+        <div class="std-card-rich-progress-container" data-ui-key="progress-row">
+            <div class="std-progress-fill" style="width: 0%;" data-ui-key="progress-bar"></div>
+        </div>
+
+    </div>
+</template>
+
 <template id="tpl-button">
     <button class="std-button" data-GUID="{{UI_COMPONENT_ID}}">
         {{CONTENT}}
