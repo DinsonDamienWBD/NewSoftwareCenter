@@ -1,5 +1,8 @@
 <Solution>
-  <Folder Name="/Additional Services/" />
+  <Folder Name="/Additional Services/">
+    <Project Path="G:/My Drive/Project/SoftwareCenterRefactored/Additional Services/InstallerService/SoftwareCenter.InstallerService.csproj" />
+    <Project Path="G:/My Drive/Project/SoftwareCenterRefactored/Additional Services/Launcher/SoftwareCenter.Launcher.csproj" />
+  </Folder>
   <Folder Name="/Contract, UI &amp; Routing/">
     <Project Path="Contract, UI &amp; Routing/Core/SoftwareCenter.Core.csproj" />
     <Project Path="Contract, UI &amp; Routing/Kernel/SoftwareCenter.Kernel.csproj" />
