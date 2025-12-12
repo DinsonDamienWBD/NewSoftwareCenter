@@ -87,6 +87,8 @@
   </Folder>
   <Folder Name="/Solution Items/">
     <File Path="Directory.Build.props" />
+    <File Path="GLOBAL_METADATA.md" />
+    <File Path="UI_METADATA.MD" />
   </Folder>
   <Project Path="Host/SoftwareCenter.Host.csproj" />
 </Solution>

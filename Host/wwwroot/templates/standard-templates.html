@@ -1,0 +1,448 @@
+﻿<template id="tpl-div">
+    <div class="std-container" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-card">
+    <div class="std-card" data-GUID="{{UI_COMPONENT_ID}}">
+        <div class="std-card-body" data-mount-point="default">
+        </div>
+    </div>
+</template>
+
+<template id="tpl-button">
+    <button class="std-button" data-GUID="{{UI_COMPONENT_ID}}">
+        {{CONTENT}}
+    </button>
+</template>
+
+<template id="tpl-input-text">
+    <div class="std-input-group" data-GUID="{{UI_COMPONENT_ID}}">
+        <input type="text" class="std-input" placeholder="{{CONTENT}}" />
+    </div>
+</template>
+
+<template id="tpl-progress">
+    <div class="std-progress-track" data-GUID="{{UI_COMPONENT_ID}}">
+        <div class="std-progress-fill" style="width: {{CONTENT}}%;"></div>
+    </div>
+</template>
+
+<template id="tpl-section">
+    <section class="std-section" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </section>
+</template>
+
+<template id="tpl-article">
+    <article class="std-article" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </article>
+</template>
+
+<template id="tpl-aside">
+    <aside class="std-aside" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </aside>
+</template>
+
+<template id="tpl-header">
+    <header class="std-header" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </header>
+</template>
+
+<template id="tpl-nav">
+    <nav class="std-nav" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </nav>
+</template>
+
+<template id="tpl-footer">
+    <footer class="std-footer" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </footer>
+</template>
+
+<template id="tpl-figure">
+    <figure class="std-figure" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </figure>
+</template>
+
+<template id="tpl-h1">
+    <h1 class="std-h1" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</h1>
+</template>
+<template id="tpl-h2">
+    <h2 class="std-h2" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</h2>
+</template>
+<template id="tpl-h3">
+    <h3 class="std-h3" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</h3>
+</template>
+<template id="tpl-h4">
+    <h4 class="std-h4" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</h4>
+</template>
+<template id="tpl-h5">
+    <h5 class="std-h5" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</h5>
+</template>
+<template id="tpl-h6">
+    <h6 class="std-h6" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</h6>
+</template>
+
+<template id="tpl-p">
+    <p class="std-p" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+        {{CONTENT}}
+    </p>
+</template>
+
+<template id="tpl-span">
+    <span class="std-span" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">{{CONTENT}}</span>
+</template>
+
+<template id="tpl-ul">
+    <ul class="std-ul" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </ul>
+</template>
+
+<template id="tpl-ol">
+    <ol class="std-ol" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </ol>
+</template>
+
+<template id="tpl-li">
+    <li class="std-li" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+        {{CONTENT}}
+    </li>
+</template>
+
+<template id="tpl-table">
+    <div class="std-table-wrapper">
+        <table class="std-table" data-GUID="{{UI_COMPONENT_ID}}">
+            <thead class="std-thead">
+            </thead>
+            <tbody class="std-tbody" data-mount-point="default">
+            </tbody>
+        </table>
+    </div>
+</template>
+
+<template id="tpl-form">
+    <form class="std-form" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </form>
+</template>
+
+<template id="tpl-input-text">
+    <input type="text" class="std-input" placeholder="{{CONTENT}}" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-input-password">
+    <input type="password" class="std-input" placeholder="********" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-input-email">
+    <input type="email" class="std-input" placeholder="user@example.com" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-input-url">
+    <input type="url" class="std-input" placeholder="https://" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-input-tel">
+    <input type="tel" class="std-input" placeholder="+1..." data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-input-number">
+    <input type="number" class="std-input" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-textarea">
+    <textarea class="std-textarea" rows="4" placeholder="{{CONTENT}}" data-GUID="{{UI_COMPONENT_ID}}"></textarea>
+</template>
+
+<template id="tpl-select">
+    <select class="std-select" data-GUID="{{UI_COMPONENT_ID}}">
+    </select>
+</template>
+
+<template id="tpl-checkbox">
+    <label class="std-checkbox-wrapper">
+        <input type="checkbox" data-GUID="{{UI_COMPONENT_ID}}" />
+        <span class="std-checkbox-label">{{CONTENT}}</span>
+    </label>
+</template>
+
+<template id="tpl-radio">
+    <label class="std-radio-wrapper">
+        <input type="radio" name="radio-group-{{UI_COMPONENT_ID}}" data-GUID="{{UI_COMPONENT_ID}}" />
+        <span class="std-radio-label">{{CONTENT}}</span>
+    </label>
+</template>
+
+<template id="tpl-input-color">
+    <div class="std-color-wrapper">
+        <label>{{CONTENT}}</label>
+        <input type="color" class="std-color" data-GUID="{{UI_COMPONENT_ID}}" />
+    </div>
+</template>
+
+<template id="tpl-input-file">
+    <input type="file" class="std-file" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-input-date">
+    <input type="date" class="std-input" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+<template id="tpl-input-time">
+    <input type="time" class="std-input" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+<template id="tpl-input-datetime">
+    <input type="datetime-local" class="std-input" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-button">
+    <button type="button" class="std-button" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</button>
+</template>
+
+<template id="tpl-input-submit">
+    <input type="submit" class="std-button std-btn-primary" value="{{CONTENT}}" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-input-reset">
+    <input type="reset" class="std-button std-btn-danger" value="{{CONTENT}}" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-input-button">
+    <input type="button" class="std-button" value="{{CONTENT}}" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-fieldset">
+    <fieldset class="std-fieldset" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+        <legend>{{CONTENT}}</legend>
+    </fieldset>
+</template>
+
+<template id="tpl-label">
+    <label class="std-label" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</label>
+</template>
+
+<template id="tpl-panel">
+    <div class="std-panel" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-progress">
+    <progress class="std-progress" value="0" max="100" data-GUID="{{UI_COMPONENT_ID}}"></progress>
+</template>
+
+<template id="tpl-meter">
+    <meter class="std-meter" min="0" max="100" low="30" high="70" optimum="80" value="0" data-GUID="{{UI_COMPONENT_ID}}"></meter>
+</template>
+
+<template id="tpl-output">
+    <output class="std-output" data-GUID="{{UI_COMPONENT_ID}}">0</output>
+</template>
+
+<template id="tpl-spinner">
+    <div class="std-spinner" data-GUID="{{UI_COMPONENT_ID}}"></div>
+</template>
+
+<template id="tpl-details">
+    <details class="std-details" data-GUID="{{UI_COMPONENT_ID}}">
+        <summary>{{CONTENT}}</summary>
+        <div class="std-details-content" data-mount-point="default"></div>
+    </details>
+</template>
+
+<template id="tpl-dialog">
+    <dialog class="std-dialog" data-GUID="{{UI_COMPONENT_ID}}">
+        <div class="std-dialog-content" data-mount-point="default"></div>
+        <form method="dialog"><button class="std-button">Close</button></form>
+    </dialog>
+</template>
+
+<template id="tpl-accordion-v">
+    <div class="std-accordion-v" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-accordion-h">
+    <div class="std-accordion-h" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-toggle">
+    <label class="std-toggle-switch" data-GUID="{{UI_COMPONENT_ID}}">
+        <input type="checkbox">
+        <span class="std-slider-track"></span>
+    </label>
+</template>
+
+<template id="tpl-range-h">
+    <input type="range" class="std-range std-range-h" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-range-v">
+    <div class="std-range-v-wrapper">
+        <input type="range" class="std-range std-range-v" orient="vertical" data-GUID="{{UI_COMPONENT_ID}}" />
+    </div>
+</template>
+
+<template id="tpl-knob">
+    <div class="std-knob-wrapper" data-GUID="{{UI_COMPONENT_ID}}">
+        <div class="std-knob-dial">
+            <div class="std-knob-indicator"></div>
+        </div>
+        <div class="std-knob-value">{{CONTENT}}</div>
+    </div>
+</template>
+
+<template id="tpl-video">
+    <video class="std-media" controls data-GUID="{{UI_COMPONENT_ID}}">
+        <p>Video not supported</p>
+    </video>
+</template>
+
+<template id="tpl-audio">
+    <audio class="std-media" controls data-GUID="{{UI_COMPONENT_ID}}"></audio>
+</template>
+
+<template id="tpl-tree-root">
+    <div class="std-tree-root" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-tree-item">
+    <div class="std-tree-item" data-GUID="{{UI_COMPONENT_ID}}">
+        <span class="std-tree-icon">📄</span> <span class="std-tree-label">{{CONTENT}}</span>
+    </div>
+</template>
+
+<template id="tpl-tree-folder">
+    <details class="std-tree-folder" data-GUID="{{UI_COMPONENT_ID}}">
+        <summary class="std-tree-summary">
+            <span class="std-tree-icon">📁</span> <span class="std-tree-label">{{CONTENT}}</span>
+        </summary>
+        <div class="std-tree-children" data-mount-point="default">
+        </div>
+    </details>
+</template>
+
+<template id="tpl-breadcrumbs">
+    <nav class="std-breadcrumbs" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </nav>
+</template>
+
+<template id="tpl-breadcrumb-item">
+    <span class="std-breadcrumb-item" data-GUID="{{UI_COMPONENT_ID}}">
+        <a class="std-breadcrumb-link">{{CONTENT}}</a>
+        <span class="std-breadcrumb-separator">/</span>
+    </span>
+</template>
+
+<template id="tpl-pagination">
+    <div class="std-pagination" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+
+<template id="tpl-badge">
+    <span class="std-badge" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</span>
+</template>
+
+<template id="tpl-toast">
+    <div class="std-toast" data-GUID="{{UI_COMPONENT_ID}}">
+        <div class="std-toast-header">
+            <strong>Notification</strong>
+            <span class="std-toast-close">×</span>
+        </div>
+        <div class="std-toast-body">{{CONTENT}}</div>
+    </div>
+</template>
+
+<template id="tpl-tooltip">
+    <div class="std-tooltip-container" data-GUID="{{UI_COMPONENT_ID}}" data-tooltip-text="{{CONTENT}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-tabs">
+    <div class="std-tabs-container" data-GUID="{{UI_COMPONENT_ID}}">
+        <div class="std-tabs-header" data-mount-point="tab-headers"></div>
+        <div class="std-tabs-content" data-mount-point="tab-panels"></div>
+    </div>
+</template>
+
+<template id="tpl-checkbox-tristate">
+    <label class="std-checkbox-wrapper">
+        <input type="checkbox" class="std-tristate" data-GUID="{{UI_COMPONENT_ID}}" />
+        <span class="std-checkbox-label">{{CONTENT}}</span>
+    </label>
+</template>
+
+<template id="tpl-input-group">
+    <div class="std-input-group-merged" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-button-group">
+    <div class="std-btn-group" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-grid">
+    <div class="std-grid" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-row">
+    <div class="std-row" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </div>
+</template>
+
+<template id="tpl-col">
+    <div class="std-col" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default"></div>
+</template>
+
+<template id="tpl-col-12">
+    <div class="std-col-12" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default"></div>
+</template>
+<template id="tpl-col-6">
+    <div class="std-col-6" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default"></div>
+</template>
+<template id="tpl-col-4">
+    <div class="std-col-4" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default"></div>
+</template>
+<template id="tpl-col-3">
+    <div class="std-col-3" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default"></div>
+</template>
+
+<template id="tpl-tr">
+    <tr class="std-tr" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+    </tr>
+</template>
+
+<template id="tpl-th">
+    <th class="std-th" data-GUID="{{UI_COMPONENT_ID}}">{{CONTENT}}</th>
+</template>
+
+<template id="tpl-td">
+    <td class="std-td" data-GUID="{{UI_COMPONENT_ID}}" data-mount-point="default">
+        {{CONTENT}}
+    </td>
+</template>
+
+<template id="tpl-divider">
+    <hr class="std-divider" data-GUID="{{UI_COMPONENT_ID}}" />
+</template>
+
+<template id="tpl-avatar">
+    <div class="std-avatar" data-GUID="{{UI_COMPONENT_ID}}">
+        <img src="{{CONTENT}}" alt="Avatar" onerror="this.style.display='none'" />
+    </div>
+</template>
+
+<template id="tpl-skeleton-text">
+    <div class="std-skeleton-text" data-GUID="{{UI_COMPONENT_ID}}"></div>
+</template>
+<template id="tpl-skeleton-rect">
+    <div class="std-skeleton-rect" data-GUID="{{UI_COMPONENT_ID}}"></div>
+</template>
+
+<template id="tpl-empty-state">
+    <div class="std-empty-state" data-GUID="{{UI_COMPONENT_ID}}">
+        <div class="std-empty-icon">∅</div>
+        <div class="std-empty-text">{{CONTENT}}</div>
+    </div>
+</template>
