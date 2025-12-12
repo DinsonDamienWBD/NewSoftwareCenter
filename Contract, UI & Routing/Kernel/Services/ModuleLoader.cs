@@ -28,6 +28,7 @@ namespace SoftwareCenter.Kernel.Services
         private readonly IErrorHandler _errorHandler;
         private readonly IServiceRoutingRegistry _serviceRoutingRegistry;
         private readonly IServiceRegistry _serviceRegistry;
+        private readonly List<IApiEndpoint> _discoveredEndpoints = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ModuleLoader"/> class.
@@ -197,9 +198,11 @@ namespace SoftwareCenter.Kernel.Services
             var fireAndForgetCommandHandlerInterface = typeof(ICommandHandler<>);
             var eventHandlerInterface = typeof(IEventHandler<>);
             var jobHandlerInterface = typeof(IJobHandler<>);
+            var apiEndpointInterface = typeof(IApiEndpoint);
 
             foreach (var type in assembly.GetTypes().Where(t => !t.IsAbstract && !t.IsInterface))
             {
+                // 1. Discover Handlers
                 var handlerPriority = type.GetCustomAttribute<HandlerPriorityAttribute>()?.Priority ?? 0;
                 var interfaces = type.GetInterfaces();
 
@@ -215,6 +218,32 @@ namespace SoftwareCenter.Kernel.Services
                             _serviceRoutingRegistry.RegisterHandler(contractType, type, i, handlerPriority, moduleId);
                             moduleInfo.Handlers.Add(new DiscoveredHandler { HandlerType = type, ContractType = contractType, InterfaceType = i, Priority = handlerPriority, OwningModuleId = moduleId });
                         }
+                    }
+                }
+
+                // 2. Discover API Endpoints (New Logic)
+                if (apiEndpointInterface.IsAssignableFrom(type))
+                {
+                    try
+                    {
+                        // Instantiate to get metadata (assuming stateless/parameterless constructor for descriptors)
+                        var endpointInstance = (IApiEndpoint)Activator.CreateInstance(type);
+                        if (endpointInstance != null)
+                        {
+                            var prop = type.GetProperty(nameof(IApiEndpoint.OwningModuleId), BindingFlags.Public | BindingFlags.Instance);
+                            if (prop != null && prop.CanWrite)
+                            {
+                                prop.SetValue(endpointInstance, moduleId);
+                            }
+                            _discoveredEndpoints.Add(endpointInstance);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        // Log or ignore if endpoint cannot be instantiated (e.g. requires DI)
+                        // For Manifest generation, endpoints are often simple DTO-like objects.
+                        var msg = $"Failed to instantiate API endpoint '{type.Name}' in module '{moduleId}'.";
+                        _errorHandler.HandleError(ex, new TraceContext(), msg, isCritical: false);
                     }
                 }
             }
@@ -238,6 +267,7 @@ namespace SoftwareCenter.Kernel.Services
                 moduleInfo.State = ModuleState.Unloading;
 
                 _serviceRoutingRegistry.UnregisterModuleHandlers(moduleId);
+                _discoveredEndpoints.RemoveAll(e => e.OwningModuleId == moduleId);
                 // Note: True DI unload is not simple. This relies on the routing registry blocking access.
                 // For a full unload, the service provider would need to be rebuilt.
 
@@ -274,6 +304,12 @@ namespace SoftwareCenter.Kernel.Services
         /// </summary>
         /// <returns>An enumerable of <see cref="ModuleInfo"/>.</returns>
         public IEnumerable<ModuleInfo> GetLoadedModules() => _loadedModules.Values;
+
+        /// <summary>
+        /// Gets all discovered API endpoints from loaded modules.
+        /// </summary>
+        /// <returns>An enumerable of discovered <see cref="IApiEndpoint"/> instances.</returns>
+        public IEnumerable<IApiEndpoint> GetDiscoveredApiEndpoints() => _discoveredEndpoints;
     }
 }
 

@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using SoftwareCenter.Core.Serialization.Converters;
 
 namespace SoftwareCenter.Core.Serialization
 {
@@ -22,7 +23,7 @@ namespace SoftwareCenter.Core.Serialization
             };
 
             // Register well-known converters here if needed, e.g. DateTimeOffset handling
-            // _options.Converters.Add(new DateTimeOffsetConverter());
+            _options.Converters.Add(new DateTimeOffsetConverter());
         }
 
         public static JsonSerializerOptions Options => _options;

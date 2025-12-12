@@ -72,5 +72,34 @@ namespace SoftwareCenter.Kernel.Services
 
             return descriptors;
         }
+
+        /// <summary>
+        /// Attempts to get the XML documentation description for a named parameter of a method.
+        /// </summary>
+        /// <param name="method">The method to inspect.</param>
+        /// <param name="parameterName">The parameter name.</param>
+        /// <returns>The parameter description or empty string if not found.</returns>
+        public string GetParameterDescription(MethodInfo method, string parameterName)
+        {
+            if (method == null || string.IsNullOrEmpty(parameterName)) return string.Empty;
+
+            var declaringType = method.DeclaringType.FullName.Replace('+', '.');
+            var methodName = method.Name;
+
+            // Build the member name for the method
+            var paramTypeNames = method.GetParameters().Select(p => p.ParameterType.FullName).ToList();
+            var memberNameBuilder = new StringBuilder($"M:{declaringType}.{methodName}");
+            if (paramTypeNames.Any())
+            {
+                memberNameBuilder.Append($"({string.Join(",", paramTypeNames)})");
+            }
+            var memberName = memberNameBuilder.ToString();
+
+            var memberElement = _xmlDoc.Descendants("member").FirstOrDefault(m => m.Attribute("name")?.Value == memberName);
+            if (memberElement == null) return string.Empty;
+
+            var paramElement = memberElement.Elements("param").FirstOrDefault(p => p.Attribute("name")?.Value == parameterName);
+            return paramElement?.Value.Trim() ?? string.Empty;
+        }
     }
 }

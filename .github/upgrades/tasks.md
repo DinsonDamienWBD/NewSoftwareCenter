@@ -6,6 +6,8 @@ This document tracks the execution of the solution-wide upgrade from `net8.0` to
 
 **Progress**: 1/4 tasks complete (25%) ![0%](https://progress-bar.xyz/25)
 
+Note: Preparatory migration documentation and scaffolding have been added to the repository to support the three migration scenarios. See notes below.
+
 ---
 
 ## Tasks
@@ -30,6 +32,19 @@ This document tracks the execution of the solution-wide upgrade from `net8.0` to
 - [ ] (7) Build the full solution and fix compilation errors referencing Plan §6 Breaking Changes Catalog (address Kernel source-incompatible APIs and Host behavioral changes as discovered)
 - [ ] (8) Solution builds with 0 errors (**Verify**)
 
+**Preparatory work completed**:
+- Created `CONTRIBUTING.md` with migration guidelines describing the three scenarios.
+- Added a central `JsonOptionsProvider` at `Contract, UI & Routing/Core/Serialization/JsonOptionsProvider.cs` to standardize `System.Text.Json` options across the solution.
+- Added `Microsoft.Data.SqlClient` package reference to `Modules/DBManager/SoftwareCenter.Module.DBManager.csproj` to prepare DB driver migration.
+- Created PR checklist & branch templates to standardize migration PRs.
+
+**Current blockers**:
+- Full solution build is failing due to external environment issues:
+  - `apphost.exe` files under `obj/Debug/net10.0` are locked by running processes (MSB4018). Close running apps/IDE instances and retry the build.
+  - NuGet restore reported project load failures intermittently; ensure network access to nuget.org and that no custom sources are blocking restore.
+
+---
+
 ### [ ] TASK-003: Run full test suite and validate upgrade
 **References**: Plan §Phase 2, Plan §7
 
@@ -42,4 +57,8 @@ This document tracks the execution of the solution-wide upgrade from `net8.0` to
 **References**: Plan §10
 
 - [ ] (1) Commit all remaining changes with message: "TASK-004: chore(upgrade): upgrade all projects to net10.0 and apply package updates"
+
+---
+
+If you want me to continue automated code changes, first resolve the `apphost.exe` lock (close running processes) or confirm you want me to proceed creating migration branches and PR patches without running a full solution build.
 

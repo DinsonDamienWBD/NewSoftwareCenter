@@ -47,19 +47,44 @@ namespace SoftwareCenter.Kernel.Services
                 }
 
                 var xmlParser = _xmlParsers[assembly];
+
+                // First try to obtain a description for the contract type
                 var description = xmlParser?.GetTypeSummary(handlerInfo.ContractType) ?? string.Empty;
+
+                // If still empty, try the assembly-level summary as a fallback
+                if (string.IsNullOrEmpty(description))
+                {
+                    description = xmlParser?.GetTypeSummary(handlerInfo.HandlerType) ?? string.Empty;
+                }
+
                 var status = !string.IsNullOrEmpty(description) ? CapabilityStatus.Available : CapabilityStatus.MetadataMissing;
 
                 List<ParameterDescriptor> parameters = new List<ParameterDescriptor>();
+
+                // For commands, events, jobs, parameters are typically in the constructor or factory method.
                 if (xmlParser != null)
                 {
-                    // For commands, events, jobs, parameters are typically in the constructor
+                    // Prefer constructor parameter descriptions when available
                     var constructor = handlerInfo.ContractType.GetConstructors()
                         .OrderByDescending(c => c.GetParameters().Length)
                         .FirstOrDefault();
                     if (constructor != null)
                     {
                         parameters.AddRange(xmlParser.GetConstructorParameters(constructor));
+                    }
+                    else
+                    {
+                        // Fallback: look for a descriptive static "Create" method or single public method
+                        var method = handlerInfo.ContractType.GetMethods(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static)
+                            .OrderByDescending(m => m.GetParameters().Length)
+                            .FirstOrDefault();
+                        if (method != null)
+                        {
+                            foreach (var p in method.GetParameters())
+                            {
+                                parameters.Add(new ParameterDescriptor(p.Name, p.ParameterType.FullName, xmlParser.GetParameterDescription(method, p.Name)));
+                            }
+                        }
                     }
                 }
 
@@ -98,41 +123,52 @@ namespace SoftwareCenter.Kernel.Services
                 capabilities.Add(descriptor);
             }
 
-            // Discover API Endpoints
-            //var apiEndpoints = _moduleLoader.GetDiscoveredApiEndpoints();
-            //foreach (var apiEndpoint in apiEndpoints)
-            //{
-            //    var assembly = apiEndpoint.GetType().Assembly;
-            //    if (!_xmlParsers.ContainsKey(assembly))
-            //    {
-            //        XmlDocumentationParser.TryCreateForAssembly(assembly, out var parser);
-            //        _xmlParsers[assembly] = parser;
-            //    }
-            //    var xmlParser = _xmlParsers[assembly];
-            //    var description = xmlParser?.GetTypeSummary(apiEndpoint.GetType()) ?? apiEndpoint.Description ?? string.Empty; // Use explicit description if available
-            //    var status = !string.IsNullOrEmpty(description) ? CapabilityStatus.Available : CapabilityStatus.MetadataMissing;
+            // Discover API Endpoints (controller-based endpoints implementing IApiEndpoint)
+            var apiEndpoints = _moduleLoader.GetDiscoveredApiEndpoints();
+            foreach (var apiEndpoint in apiEndpoints)
+            {
+                var assembly = apiEndpoint.GetType().Assembly;
+                if (!_xmlParsers.ContainsKey(assembly))
+                {
+                    XmlDocumentationParser.TryCreateForAssembly(assembly, out var parser);
+                    _xmlParsers[assembly] = parser;
+                }
+                var xmlParser = _xmlParsers[assembly];
+                var description = xmlParser?.GetTypeSummary(apiEndpoint.GetType()) ?? apiEndpoint.Description ?? string.Empty;
+                var status = !string.IsNullOrEmpty(description) ? CapabilityStatus.Available : CapabilityStatus.MetadataMissing;
 
-            //    // API endpoints might have method parameters, but for now, we'll just describe the endpoint itself.
-            //    var parameters = new List<ParameterDescriptor>
-            //    {
-            //        new ParameterDescriptor("HttpMethod", typeof(string).FullName, "The HTTP method (GET, POST, etc.)"),
-            //        new ParameterDescriptor("Path", typeof(string).FullName, "The API endpoint path")
-            //    };
+                // API endpoints might have route parameters; attempt to describe them via reflection on properties or method parameters.
+                var parameters = new List<ParameterDescriptor>();
+                try
+                {
+                    var method = apiEndpoint.GetType().GetMethods(BindingFlags.Public | BindingFlags.Instance).FirstOrDefault();
+                    if (method != null)
+                    {
+                        foreach (var p in method.GetParameters())
+                        {
+                            var paramDesc = xmlParser != null ? xmlParser.GetParameterDescription(method, p.Name) : string.Empty;
+                            parameters.Add(new ParameterDescriptor(p.Name, p.ParameterType.FullName, paramDesc));
+                        }
+                    }
+                }
+                catch
+                {
+                    // Ignore reflection errors here; this is best-effort metadata
+                }
 
-
-            //    var descriptor = new CapabilityDescriptor(
-            //        name: $"{apiEndpoint.HttpMethod} {apiEndpoint.Path}",
-            //        description: description,
-            //        type: CapabilityType.ApiEndpoint,
-            //        status: status,
-            //        priority: 0, // API Endpoints don't currently have a priority attribute
-            //        contractTypeName: typeof(IApiEndpoint).FullName,
-            //        handlerTypeName: apiEndpoint.GetType().FullName,
-            //        owningModuleId: apiEndpoint.OwningModuleId,
-            //        parameters: parameters
-            //    );
-            //    capabilities.Add(descriptor);
-            //}
+                var descriptor = new CapabilityDescriptor(
+                    name: $"{apiEndpoint.HttpMethod} {apiEndpoint.Path}",
+                    description: description,
+                    type: CapabilityType.ApiEndpoint,
+                    status: status,
+                    priority: 0,
+                    contractTypeName: typeof(IApiEndpoint).FullName,
+                    handlerTypeName: apiEndpoint.GetType().FullName,
+                    owningModuleId: apiEndpoint.OwningModuleId,
+                    parameters: parameters
+                );
+                capabilities.Add(descriptor);
+            }
 
             return new RegistryManifest(capabilities);
         }

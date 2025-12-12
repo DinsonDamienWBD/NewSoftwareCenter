@@ -11,11 +11,14 @@ using SoftwareCenter.Host.Hubs;
 using SoftwareCenter.Kernel;
 using SoftwareCenter.Kernel.Services;
 using SoftwareCenter.UIManager.Services;
+using SoftwareCenter.Host.Services; // HostTemplateService
+using SoftwareCenter.Core.Discovery.Commands; // GetRegistryManifestCommand
 using System;
 using System.IO;
 using System.Reflection;
 using System.Text.Json;
 using System.Threading.Tasks;
+using SoftwareCenter.UIManager;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,9 +28,10 @@ builder.Logging.AddProvider(new SoftwareCenter.Kernel.Logging.FileLoggerProvider
 builder.Logging.AddConsole();
 
 // --- 2. Module Loader Setup (Pre-Container Build) ---
-// We manually trigger module service configuration to allow modules to register their own services.
 var tempServices = new ServiceCollection();
+// Register Kernel services so modules can access core types during ConfigureModuleServices
 tempServices.AddKernel();
+tempServices.AddUIManager();
 
 #pragma warning disable ASP0000
 var tempProvider = tempServices.BuildServiceProvider();
@@ -38,9 +42,9 @@ var tempRoutingRegistry = tempProvider.GetRequiredService<IServiceRoutingRegistr
 var tempServiceRegistry = tempProvider.GetRequiredService<IServiceRegistry>();
 
 var moduleLoader = new ModuleLoader(tempErrorHandler, tempRoutingRegistry, tempServiceRegistry);
+// Let modules register their own services into the real builder.Services; Host does not reference module types
 moduleLoader.ConfigureModuleServices(builder.Services);
 
-// Explicitly dispose of the temporary provider to prevent any lingering singletons
 if (tempProvider is IDisposable disposableProvider)
 {
     disposableProvider.Dispose();
@@ -52,9 +56,9 @@ builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
 // --- 4. UI Service Registration (New Architecture) ---
-// FIX: ASP0000 Warning resolved. We do not manually pass WebRootPath here. 
-// The Service itself injects IWebHostEnvironment.
-builder.Services.AddSingleton<UiTemplateService>();
+// Register UIManager and Host-provided template service per metadata
+builder.Services.AddUIManager();
+builder.Services.AddSingleton<ITemplateService, HostTemplateService>();
 
 // Register the Renderer which handles the Manifest logic and Index composition
 builder.Services.AddScoped<IUiService, UiRenderer>();
@@ -108,6 +112,21 @@ app.MapPost("/api/dispatch/{commandName}", async (
     }
 });
 
+// --- Manifest endpoint ---
+app.MapGet("/api/manifest", async (ICommandBus commandBus) =>
+{
+    try
+    {
+        var traceContext = new TraceContext { Items = { ["ModuleId"] = "Host.Frontend" } };
+        var manifest = await commandBus.Dispatch<SoftwareCenter.Core.Discovery.RegistryManifest>(new GetRegistryManifestCommand(), traceContext);
+        return Results.Ok(manifest);
+    }
+    catch (Exception ex)
+    {
+        return Results.Problem(ex.InnerException?.Message ?? ex.Message, statusCode: 500);
+    }
+});
+
 // --- 6. Pipeline Configuration ---
 if (!app.Environment.IsDevelopment())
 {
@@ -146,7 +165,6 @@ if (Directory.Exists(modulesPath))
 }
 
 // --- 8. Endpoint Mapping ---
-// The Default Route directs "/" to MainController -> Index (which performs UI Composition)
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Main}/{action=Index}/{id?}");
@@ -162,10 +180,6 @@ using (var scope = app.Services.CreateScope())
     // Initialize Modules (Backend Logic)
     var loader = serviceProvider.GetRequiredService<ModuleLoader>();
     await loader.InitializeModules(serviceProvider);
-
-    // NOTE: Previous "Host UI" initialization code (Creating Nav Buttons via Commands) 
-    // has been removed. The initial UI structure is now handled by the server-side 
-    // composition of 'index.html' and the Zone files.
 }
 
 app.Run();

@@ -14,7 +14,6 @@
 	<ItemGroup>
 		<Folder Include="Interfaces\" />
 		<Folder Include="Models\" />
-		<Folder Include="Services\" />
 		<Folder Include="UI\Html\" />
 		<Folder Include="UI\Script\" />
 		<Folder Include="UI\Style\" />
@@ -28,7 +27,5 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\..\Contract, UI &amp; Routing\Core\SoftwareCenter.Core.csproj" />
 	</ItemGroup>
-
-	<!-- Agent Framework integration should be added when a supported package id/version is chosen. -->
 
 </Project>
