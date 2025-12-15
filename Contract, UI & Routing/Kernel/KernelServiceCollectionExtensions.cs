@@ -22,26 +22,45 @@ namespace SoftwareCenter.Kernel
         {
             // Register core Kernel services
             services.AddLogging();
-            services.AddSingleton<IErrorHandler, DefaultErrorHandler>();
-            services.AddSingleton<IServiceRegistry, ServiceRegistry>();
-            services.AddSingleton<IServiceRoutingRegistry, ServiceRoutingRegistry>();
-            services.AddSingleton<ModuleLoader>();
 
+            // Register the provider that will break the circular dependency
+            services.AddSingleton<IErrorHandlerProvider, ErrorHandlerProvider>();
+
+            // Register core Kernel services that have dependencies
+            services.AddSingleton<IErrorHandler, DefaultErrorHandler>();
             services.AddSingleton<ISmartCommandRouter, SmartCommandRouter>();
             services.AddSingleton<ICommandBus, CommandBus>();
             services.AddSingleton<IEventBus, EventBus>();
+
+            // Register other services
+            services.AddSingleton<IServiceRegistry, ServiceRegistry>();
+            services.AddSingleton<IServiceRoutingRegistry, ServiceRoutingRegistry>();
+            services.AddSingleton<ModuleLoader>();
             services.AddSingleton<CommandFactory>();
             services.AddSingleton<RegistryManifestService>();
             services.AddSingleton<GlobalDataStore>();
 
-            // Use a temporary service provider to run the first phase of module loading
-            var tempServiceProvider = services.BuildServiceProvider();
-            var moduleLoader = tempServiceProvider.GetRequiredService<ModuleLoader>();
-            var serviceRoutingRegistry = tempServiceProvider.GetRequiredService<IServiceRoutingRegistry>();
-            var errorHandler = tempServiceProvider.GetRequiredService<IErrorHandler>();
-
+            // Create a temporary collection of services to discover modules
+            // This is safer than building a temporary service provider
+            var tempServices = new ServiceCollection();
+            tempServices.AddSingleton(services.BuildServiceProvider().GetRequiredService<IServiceRoutingRegistry>());
+            tempServices.AddSingleton(services.BuildServiceProvider().GetRequiredService<IErrorHandler>());
+            tempServices.AddSingleton(services.BuildServiceProvider().GetRequiredService<IServiceRegistry>()); // Add this line
+            
+            var tempServiceProvider = tempServices.BuildServiceProvider(); // Changed to a variable for reuse
+            var moduleLoader = new ModuleLoader(
+                tempServiceProvider.GetRequiredService<IErrorHandler>(),
+                tempServiceProvider.GetRequiredService<IServiceRoutingRegistry>(),
+                tempServiceProvider.GetRequiredService<IServiceRegistry>()
+            );
+            
             // Phase 1: Discover modules and let them add their services to the collection
             moduleLoader.ConfigureModuleServices(services);
+            
+            // Now that all services are registered, build the main provider to scan assemblies
+            var provider = services.BuildServiceProvider();
+            var serviceRoutingRegistry = provider.GetRequiredService<IServiceRoutingRegistry>();
+            var errorHandler = provider.GetRequiredService<IErrorHandler>();
 
             // Now, discover handlers and validators from all loaded assemblies
             var assembliesToScan = moduleLoader.GetLoadedAssemblies();
@@ -54,7 +73,7 @@ namespace SoftwareCenter.Kernel
             foreach (var assembly in assembliesToScan)
             {
                 var owningModule = moduleLoader.GetLoadedModules().FirstOrDefault(m => m.Assembly == assembly);
-                var moduleId = owningModule?.ModuleId ?? "Kernel"; 
+                var moduleId = owningModule?.ModuleId ?? "Kernel";
 
                 try
                 {
@@ -73,21 +92,25 @@ namespace SoftwareCenter.Kernel
                                     genericDef == eventHandlerInterface || genericDef == jobHandlerInterface)
                                 {
                                     var contractType = i.GetGenericArguments()[0];
-                                    services.AddTransient(type);
+                                    // Registration is already done by modules, just need to update the routing registry
                                     serviceRoutingRegistry.RegisterHandler(contractType, type, i, handlerPriority, moduleId);
                                 }
                             }
                         }
 
-                        // Register Validators
+                        // Validators might also be registered by modules
                         var validatorInterfaces = type.GetInterfaces().Where(i => i.IsGenericType && i.GetGenericTypeDefinition() == commandValidatorInterface);
-                        foreach(var validatorInterface in validatorInterfaces)
+                        foreach (var validatorInterface in validatorInterfaces)
                         {
-                            services.AddTransient(validatorInterface, type);
+                            // Ensure validator is registered if not already
+                             if (!services.Any(s => s.ServiceType == validatorInterface && s.ImplementationType == type))
+                            {
+                                services.AddTransient(validatorInterface, type);
+                            }
                         }
                     }
                 }
-                catch(ReflectionTypeLoadException ex)
+                catch (ReflectionTypeLoadException ex)
                 {
                     errorHandler.HandleError(ex, new Core.Diagnostics.TraceContext(), $"Error loading types from assembly {assembly.FullName}");
                 }

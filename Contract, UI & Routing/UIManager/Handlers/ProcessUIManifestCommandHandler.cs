@@ -9,10 +9,10 @@ namespace SoftwareCenter.UIManager.Handlers
 {
     public class ProcessUIManifestCommandHandler : ICommandHandler<ProcessUIManifestCommand>
     {
-        private readonly IUiService _uiService;
+        private readonly global::SoftwareCenter.Core.UI.IUiService _uiService;
         private readonly IUIHubNotifier _hubNotifier;
 
-        public ProcessUIManifestCommandHandler(IUiService uiService, IUIHubNotifier hubNotifier)
+        public ProcessUIManifestCommandHandler(global::SoftwareCenter.Core.UI.IUiService uiService, IUIHubNotifier hubNotifier)
         {
             _uiService = uiService;
             _hubNotifier = hubNotifier;

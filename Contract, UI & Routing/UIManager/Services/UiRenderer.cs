@@ -1,6 +1,7 @@
 ﻿using HtmlAgilityPack;
 using SoftwareCenter.Core.UI;
 using System;
+using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -8,7 +9,7 @@ using System.Xml;
 
 namespace SoftwareCenter.UIManager.Services
 {
-    public class UiRenderer : IUiService
+    public class UiRenderer : Core.UI.IUiService
     {
         private readonly UiTemplateService _templates;
 

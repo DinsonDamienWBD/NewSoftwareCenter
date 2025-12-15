@@ -18,7 +18,7 @@ namespace SoftwareCenter.Kernel.Services
         private readonly IServiceProvider _serviceProvider;
         private readonly IServiceRoutingRegistry _routingRegistry;
         private readonly ILogger<SmartCommandRouter> _logger;
-        private readonly IErrorHandler _errorHandler; // Injected IErrorHandler
+        private readonly IErrorHandlerProvider _errorHandlerProvider; // Injected IErrorHandlerProvider
 
         /// <summary>
         /// Initializes a new instance of the <see cref="SmartCommandRouter"/> class.
@@ -26,13 +26,13 @@ namespace SoftwareCenter.Kernel.Services
         /// <param name="serviceProvider">The service provider to resolve handler instances.</param>
         /// <param name="routingRegistry">The routing registry to get handler priorities and types.</param>
         /// <param name="logger">The logger for diagnostics.</param>
-        /// <param name="errorHandler">The error handler for reporting unhandled exceptions.</param>
-        public SmartCommandRouter(IServiceProvider serviceProvider, IServiceRoutingRegistry routingRegistry, ILogger<SmartCommandRouter> logger, IErrorHandler errorHandler)
+        /// <param name="errorHandlerProvider">The error handler for reporting unhandled exceptions.</param>
+        public SmartCommandRouter(IServiceProvider serviceProvider, IServiceRoutingRegistry routingRegistry, ILogger<SmartCommandRouter> logger, IErrorHandlerProvider errorHandlerProvider)
         {
             _serviceProvider = serviceProvider;
             _routingRegistry = routingRegistry;
             _logger = logger;
-            _errorHandler = errorHandler;
+            _errorHandlerProvider = errorHandlerProvider;
         }
 
         public async Task Route(ICommand command, ITraceContext traceContext)
@@ -80,7 +80,7 @@ namespace SoftwareCenter.Kernel.Services
                     }
                     catch (Exception ex)
                     {
-                        await _errorHandler.HandleError(ex, traceContext, $"An unexpected error occurred during validation of command '{commandType.Name}'.");
+                        await _errorHandlerProvider.GetHandler().HandleError(ex, traceContext, $"An unexpected error occurred during validation of command '{commandType.Name}'.");
                         throw;
                     }
                 }
@@ -111,7 +111,7 @@ namespace SoftwareCenter.Kernel.Services
             }
 
             // If we reach here, no handler successfully processed the command
-            await _errorHandler.HandleError(new InvalidOperationException($"No handler successfully processed command type '{command.GetType().Name}'."), 
+            await _errorHandlerProvider.GetHandler().HandleError(new InvalidOperationException($"No handler successfully processed command type '{command.GetType().Name}'."), 
                                             traceContext, 
                                             $"No handler successfully processed command type '{command.GetType().Name}'.", 
                                             isCritical: false); // Not critical enough to shutdown, but definitely an error
@@ -141,7 +141,7 @@ namespace SoftwareCenter.Kernel.Services
             }
 
             // If we reach here, no handler successfully processed the command
-            await _errorHandler.HandleError(new InvalidOperationException($"No handler successfully processed command type '{command.GetType().Name}' and returned a result."), 
+            await _errorHandlerProvider.GetHandler().HandleError(new InvalidOperationException($"No handler successfully processed command type '{command.GetType().Name}' and returned a result."), 
                                             traceContext, 
                                             $"No handler successfully processed command type '{command.GetType().Name}' and returned a result.", 
                                             isCritical: false); // Not critical enough to shutdown, but definitely an error

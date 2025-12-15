@@ -24,11 +24,11 @@ namespace SoftwareCenter.Kernel.Services
     /// </summary>
     public class ModuleLoader
     {
-        private readonly Dictionary<string, ModuleInfo> _loadedModules = new();
         private readonly IErrorHandler _errorHandler;
         private readonly IServiceRoutingRegistry _serviceRoutingRegistry;
         private readonly IServiceRegistry _serviceRegistry;
         private readonly List<IApiEndpoint> _discoveredEndpoints = new();
+        private readonly Dictionary<string, ModuleInfo> _loadedModules = new();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="ModuleLoader"/> class.
@@ -42,6 +42,7 @@ namespace SoftwareCenter.Kernel.Services
             _serviceRoutingRegistry = serviceRoutingRegistry ?? throw new ArgumentNullException(nameof(serviceRoutingRegistry));
             _serviceRegistry = serviceRegistry ?? throw new ArgumentNullException(nameof(serviceRegistry));
         }
+
 
         /// <summary>
         /// Represents a handler (for a command, event, etc.) discovered within a module.

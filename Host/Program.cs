@@ -25,7 +25,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 // 1. Add Logging
 builder.Logging.ClearProviders();
-builder.Logging.AddConsole();
+builder.Logging.AddConsole().SetMinimumLevel(LogLevel.Debug);
 // Note: FileLoggerProvider is in Kernel, will be registered via AddKernel if needed.
 
 // 2. Add Core Infrastructure (Kernel)

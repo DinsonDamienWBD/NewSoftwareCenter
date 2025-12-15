@@ -2,6 +2,7 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using SoftwareCenter.Core.Commands;
 using SoftwareCenter.Core.Commands.UI;
+using SoftwareCenter.Kernel.Services;
 using System;
 using System.Collections.Generic;
 using System.Threading;
@@ -64,7 +65,7 @@ namespace SoftwareCenter.Host.Services
                     { "Icon", icon }
                 }
             ));
-            _loggerLogInformation($"Created nav button for {featureName} with ID: {navButtonId}");
+            _logger.LogInformation($"Created nav button for {featureName} with ID: {navButtonId}");
         }
 
         public Task StopAsync(CancellationToken cancellationToken)
