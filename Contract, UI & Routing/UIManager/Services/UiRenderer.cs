@@ -1,4 +1,5 @@
 ﻿using HtmlAgilityPack;
+using Microsoft.AspNetCore.Hosting; // Added for IWebHostEnvironment
 using SoftwareCenter.Core.UI;
 using System;
 using System.IO;
@@ -12,44 +13,99 @@ namespace SoftwareCenter.UIManager.Services
     public class UiRenderer : Core.UI.IUiService
     {
         private readonly UiTemplateService _templates;
+        private readonly IWebHostEnvironment _env; // Added IWebHostEnvironment
 
-        public UiRenderer(UiTemplateService templates)
+        public UiRenderer(UiTemplateService templates, IWebHostEnvironment env)
         {
             _templates = templates;
+            _env = env; // Storing the injected environment
         }
 
         // --- 1. INITIAL LOAD LOGIC (Index + Zones) ---
 
         public async Task<string> GetComposedIndexPageAsync()
         {
+            var debugMessages = new StringBuilder();
+            debugMessages.AppendLine("<!-- DEBUG START -->");
+            debugMessages.AppendLine("<!-- Entered GetComposedIndexPageAsync. -->");
+
             // 1. Load shell
-            // Note: We assume the Host passes the correct root path to TemplateService
-            // Here we need to read index.html specifically.
-            // For simplicity, let's assume we read it via IO here or inject a path provider.
-            // Pseudo-code implementation:
-            var indexPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "index.html");
-            if (!System.IO.File.Exists(indexPath)) return "Error: index.html not found";
-
-            var indexHtml = await System.IO.File.ReadAllTextAsync(indexPath);
-
-            // 2. Regex Discovery: var regex = new Regex(@"");
-            var regex = new Regex(@"");
-            var processedHtml = await regex.ReplaceAsync(indexHtml, async (match) =>
+            var indexPath = Path.Combine(_env.WebRootPath, "Html", "index.html");
+            debugMessages.AppendLine($"<!-- Checking for index.html at: {indexPath} -->");
+            if (!System.IO.File.Exists(indexPath))
             {
-                var zoneName = match.Groups[1].Value.Trim(); // e.g., "TITLEBAR"
+                debugMessages.AppendLine($"<!-- ERROR: index.html NOT FOUND at: {indexPath} -->");
+                return $"<h1>Error: Base index.html not found!</h1>{debugMessages.ToString()}";
+            }
+            debugMessages.AppendLine($"<!-- index.html FOUND at: {indexPath} -->");
 
-                // 3. Load Zone File
-                var zoneContent = await _templates.GetZoneHtmlAsync(zoneName);
+            var html = await System.IO.File.ReadAllTextAsync(indexPath);
 
-                // 4. Assign Identity (GUID)
-                // Zones get a generic ID or a specific System ID. Let's create a fresh one.
-                var zoneGuid = Guid.NewGuid().ToString();
+            // 2. Load the HTML into HtmlAgilityPack
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
 
-                // Replace Token
-                return zoneContent.Replace("{{UI_COMPONENT_ID}}", zoneGuid);
-            });
+            // 3. Inject zone HTMLs
+            await InjectZoneHtmlInRendererAsync(doc, "titlebar-zone", debugMessages);
+            await InjectZoneHtmlInRendererAsync(doc, "nav-rail-zone", debugMessages);
+            await InjectZoneHtmlInRendererAsync(doc, "content-zone", debugMessages);
 
-            return processedHtml;
+            // Append debug messages before returning
+            debugMessages.AppendLine("<!-- DEBUG END -->");
+            var body = doc.DocumentNode.SelectSingleNode("//body");
+            if (body != null)
+            {
+                body.AppendChild(doc.CreateComment(debugMessages.ToString()));
+            }
+            else
+            {
+                // If no body, append to the root document node
+                doc.DocumentNode.AppendChild(doc.CreateComment(debugMessages.ToString()));
+            }
+
+            // 4. Return the composed HTML
+            return doc.DocumentNode.OuterHtml;
+        }
+
+        private async Task InjectZoneHtmlInRendererAsync(HtmlDocument doc, string zoneId, StringBuilder debugMessages)
+        {
+            debugMessages.AppendLine($"<!-- Attempting to inject zone: {zoneId} -->");
+            var placeholderElement = doc.DocumentNode.SelectSingleNode($"//div[@id='{zoneId}']");
+            if (placeholderElement != null)
+            {
+                debugMessages.AppendLine($"<!-- Found placeholder for zone: {zoneId} -->");
+                var fullZoneHtml = await _templates.GetZoneHtmlAsync(zoneId, debugMessages);
+                if (!string.IsNullOrEmpty(fullZoneHtml))
+                {
+                    debugMessages.AppendLine($"<!-- Full zone HTML received for {zoneId}: {fullZoneHtml.Substring(0, Math.Min(fullZoneHtml.Length, 100))}... -->");
+                    fullZoneHtml = fullZoneHtml.Replace("-->", "").Trim();
+                    debugMessages.AppendLine($"<!-- Trimmed zone HTML for {zoneId}: {fullZoneHtml.Substring(0, Math.Min(fullZoneHtml.Length, 100))}... -->");
+
+                    var fragmentDoc = new HtmlDocument();
+                    fragmentDoc.LoadHtml(fullZoneHtml);
+                    var fragmentRoot = fragmentDoc.DocumentNode.SelectSingleNode("//div");
+
+                    if (fragmentRoot != null)
+                    {
+                        debugMessages.AppendLine($"<!-- Fragment root found for {zoneId}: {fragmentRoot.OuterHtml.Substring(0, Math.Min(fragmentRoot.OuterHtml.Length, 100))}... -->");
+                        debugMessages.AppendLine($"<!-- Attempting to replace placeholder for {zoneId}... -->");
+                        placeholderElement.ParentNode.ReplaceChild(fragmentRoot.CloneNode(true), placeholderElement);
+                        debugMessages.AppendLine($"<!-- Placeholder replaced for {zoneId}. -->");
+                    }
+                    else
+                    {
+                        debugMessages.AppendLine($"<!-- ERROR: Fragment root NOT found for zone: {zoneId}. Full zone HTML: {fullZoneHtml} -->");
+                    }
+                }
+                else
+                {
+                    debugMessages.AppendLine($"<!-- WARNING: Full zone HTML was EMPTY for zone: {zoneId} -->");
+                }
+            }
+            else
+            {
+                debugMessages.AppendLine($"<!-- WARNING: Placeholder NOT found for zone: {zoneId} -->");
+            }
         }
 
         // --- 2. DYNAMIC MANIFEST LOGIC (Recursion) ---
@@ -121,24 +177,6 @@ namespace SoftwareCenter.UIManager.Services
             }
 
             return doc.DocumentNode.OuterHtml;
-        }
-    }
-
-    // Helper for async regex
-    public static class RegexExtensions
-    {
-        public static async Task<string> ReplaceAsync(this Regex regex, string input, Func<Match, Task<string>> replacementFn)
-        {
-            var sb = new StringBuilder();
-            var lastIndex = 0;
-            foreach (Match match in regex.Matches(input))
-            {
-                sb.Append(input, lastIndex, match.Index - lastIndex);
-                sb.Append(await replacementFn(match));
-                lastIndex = match.Index + match.Length;
-            }
-            sb.Append(input, lastIndex, input.Length - lastIndex);
-            return sb.ToString();
         }
     }
 }

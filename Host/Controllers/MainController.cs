@@ -13,7 +13,6 @@ namespace SoftwareCenter.Host.Controllers
             _uiService = uiService;
         }
 
-        [HttpGet("/")]
         public async Task<IActionResult> Index()
         {
             // Instead of serving the static index.html directly,

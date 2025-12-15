@@ -4,6 +4,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text; // Added for StringBuilder
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
@@ -20,13 +21,26 @@ namespace SoftwareCenter.UIManager.Services
             _webRootPath = env.WebRootPath;
         }
 
-        public async Task<string> GetZoneHtmlAsync(string zoneName)
+        public async Task<string> GetZoneHtmlAsync(string zoneName, StringBuilder debugMessages) // Modified signature
         {
+            debugMessages.AppendLine($"<!-- UiTemplateService: Entered GetZoneHtmlAsync for zone: {zoneName} -->");
             // Safety check in case webroot is missing
-            if (string.IsNullOrEmpty(_webRootPath)) return "";
+            if (string.IsNullOrEmpty(_webRootPath))
+            {
+                debugMessages.AppendLine($"<!-- UiTemplateService: WARNING: _webRootPath is EMPTY. -->");
+                return "";
+            }
+            debugMessages.AppendLine($"<!-- UiTemplateService: _webRootPath: {_webRootPath} -->");
 
             var path = Path.Combine(_webRootPath, "Html", $"{zoneName.ToLower()}-zone.html");
-            if (!File.Exists(path)) return $"";
+            debugMessages.AppendLine($"<!-- UiTemplateService: Constructed path for {zoneName}: {path} -->");
+
+            if (!File.Exists(path))
+            {
+                debugMessages.AppendLine($"<!-- UiTemplateService: ERROR: File NOT FOUND at path: {path} -->");
+                return $"";
+            }
+            debugMessages.AppendLine($"<!-- UiTemplateService: File FOUND at path: {path} -->");
             return await File.ReadAllTextAsync(path);
         }
 

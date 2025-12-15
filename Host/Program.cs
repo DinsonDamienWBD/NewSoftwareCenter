@@ -18,6 +18,7 @@ using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.Logging;
+using SoftwareCenter.Core.UI;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -152,9 +153,9 @@ app.MapGet("/api/manifest", async (ICommandBus commandBus) =>
 // Endpoint to serve the fully composed HTML from UIManager
 app.MapGet("/", async (context) =>
 {
-    // Retrieve UiComposerService from the request services
-    var uiComposerService = context.RequestServices.GetRequiredService<UiComposerService>();
-    var composedHtml = await uiComposerService.GetComposedHtmlAsync();
+    // Retrieve IUiService from the request services
+    var uiService = context.RequestServices.GetRequiredService<IUiService>();
+    var composedHtml = await uiService.GetComposedIndexPageAsync();
     context.Response.ContentType = "text/html";
     await context.Response.WriteAsync(composedHtml);
 });
