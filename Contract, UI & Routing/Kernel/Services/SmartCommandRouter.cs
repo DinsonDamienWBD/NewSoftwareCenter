@@ -37,7 +37,7 @@ namespace SoftwareCenter.Kernel.Services
 
         public async Task Route(ICommand command, ITraceContext traceContext)
         {
-            await ValidateCommand(command, traceContext);
+            await ValidateCommand(command, traceContext, false);
 
             var commandType = command.GetType();
             var handlers = _routingRegistry.GetAllHandlers(commandType)
@@ -48,7 +48,7 @@ namespace SoftwareCenter.Kernel.Services
 
         public async Task<TResult> Route<TResult>(ICommand<TResult> command, ITraceContext traceContext)
         {
-            await ValidateCommand(command, traceContext);
+            await ValidateCommand(command, traceContext, false);
 
             var commandType = command.GetType();
             var handlers = _routingRegistry.GetAllHandlers(commandType)
@@ -57,31 +57,39 @@ namespace SoftwareCenter.Kernel.Services
             return await RouteAndExecute<TResult>(command, traceContext, handlers.ToList());
         }
 
-        private async Task ValidateCommand(ICommand command, ITraceContext traceContext)
+        private async Task ValidateCommand(ICommand command, ITraceContext traceContext, bool isValidationCall = false)
         {
-            var commandType = command.GetType();
-            var validatorType = typeof(ICommandValidator<>).MakeGenericType(commandType);
-
-            // Get all validators for this command type
-            var validators = _serviceProvider.GetServices(validatorType);
-
-            foreach (var validator in validators)
+            if (isValidationCall)
             {
-                if (validator != null)
+                return;
+            }
+
+
+            {
+                var commandType = command.GetType();
+                var validatorType = typeof(ICommandValidator<>).MakeGenericType(commandType);
+
+                // Get all validators for this command type
+                var validators = _serviceProvider.GetServices(validatorType);
+
+                foreach (var validator in validators)
                 {
-                    try
+                    if (validator != null)
                     {
-                        await ((dynamic)validator).Validate((dynamic)command, traceContext);
-                    }
-                    catch (Core.Errors.ValidationException vex) // Explicitly catch our ValidationException
-                    {
-                        _logger.LogWarning(vex, "Command validation failed for command '{CommandName}' (TraceId: {TraceId}).", commandType.Name, traceContext.TraceId);
-                        throw; // Re-throw validation exceptions
-                    }
-                    catch (Exception ex)
-                    {
-                        await _errorHandlerProvider.GetHandler().HandleError(ex, traceContext, $"An unexpected error occurred during validation of command '{commandType.Name}'.");
-                        throw;
+                        try
+                        {
+                            await ((dynamic)validator).Validate((dynamic)command, traceContext);
+                        }
+                        catch (Core.Errors.ValidationException vex) // Explicitly catch our ValidationException
+                        {
+                            _logger.LogWarning(vex, "Command validation failed for command '{CommandName}' (TraceId: {TraceId}).", commandType.Name, traceContext.TraceId);
+                            throw; // Re-throw validation exceptions
+                        }
+                        catch (Exception ex)
+                        {
+                            await _errorHandlerProvider.GetHandler().HandleError(ex, traceContext, $"An unexpected error occurred during validation of command '{commandType.Name}'.");
+                            throw;
+                        }
                     }
                 }
             }

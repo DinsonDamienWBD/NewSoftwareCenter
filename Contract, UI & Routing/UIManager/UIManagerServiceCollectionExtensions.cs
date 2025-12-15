@@ -14,6 +14,7 @@ namespace SoftwareCenter.UIManager
             // Register UIManager services
             services.AddSingleton<UIStateService>();
             services.AddSingleton<UiTemplateService>();
+            services.AddSingleton<UiComposerService>(); // Register the UI Composer Service
             services.AddSingleton<global::SoftwareCenter.Core.UI.IUiService, UiRenderer>();
 
             // The Host is responsible for providing the implementation of IUIHubNotifier

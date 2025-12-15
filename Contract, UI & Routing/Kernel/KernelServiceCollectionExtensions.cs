@@ -13,6 +13,8 @@ using SoftwareCenter.Core.Jobs;
 using SoftwareCenter.Core.Routing;
 using SoftwareCenter.Core.Discovery.Commands;
 using SoftwareCenter.Core.Discovery;
+using Microsoft.Extensions.Logging; // Added
+using Microsoft.Extensions.Logging.Abstractions; // Added
 
 namespace SoftwareCenter.Kernel
 {
@@ -35,35 +37,37 @@ namespace SoftwareCenter.Kernel
             // Register other services
             services.AddSingleton<IServiceRegistry, ServiceRegistry>();
             services.AddSingleton<IServiceRoutingRegistry, ServiceRoutingRegistry>();
-            services.AddSingleton<ModuleLoader>();
             services.AddSingleton<CommandFactory>();
             services.AddSingleton<RegistryManifestService>();
             services.AddSingleton<GlobalDataStore>();
 
-            // Create a temporary collection of services to discover modules
-            // This is safer than building a temporary service provider
-            var tempServices = new ServiceCollection();
-            tempServices.AddSingleton(services.BuildServiceProvider().GetRequiredService<IServiceRoutingRegistry>());
-            tempServices.AddSingleton(services.BuildServiceProvider().GetRequiredService<IErrorHandler>());
-            tempServices.AddSingleton(services.BuildServiceProvider().GetRequiredService<IServiceRegistry>()); // Add this line
+            // --- Start of new block for manually constructing temporary ModuleLoader ---
+            // Manually construct dependencies for a temporary ModuleLoader for early configuration.
+            // This bypasses the DI container for this specific instance to avoid premature service resolution issues.
+            var tempLogger = NullLogger<ModuleLoader>.Instance; // Use NullLogger for temporary instance
+            var tempServiceRoutingRegistry = new ServiceRoutingRegistry(); // Assuming parameterless constructor
+            var tempServiceRegistry = new ServiceRegistry(); // Assuming parameterless constructor
             
-            var tempServiceProvider = tempServices.BuildServiceProvider(); // Changed to a variable for reuse
-            var moduleLoader = new ModuleLoader(
-                tempServiceProvider.GetRequiredService<IErrorHandler>(),
-                tempServiceProvider.GetRequiredService<IServiceRoutingRegistry>(),
-                tempServiceProvider.GetRequiredService<IServiceRegistry>()
-            );
+            var temporaryModuleLoader = new ModuleLoader(tempLogger, tempServiceRoutingRegistry, tempServiceRegistry);
+
+            // Phase 1: Discover modules and let them add their services to the main collection
+            temporaryModuleLoader.ConfigureModuleServices(services);
+            // --- End of new block for manually constructing temporary ModuleLoader ---
             
-            // Phase 1: Discover modules and let them add their services to the collection
-            moduleLoader.ConfigureModuleServices(services);
-            
-            // Now that all services are registered, build the main provider to scan assemblies
-            var provider = services.BuildServiceProvider();
+            // Register the actual ModuleLoader singleton for the main application lifecycle
+            // Its dependencies will be resolved from the final, full service provider.
+            services.AddSingleton<ModuleLoader>(); 
+
+            // Now that all services are registered (including those from modules), build the main provider to scan assemblies
+            var provider = services.BuildServiceProvider(); 
             var serviceRoutingRegistry = provider.GetRequiredService<IServiceRoutingRegistry>();
             var errorHandler = provider.GetRequiredService<IErrorHandler>();
 
+            // The ModuleLoader needed here is the one managed by the main DI container.
+            var mainModuleLoader = provider.GetRequiredService<ModuleLoader>();
+
             // Now, discover handlers and validators from all loaded assemblies
-            var assembliesToScan = moduleLoader.GetLoadedAssemblies();
+            var assembliesToScan = mainModuleLoader.GetLoadedAssemblies();
             var commandHandlerInterface = typeof(ICommandHandler<,>);
             var fireAndForgetCommandHandlerInterface = typeof(ICommandHandler<>);
             var eventHandlerInterface = typeof(IEventHandler<>);
@@ -72,7 +76,7 @@ namespace SoftwareCenter.Kernel
 
             foreach (var assembly in assembliesToScan)
             {
-                var owningModule = moduleLoader.GetLoadedModules().FirstOrDefault(m => m.Assembly == assembly);
+                var owningModule = mainModuleLoader.GetLoadedModules().FirstOrDefault(m => m.Assembly == assembly);
                 var moduleId = owningModule?.ModuleId ?? "Kernel";
 
                 try

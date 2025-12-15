@@ -8,9 +8,10 @@
 </head>
 <body>
     <div id="app-container">
-
-        <div id="main-content">
-
+        <div id="titlebar-zone" class="zone-wrapper titlebar-layout" data-mount-point="titlebar-zone"></div>
+        <div style="display: flex; flex-grow: 1;"> <!-- Flex container for nav and content -->
+            <div id="nav-rail-zone" class="zone-wrapper nav-rail-layout" data-mount-point="nav-rail-zone"></div>
+            <div id="content-zone" class="zone-wrapper content-layout" data-mount-point="content-zone"></div>
         </div>
     </div>
 

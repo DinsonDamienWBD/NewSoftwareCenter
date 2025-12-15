@@ -40,6 +40,9 @@ builder.Services.AddUIManager();
 builder.Services.AddControllers();
 builder.Services.AddSignalR();
 
+// Register ITemplateService
+builder.Services.AddSingleton<SoftwareCenter.Core.UI.ITemplateService, HostTemplateService>();
+
 // Registers the service that populates the UI with the Host's own features on startup.
 builder.Services.AddHostedService<HostFeatureUIService>();
 
@@ -59,6 +62,7 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+// app.UseDefaultFiles(); // Removed as per architectural clarification
 app.UseStaticFiles(); // Serves files from wwwroot
 
 // Add static file serving for each module's wwwroot directory
@@ -145,6 +149,16 @@ app.MapGet("/api/manifest", async (ICommandBus commandBus) =>
     }
 });
 
+// Endpoint to serve the fully composed HTML from UIManager
+app.MapGet("/", async (context) =>
+{
+    // Retrieve UiComposerService from the request services
+    var uiComposerService = context.RequestServices.GetRequiredService<UiComposerService>();
+    var composedHtml = await uiComposerService.GetComposedHtmlAsync();
+    context.Response.ContentType = "text/html";
+    await context.Response.WriteAsync(composedHtml);
+});
+
 // Map controller routes and the SignalR hub
 app.MapControllerRoute(name: "default", pattern: "{controller=Main}/{action=Index}/{id?}");
 app.MapHub<UiHub>("/uihub");
@@ -163,7 +177,15 @@ if (app.Environment.IsDevelopment())
     var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
     lifetime.ApplicationStarted.Register(() =>
     {
-        var addresses = app.Services.GetRequiredService<IServerAddressesFeature>().Addresses;
+        var addresses = (app.Services.GetService<Microsoft.AspNetCore.Hosting.Server.IServer>() as IServerAddressesFeature)?.Addresses;
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+
+        if (addresses == null || !addresses.Any())
+        {
+            logger.LogWarning("Server addresses not found, skipping browser launch.");
+            return;
+        }
+        
         var url = addresses.FirstOrDefault(x => x.StartsWith("https://")) ?? addresses.FirstOrDefault();
 
         if (!string.IsNullOrEmpty(url))
@@ -179,8 +201,7 @@ if (app.Environment.IsDevelopment())
             }
             catch(Exception ex)
             {
-                var logger = app.Services.GetRequiredService<ILogger<Program>>();
-                logger.LogError(ex, "Could not open browser.");
+                logger.LogError(ex, "Could not open browser with URL: {Url}", url);
             }
         }
     });

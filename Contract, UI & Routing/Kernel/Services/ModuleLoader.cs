@@ -15,6 +15,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.Loader;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging; // Added for ILogger
 
 namespace SoftwareCenter.Kernel.Services
 {
@@ -24,7 +25,7 @@ namespace SoftwareCenter.Kernel.Services
     /// </summary>
     public class ModuleLoader
     {
-        private readonly IErrorHandler _errorHandler;
+        private readonly ILogger<ModuleLoader> _logger; // Changed from IErrorHandler
         private readonly IServiceRoutingRegistry _serviceRoutingRegistry;
         private readonly IServiceRegistry _serviceRegistry;
         private readonly List<IApiEndpoint> _discoveredEndpoints = new();
@@ -33,12 +34,12 @@ namespace SoftwareCenter.Kernel.Services
         /// <summary>
         /// Initializes a new instance of the <see cref="ModuleLoader"/> class.
         /// </summary>
-        /// <param name="errorHandler">The application's error handler.</param>
+        /// <param name="logger">The logger for module loading events.</param>
         /// <param name="serviceRoutingRegistry">The registry for command/event/job handlers.</param>
         /// <param name="serviceRegistry">The registry for general services.</param>
-        public ModuleLoader(IErrorHandler errorHandler, IServiceRoutingRegistry serviceRoutingRegistry, IServiceRegistry serviceRegistry)
+        public ModuleLoader(ILogger<ModuleLoader> logger, IServiceRoutingRegistry serviceRoutingRegistry, IServiceRegistry serviceRegistry)
         {
-            _errorHandler = errorHandler ?? throw new ArgumentNullException(nameof(errorHandler));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _serviceRoutingRegistry = serviceRoutingRegistry ?? throw new ArgumentNullException(nameof(serviceRoutingRegistry));
             _serviceRegistry = serviceRegistry ?? throw new ArgumentNullException(nameof(serviceRegistry));
         }
@@ -111,8 +112,7 @@ namespace SoftwareCenter.Kernel.Services
 
             if (_loadedModules.ContainsKey(moduleId))
             {
-                var message = $"Module '{moduleId}' is already loaded.";
-                _errorHandler.HandleError(new InvalidOperationException(message), new TraceContext(), message, isCritical: false);
+                _logger.LogWarning("Module '{ModuleId}' is already loaded. Skipping.", moduleId); // Changed from _errorHandler
                 return;
             }
 
@@ -135,13 +135,12 @@ namespace SoftwareCenter.Kernel.Services
                     _loadedModules.Add(moduleId, moduleInfo);
                     DiscoverAndRegisterHandlers(moduleInfo);
                     
-                    var message = $"Module '{moduleId}' discovered and services configured.";
-                    _errorHandler.HandleError(new InvalidOperationException(message), new TraceContext(), message, isCritical: false);
+                    _logger.LogInformation("Module '{ModuleId}' discovered and services configured.", moduleId); // Changed from _errorHandler
                 }
             }
             catch (Exception ex)
             {
-                _errorHandler.HandleError(ex, new TraceContext(), $"Error loading and configuring services for module from {dllPath}.");
+                _logger.LogError(ex, "Error loading and configuring services for module from {DllPath}.", dllPath); // Changed from _errorHandler
             }
         }
 
@@ -153,13 +152,16 @@ namespace SoftwareCenter.Kernel.Services
         public async Task InitializeModules(IServiceProvider serviceProvider)
         {
             var modules = serviceProvider.GetServices<IModule>();
+            var errorHandler = serviceProvider.GetRequiredService<IErrorHandler>(); // Resolve IErrorHandler here
 
             foreach (var module in modules)
             {
+                ModuleInfo moduleInfo = null; // Declare and initialize moduleInfo to null
+
                 try
                 {
                     // Find the corresponding ModuleInfo to store the final, DI-managed instance
-                    if (_loadedModules.TryGetValue(module.Id, out var moduleInfo))
+                    if (_loadedModules.TryGetValue(module.Id, out moduleInfo))
                     {
                         moduleInfo.Instance = module;
                         moduleInfo.State = ModuleState.Initializing;
@@ -167,18 +169,17 @@ namespace SoftwareCenter.Kernel.Services
                         await module.Initialize(serviceProvider);
 
                         moduleInfo.State = ModuleState.Initialized;
-                        var message = $"Module '{module.Id}' initialized successfully.";
-                        _errorHandler.HandleError(new InvalidOperationException(message), new TraceContext(), message, isCritical: false);
+                        _logger.LogInformation("Module '{ModuleId}' initialized successfully.", module.Id);
                     }
                     else
                     {
-                        _errorHandler.HandleError(new InvalidOperationException($"Module {module.Id} was resolved from DI but not found in the loader's registry."), new TraceContext());
+                        errorHandler.HandleError(new InvalidOperationException($"Module {module.Id} was resolved from DI but not found in the loader's registry."), new TraceContext(), isCritical: false);
                     }
                 }
                 catch (Exception ex)
                 {
-                    _errorHandler.HandleError(ex, new TraceContext(), $"Error initializing module '{module.Id}'.");
-                    if (_loadedModules.TryGetValue(module.Id, out var moduleInfo))
+                    errorHandler.HandleError(ex, new TraceContext(), $"Error initializing module '{module.Id}'.", isCritical: false);
+                    if (moduleInfo != null) // Add null check before accessing moduleInfo.State
                     {
                         moduleInfo.State = ModuleState.Error;
                     }
@@ -220,6 +221,11 @@ namespace SoftwareCenter.Kernel.Services
                             moduleInfo.Handlers.Add(new DiscoveredHandler { HandlerType = type, ContractType = contractType, InterfaceType = i, Priority = handlerPriority, OwningModuleId = moduleId });
                         }
                     }
+                    else if (i == apiEndpointInterface) // For non-generic IApiEndpoint directly
+                    {
+                        // Handle direct implementation of IApiEndpoint
+                        // This case is typically covered by the IsAssignableFrom check below, but including for clarity.
+                    }
                 }
 
                 // 2. Discover API Endpoints (New Logic)
@@ -241,10 +247,7 @@ namespace SoftwareCenter.Kernel.Services
                     }
                     catch (Exception ex)
                     {
-                        // Log or ignore if endpoint cannot be instantiated (e.g. requires DI)
-                        // For Manifest generation, endpoints are often simple DTO-like objects.
-                        var msg = $"Failed to instantiate API endpoint '{type.Name}' in module '{moduleId}'.";
-                        _errorHandler.HandleError(ex, new TraceContext(), msg, isCritical: false);
+                        _logger.LogError(ex, "Failed to instantiate API endpoint '{TypeName}' in module '{ModuleId}'.", type.Name, moduleId); // Changed from _errorHandler
                     }
                 }
             }
@@ -258,8 +261,7 @@ namespace SoftwareCenter.Kernel.Services
         {
             if (!_loadedModules.TryGetValue(moduleId, out var moduleInfo))
             {
-                var message = $"Module '{moduleId}' not found for unloading.";
-                _errorHandler.HandleError(new InvalidOperationException(message), new TraceContext(), message, isCritical: false);
+                _logger.LogWarning("Module '{ModuleId}' not found for unloading.", moduleId); // Changed from _errorHandler
                 return;
             }
 
@@ -276,16 +278,15 @@ namespace SoftwareCenter.Kernel.Services
                 moduleInfo.LoadContext.Unload();
                 moduleInfo.State = ModuleState.Unloaded;
 
-                var message = $"Module '{moduleId}' unloaded successfully.";
-                _errorHandler.HandleError(new InvalidOperationException(message), new TraceContext(), message, isCritical: false);
+                _logger.LogInformation("Module '{ModuleId}' unloaded successfully.", moduleId); // Changed from _errorHandler
 
                 GC.Collect();
                 GC.WaitForPendingFinalizers();
             }
             catch (Exception ex)
             {
-                moduleInfo.State = ModuleState.Error;
-                _errorHandler.HandleError(ex, new TraceContext(), $"Error unloading module '{moduleId}'.");
+                _logger.LogError(ex, "Error unloading module '{ModuleId}'.", moduleId);
+                moduleInfo.State = ModuleState.Error; // Directly use the existing moduleInfo, which is in scope.
             }
         }
 
@@ -313,4 +314,3 @@ namespace SoftwareCenter.Kernel.Services
         public IEnumerable<IApiEndpoint> GetDiscoveredApiEndpoints() => _discoveredEndpoints;
     }
 }
-

@@ -6,6 +6,8 @@ using SoftwareCenter.Core.Errors;
 using SoftwareCenter.Core.Diagnostics;
 using SoftwareCenter.Core.Logs;
 
+using Microsoft.Extensions.Logging;
+
 namespace SoftwareCenter.Kernel.Services
 {
     /// <summary>
@@ -14,28 +16,28 @@ namespace SoftwareCenter.Kernel.Services
     /// </summary>
     public class DefaultErrorHandler : IErrorHandler
     {
-        private readonly ICommandBus _commandBus;
+        private readonly ILogger<DefaultErrorHandler> _logger;
 
-        public DefaultErrorHandler(ICommandBus commandBus)
+        public DefaultErrorHandler(ILogger<DefaultErrorHandler> logger)
         {
-            _commandBus = commandBus ?? throw new ArgumentNullException(nameof(commandBus));
+            _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         }
 
         public async Task HandleError(Exception exception, ITraceContext traceContext, string message = null, bool isCritical = false)
         {
-            var logLevel = isCritical ? LogLevel.Critical : LogLevel.Error;
             var logMessage = message ?? "An unhandled error occurred.";
 
-            var structuredData = new Dictionary<string, object>
+            // Use the injected logger directly to avoid circular dependencies with the command bus.
+            // ILogger's methods (LogCritical, LogError) accept an Exception object directly.
+            if (isCritical)
             {
-                { "ExceptionType", exception?.GetType().FullName },
-                { "ExceptionMessage", exception?.Message },
-                { "StackTrace", exception?.StackTrace }
-            };
-
-            var logCommand = new LogCommand(logLevel, logMessage, traceContext, exception, structuredData);
-
-            await _commandBus.Dispatch(logCommand, traceContext);
+                _logger.LogCritical(exception, "CRITICAL: {LogMessage} (TraceId: {TraceId})", logMessage, traceContext?.TraceId);
+            }
+            else
+            {
+                _logger.LogError(exception, "ERROR: {LogMessage} (TraceId: {TraceId})", logMessage, traceContext?.TraceId);
+            }
+            await Task.CompletedTask; // Since ILogger is synchronous, return a completed task
         }
     }
 }
