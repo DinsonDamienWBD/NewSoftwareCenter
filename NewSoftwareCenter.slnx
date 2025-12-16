@@ -1,0 +1,7 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="Metadata/GLOBAL_METADATA.MD" />
+    <File Path="Metadata/UI_METADATA.MD" />
+  </Folder>
+</Solution>
