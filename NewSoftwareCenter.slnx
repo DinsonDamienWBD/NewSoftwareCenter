@@ -1,7 +1,18 @@
 <Solution>
+  <Folder Name="/Kernel/">
+    <Project Path="Kernel/Core/Core.csproj" />
+    <Project Path="Kernel/DataWarehouse/DataWarehouse.csproj" />
+  </Folder>
+  <Folder Name="/Kernel/Managers/">
+    <Project Path="Kernel/Managers/BackendManager/BackendManager.csproj" />
+    <Project Path="Kernel/Managers/FrontendManager/FrontendManager.csproj" />
+  </Folder>
   <Folder Name="/Solution Items/">
     <File Path="Directory.Build.props" />
     <File Path="Metadata/GLOBAL_METADATA.MD" />
     <File Path="Metadata/UI_METADATA.MD" />
   </Folder>
+  <Project Path="Host/Host.csproj">
+    <BuildDependency Project="Kernel/Core/Core.csproj" />
+  </Project>
 </Solution>

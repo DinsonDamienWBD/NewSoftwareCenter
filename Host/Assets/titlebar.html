@@ -1,0 +1,99 @@
+﻿<div class="app-drag-region" style="display: flex; width: 100%; justify-content: space-between; align-items: center;">
+
+    <div style="font-weight: bold; padding-left: 10px;">
+        Software Center <span style="font-weight:normal; opacity: 0.7;">| Host</span>
+    </div>
+
+    <div class="app-no-drag" style="display: flex; gap: 10px;">
+
+        <button class="sys-btn" onclick="window.open('/developer.html', '_blank')" title="Open Developer Tools">
+            🛠️
+        </button>
+
+        <button class="sys-btn" id="btn-elevate" title="Toggle Admin Mode">
+            🛡️
+        </button>
+
+        <div style="position: relative;">
+            <button class="sys-btn" id="btn-bell">🔔</button>
+            <span id="notif-badge" style="display:none; position:absolute; top:0; right:0; width:8px; height:8px; background:red; border-radius:50%;"></span>
+        </div>
+
+        <div style="position: relative;">
+            <button class="sys-btn" id="btn-power" onclick="togglePowerMenu()">⚡</button>
+
+            <div id="power-dropdown" style="display:none; position:absolute; right:0; top:30px; background:var(--secondary-bg-color); border:1px solid var(--border-color); width: 150px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); z-index: 1000; padding: 5px 0;">
+
+                <div class="menu-item" style="padding: 8px 15px; cursor: pointer;"
+                     onclick="api.post('system/power', { action: 'restart-web' })">
+                    Restart Web
+                </div>
+
+                <div class="menu-item" style="padding: 8px 15px; cursor: pointer;"
+                     onclick="shutdownSystem()">
+                    Stop Web
+                </div>
+
+                <div style="border-top:1px solid var(--border-color); margin: 5px 0;"></div>
+
+                <div class="menu-item" style="padding: 8px 15px; cursor: pointer; color: #ff6b6b;"
+                     onclick="alert('Reboot OS not implemented yet')">
+                    Reboot OS
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    function togglePowerMenu() {
+        const menu = document.getElementById('power-dropdown');
+        menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+    }
+
+    document.addEventListener('click', function (event) {
+        const menu = document.getElementById('power-dropdown');
+        const btn = document.getElementById('btn-power');
+        if (!btn.contains(event.target) && !menu.contains(event.target)) {
+            menu.style.display = 'none';
+        }
+    });
+
+    async function shutdownSystem() {
+        if (!confirm("Stop the Server?")) return;
+        try {
+            await api.post('system/power', { action: 'shutdown' });
+            showOverlay("System Halted", "The server has shut down. You may close this tab.");
+            window.close();
+        } catch (e) { alert("Server unreachable"); }
+    }
+
+    async function restartSystem() {
+        if (!confirm("Restart the Server?")) return;
+        try {
+            await api.post('system/power', { action: 'restart-web' });
+            showOverlay("Restarting...", "The server is restarting. A new tab will open shortly.");
+            setTimeout(() => window.close(), 2000);
+        } catch (e) { alert("Server unreachable"); }
+    }
+
+    async function rebootOs() {
+        if (!confirm("⚠️ REBOOT WINDOWS? \n\nThis will restart the host computer.")) return;
+        try {
+            await api.post('system/power', { action: 'reboot-os' });
+            showOverlay("Rebooting...", "The Operating System is restarting...");
+            setTimeout(() => window.close(), 2000);
+        } catch (e) { alert("Server unreachable"); }
+    }
+
+    function showOverlay(title, subtitle) {
+        document.body.innerHTML = `
+            <div style="height:100vh; background:#1a1a1d; color:#c5c6c7; display:flex;
+                        align-items:center; justify-content:center; flex-direction:column; font-family:sans-serif;">
+                <h1 style="color:#ff6b6b">${title}</h1>
+                <p>${subtitle}</p>
+            </div>
+        `;
+    }
+</script>

@@ -1,0 +1,485 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kernel Developer Tools</title>
+    <style>
+        :root {
+            --bg-color: #1e1e1e;
+            --sidebar-bg: #252526;
+            --text-color: #d4d4d4;
+            --accent-color: #007acc;
+            --border-color: #3e3e42;
+            --success-color: #4ec9b0;
+            --fail-color: #f44747;
+            --method-cmd: #c586c0;
+            --method-query: #4ec9b0;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .search-box {
+            padding: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+            .search-box input {
+                width: 95%;
+                padding: 8px;
+                background: #3c3c3c;
+                border: 1px solid var(--border-color);
+                color: white;
+                border-radius: 4px;
+            }
+
+        .api-list {
+            flex: 1;
+            overflow-y: auto;
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .api-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #2d2d2d;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+            .api-item:hover {
+                background-color: #2a2d2e;
+            }
+
+            .api-item.active {
+                background-color: #37373d;
+                border-left: 3px solid var(--accent-color);
+            }
+
+        .badge {
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #1e1e1e;
+        }
+
+            .badge.cmd {
+                background-color: var(--method-cmd);
+            }
+
+            .badge.query {
+                background-color: var(--method-query);
+            }
+
+        /* Main Content */
+        .main {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+        }
+
+            .header h1 {
+                margin: 0;
+                font-size: 24px;
+                color: var(--accent-color);
+            }
+
+            .header .meta {
+                font-size: 12px;
+                color: #888;
+                margin-top: 5px;
+            }
+
+        /* Dependency Graph */
+        .graph-panel {
+            display: flex;
+            gap: 20px;
+            background: #2d2d2d;
+            padding: 15px;
+            border-radius: 5px;
+        }
+
+        .graph-col {
+            flex: 1;
+        }
+
+            .graph-col h3 {
+                margin-top: 0;
+                font-size: 14px;
+                color: #aaa;
+                border-bottom: 1px solid #444;
+                padding-bottom: 5px;
+            }
+
+        .link-item {
+            display: block;
+            padding: 4px 8px;
+            background: #333;
+            margin-bottom: 4px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+            .link-item:hover {
+                background: #444;
+            }
+
+        /* Schema Form */
+        .schema-form {
+            background: #252526;
+            padding: 20px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+            .form-group label {
+                display: block;
+                margin-bottom: 5px;
+                font-size: 12px;
+                font-weight: bold;
+                color: #ccc;
+            }
+
+            .form-group .desc {
+                font-size: 11px;
+                color: #888;
+                margin-bottom: 5px;
+                font-style: italic;
+            }
+
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            background: #1e1e1e;
+            border: 1px solid #444;
+            color: white;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+
+            .form-control:focus {
+                border-color: var(--accent-color);
+                outline: none;
+            }
+
+        /* Json Viewer */
+        .response-area {
+            background: #1e1e1e;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid var(--border-color);
+            font-family: monospace;
+            white-space: pre-wrap;
+            font-size: 12px;
+            color: #ce9178;
+            min-height: 100px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+            .btn:hover {
+                opacity: 0.9;
+            }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="Search API..." onkeyup="filterList()">
+        </div>
+        <ul class="api-list" id="apiList">
+        </ul>
+    </div>
+
+    <div class="main" id="mainContent">
+        <div style="text-align: center; margin-top: 100px; color: #666;">
+            <h2>Select an API Endpoint</h2>
+            <p>Select a command or query from the sidebar to inspect dependencies and test payloads.</p>
+        </div>
+    </div>
+
+    <script>
+        let registryData = [];
+
+        // 1. Fetch Registry Data
+        async function init() {
+            try {
+                // FIX: Use Direct Backend Endpoint (bypass Middleware for dev tools)
+                const response = await fetch('/api/backend/dispatch', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        MessageType: 'system/dev/help',
+                        Payload: {}
+                    })
+                });
+
+                const json = await response.json();
+
+                // Handle standard Result<T> envelope
+                if (json.isSuccess && json.value) {
+                    registryData = json.value;
+                    renderSidebar(registryData);
+                } else {
+                    console.error("API Error", json);
+                    document.getElementById('mainContent').innerHTML = `<h3 style="color:var(--fail-color)">API Error: ${json.error}</h3>`;
+                }
+            } catch (err) {
+                console.error("Fetch Error", err);
+                document.getElementById('mainContent').innerHTML = `<h3 style="color:var(--fail-color)">Network Error: ${err.message}</h3>`;
+            }
+        }
+
+        // 2. Render Sidebar
+        function renderSidebar(items) {
+            const list = document.getElementById('apiList');
+            list.innerHTML = '';
+
+            items.forEach(item => {
+                const li = document.createElement('li');
+                li.className = 'api-item';
+                li.dataset.filter = item.route.toLowerCase();
+
+                // Determine Badge
+                let badgeClass = 'cmd';
+                if (item.type.toLowerCase().includes('query')) badgeClass = 'query';
+
+                li.innerHTML = `<span class="badge ${badgeClass}">${badgeClass.toUpperCase()}</span> ${item.route}`;
+                li.onclick = () => selectItem(item, li);
+                list.appendChild(li);
+            });
+        }
+
+        function filterList() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            document.querySelectorAll('.api-item').forEach(el => {
+                el.style.display = el.dataset.filter.includes(term) ? 'flex' : 'none';
+            });
+        }
+
+        // 3. Render Detail View
+        function selectItem(item, element) {
+            document.querySelectorAll('.api-item').forEach(el => el.classList.remove('active'));
+            element.classList.add('active');
+
+            const main = document.getElementById('mainContent');
+            main.innerHTML = `
+                    <div class="header">
+                        <h1>${item.route}</h1>
+                        <div class="meta">
+                            Owner: <strong>${item.ownerId}</strong> | Type: <strong>${item.type}</strong>
+                        </div>
+                        <p>${item.description || "No description provided."}</p>
+                    </div>
+
+                    <div class="graph-panel">
+                        <div class="graph-col">
+                            <h3>Referred By (Callers)</h3>
+                            ${renderLinks(item.referredBy, 'No known callers.')}
+                        </div>
+                        <div class="graph-col">
+                            <h3>Refers To (Dependencies)</h3>
+                            ${renderLinks(item.refersTo, 'No dependencies declared.')}
+                        </div>
+                    </div>
+
+                    <div class="schema-form">
+                        <h3 style="margin-top:0">Try It Out</h3>
+                        <div id="formFields"></div>
+                        <button class="btn" onclick="executeRequest('${item.route}')">Send Request</button>
+                    </div>
+
+                    <h3>Response</h3>
+                    <div class="response-area" id="responseOutput">Waiting for request...</div>
+                `;
+
+            generateForm(item.payloadSchema, document.getElementById('formFields'));
+        }
+
+        function renderLinks(links, emptyText) {
+            if (!links || links.length === 0) return `<div style="color:#666; font-size:12px; font-style:italic;">${emptyText}</div>`;
+            return links.map(link => `<a class="link-item" onclick="navigateTo('${link}')">${link}</a>`).join('');
+        }
+
+        function navigateTo(route) {
+            const item = registryData.find(x => x.route === route);
+            if (!item) return alert("Route not found in current registry dump.");
+            // Reset and Select
+            document.querySelectorAll('.api-item').forEach(el => el.classList.remove('active'));
+            // Find sidebar element (simple method)
+            const el = Array.from(document.querySelectorAll('.api-item')).find(el => el.innerText.includes(route));
+            if (el) selectItem(item, el);
+        }
+
+        // 4. Recursive Form Generator
+        function generateForm(schema, container, prefix = '') {
+            if (!schema || !schema.properties) {
+                container.innerHTML = '<div style="color:#888;">No payload required (Void).</div>';
+                return;
+            }
+
+            for (const [key, prop] of Object.entries(schema.properties)) {
+                const fieldId = prefix ? `${prefix}.${key}` : key;
+
+                const group = document.createElement('div');
+                group.className = 'form-group';
+
+                const label = document.createElement('label');
+                label.innerText = `${key} (${prop.typeName})`;
+                group.appendChild(label);
+
+                if (prop.description) {
+                    const desc = document.createElement('div');
+                    desc.className = 'desc';
+                    desc.innerText = prop.description;
+                    group.appendChild(desc);
+                }
+
+                if (prop.typeName === 'object') {
+                    const subContainer = document.createElement('div');
+                    subContainer.style.paddingLeft = "15px";
+                    subContainer.style.borderLeft = "2px solid #333";
+                    generateForm(prop, subContainer, fieldId);
+                    group.appendChild(subContainer);
+                }
+                else if (prop.typeName === 'enum') {
+                    const select = document.createElement('select');
+                    select.className = 'form-control';
+                    select.dataset.path = fieldId;
+                    select.dataset.type = 'string';
+
+                    prop.enumValues.forEach(val => {
+                        const opt = document.createElement('option');
+                        opt.value = val;
+                        opt.innerText = val;
+                        if (val === prop.defaultValue) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                    group.appendChild(select);
+                }
+                else if (prop.typeName === 'bool') {
+                    const input = document.createElement('input');
+                    input.type = 'checkbox';
+                    input.dataset.path = fieldId;
+                    input.dataset.type = 'bool';
+                    if (prop.defaultValue === true) input.checked = true;
+                    group.appendChild(input);
+                }
+                else {
+                    const input = document.createElement('input');
+                    input.type = prop.typeName === 'number' ? 'number' : 'text';
+                    input.className = 'form-control';
+                    input.dataset.path = fieldId;
+                    input.dataset.type = prop.typeName;
+                    if (prop.defaultValue !== undefined) input.value = prop.defaultValue;
+                    group.appendChild(input);
+                }
+
+                container.appendChild(group);
+            }
+        }
+
+        // 5. Execution Logic
+        async function executeRequest(route) {
+            const output = document.getElementById('responseOutput');
+            output.innerText = "Sending...";
+
+            // Build Payload
+            const payload = {};
+            const inputs = document.querySelectorAll('[data-path]');
+
+            inputs.forEach(input => {
+                const path = input.dataset.path.split('.');
+                const type = input.dataset.type;
+                let value = input.type === 'checkbox' ? input.checked : input.value;
+
+                if (type === 'number') value = parseFloat(value);
+                if (type === 'bool') value = input.checked;
+
+                let current = payload;
+                for (let i = 0; i < path.length - 1; i++) {
+                    if (!current[path[i]]) current[path[i]] = {};
+                    current = current[path[i]];
+                }
+                current[path[path.length - 1]] = value;
+            });
+
+            // FIX: Use Direct Endpoint for now
+            const isFrontend = route.startsWith('ui/') || route.includes('frontend');
+            const endpoint = isFrontend ? '/api/frontend/dispatch' : '/api/backend/dispatch';
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        MessageType: route,
+                        Payload: payload
+                    })
+                });
+
+                const text = await res.text();
+                try {
+                    const json = JSON.parse(text);
+                    output.innerText = JSON.stringify(json, null, 2);
+                    output.style.color = json.isSuccess ? "var(--success-color)" : "var(--fail-color)";
+                } catch {
+                    output.innerText = text;
+                }
+            } catch (err) {
+                output.innerText = "Error: " + err.message;
+                output.style.color = "var(--fail-color)";
+            }
+        }
+
+        // Start
+        init();
+    </script>
+</body>
+</html>

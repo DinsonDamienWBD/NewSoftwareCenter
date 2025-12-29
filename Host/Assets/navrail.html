@@ -1,0 +1,16 @@
+﻿<div style="display: flex; flex-direction: column; width: 100%; align-items: center; gap: 15px;">
+
+    <button class="sys-btn" id="btn-home" onclick="api.post('system/navigate', { target: 'home' })" title="Home">
+        🏠
+    </button>
+
+    <button class="sys-btn" id="btn-settings" onclick="api.post('system/navigate', { target: 'settings' })" title="Settings">
+        ⚙️
+    </button>
+
+    <div style="width: 60%; height: 1px; background-color: var(--border-color); opacity: 0.5;"></div>
+
+    <div id="nav-item-container" style="display: flex; flex-direction: column; gap: 10px; width: 100%; align-items: center;">
+    </div>
+
+</div>

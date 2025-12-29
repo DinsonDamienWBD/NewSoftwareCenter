@@ -1,0 +1,100 @@
+﻿<div style="padding: 20px; max-width: 800px; margin: 0 auto;">
+
+    <div class="std-header">
+        <h2 class="std-h2">System Configuration</h2>
+        <p class="std-p">Manage your environment preferences.</p>
+    </div>
+
+    <div class="std-panel" style="margin-bottom: 20px;">
+        <h4 class="std-h4">Appearance</h4>
+        <div class="std-row">
+            <div class="std-col-6">
+                <label class="std-label">Theme Mode</label>
+                <select class="std-select" id="set-theme">
+                    <option value="dark">Dark Mode</option>
+                    <option value="light">Light Mode</option>
+                    <option value="system">Sync with System</option>
+                </select>
+            </div>
+            <div class="std-col-6">
+                <label class="std-label">Language</label>
+                <select class="std-select" id="set-lang">
+                    <option value="en-US">English (US)</option>
+                    <option value="ja-JP">Japanese</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="std-panel" style="margin-bottom: 20px;">
+        <h4 class="std-h4">Behavior</h4>
+
+        <label class="std-checkbox-wrapper">
+            <input type="checkbox" id="set-autosave">
+            <span class="std-checkbox-label">Auto-save changes every 5 minutes</span>
+        </label>
+
+        <div class="std-divider"></div>
+
+        <h5 class="std-h5">Notifications</h5>
+        <div style="display: flex; gap: 20px;">
+            <label class="std-toggle-switch">
+                <input type="checkbox" id="set-notif-desktop" checked>
+                <span class="std-slider-track"></span>
+            </label>
+            <span>Desktop Popups</span>
+
+            <label class="std-toggle-switch" style="margin-left: 20px;">
+                <input type="checkbox" id="set-notif-email">
+                <span class="std-slider-track"></span>
+            </label>
+            <span>Email Alerts</span>
+        </div>
+    </div>
+
+    <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button class="std-button" onclick="loadSettings()">Discard</button>
+        <button class="std-button std-btn-primary" onclick="saveSettings()">Save Changes</button>
+    </div>
+
+</div>
+
+<script>
+    // This script executes when the HTML is injected into the DOM
+
+    // 1. Fetch Data
+    async function loadSettings() {
+        // We call the Backend to get the JSON
+        // Note: We haven't implemented 'system/get-settings' yet (That's Step 3.3!)
+        const response = await api.post('system/get-settings');
+        if (response && response.payload) {
+            const data = response.payload;
+
+            // 2. Bind to UI
+            document.getElementById('set-theme').value = data.theme;
+            document.getElementById('set-lang').value = data.language;
+            document.getElementById('set-autosave').checked = data.autoSave;
+            document.getElementById('set-notif-desktop').checked = data.notifications?.desktop;
+            document.getElementById('set-notif-email').checked = data.notifications?.email;
+        }
+    }
+
+    // 3. Save Data
+    async function saveSettings() {
+        const data = {
+            theme: document.getElementById('set-theme').value,
+            language: document.getElementById('set-lang').value,
+            autoSave: document.getElementById('set-autosave').checked,
+            notifications: {
+                desktop: document.getElementById('set-notif-desktop').checked,
+                email: document.getElementById('set-notif-email').checked
+            }
+        };
+
+        await api.post('system/save-settings', data);
+        alert('Settings Saved!');
+    }
+
+    // Init
+    loadSettings();
+</script>

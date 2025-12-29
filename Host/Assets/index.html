@@ -1,0 +1,62 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Software Center Kernel</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-grid">
+        <div id="zone-titlebar"></div>
+
+        <div id="zone-nav"></div>
+
+        <div id="zone-content">
+        </div>
+    </div>
+
+    <div id="zone-templates" style="display:none;"></div>
+
+    <script>
+        console.log("Kernel Shell Loaded - V2"); // Changed log to verify update
+
+        const api = {
+            post: async (path, data = {}) => {
+                try {
+                    // 1. Prepare the Payload (Merge data with system fields)
+                    const commandPayload = {
+                        ...data, // Spread the data (e.g., { target: 'home' })
+                        MessageId: crypto.randomUUID(),
+                    };
+
+                    // 2. Send the Envelope
+                    const response = await fetch(`/api/dispatch`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Command-Type': path
+                        },
+                        body: JSON.stringify({
+                            // MUST be 'MessageType' to match C# MessageEnvelope class
+                            MessageType: path,
+
+                            // MUST be an Object (not a string) to match JsonElement
+                            Payload: commandPayload
+                        })
+                    });
+
+                    if (!response.ok) {
+                        const err = await response.json();
+                        console.error("Server Error:", err);
+                        alert("Error: " + (err.Error || "Unknown Error"));
+                    }
+                } catch (e) {
+                    console.error("Network Failed", e);
+                }
+            }
+        };
+    </script>
+</body>
+</html>
