@@ -15,6 +15,10 @@ namespace DataWarehouse.IO
         private readonly byte[] _roomKey = roomKey;
         private readonly string _roomPrefix = roomPrefix; // e.g., "Modules/ModuleA/"
 
+        // Header: [Version 1b] [AlgId 1b]
+        private const byte CurrentVersion = 0x01;
+        private const int ChunkSize = 1024 * 1024; // 1MB
+
         /// <summary>
         /// Storage capabilities
         /// </summary>
@@ -32,18 +36,17 @@ namespace DataWarehouse.IO
         /// <returns></returns>
         public async Task SaveAsync(string path, Stream data)
         {
-            // 1. Read the input stream into memory (Encryption requires the whole block for GCM)
-            // Note: For massive files (GBs), we would need a chunking strategy. 
-            // For typical enterprise files (MBs), this is fine.
-            using var ms = new MemoryStream();
-            await data.CopyToAsync(ms);
-            var plaintext = ms.ToArray();
+            using var outStream = new MemoryStream();
+            outStream.WriteByte(CurrentVersion);
 
-            // 2. Encrypt
-            var ciphertext = _crypto.Encrypt(plaintext, _roomKey);
+            // Use Async Chunked Stream
+            using (var encryptor = new ChunkedEncryptionStream(outStream, _crypto, _roomKey))
+            {
+                await data.CopyToAsync(encryptor);
+                // Dispose will trigger FlushAsync
+            }
 
-            // 3. Write to backing store
-            using var outStream = new MemoryStream(ciphertext);
+            outStream.Position = 0;
             await _backingStore.SaveAsync(Qualify(path), outStream);
         }
 
@@ -54,17 +57,35 @@ namespace DataWarehouse.IO
         /// <returns></returns>
         public async Task<Stream> LoadAsync(string path)
         {
-            // 1. Load Encrypted Blob
             using var encryptedStream = await _backingStore.LoadAsync(Qualify(path));
-            using var ms = new MemoryStream();
-            await encryptedStream.CopyToAsync(ms);
-            var ciphertext = ms.ToArray();
+            var outStream = new MemoryStream();
 
-            // 2. Decrypt
-            // If the key is wrong, this throws CryptographicException (Access Denied)
-            var plaintext = _crypto.Decrypt(ciphertext, _roomKey);
+            // 1. Verify Header
+            int version = encryptedStream.ReadByte();
+            if (version == -1)
+            {
+                // FIX: Zero-byte file (Empty). Return empty stream.
+                return new MemoryStream();
+            }
+            if (version != CurrentVersion) throw new InvalidOperationException($"Unknown file version: {version}");
 
-            return new MemoryStream(plaintext);
+            // 2. Read Chunks
+            var lengthBuffer = new byte[4];
+            while (await encryptedStream.ReadAsync(lengthBuffer.AsMemory(0, 4)) > 0)
+            {
+                var blockLength = BitConverter.ToInt32(lengthBuffer, 0);
+                if (blockLength == 0) continue; // Safety check
+
+                var block = new byte[blockLength];
+                var read = await encryptedStream.ReadAsync(block.AsMemory(0, blockLength));
+                if (read != blockLength) throw new EndOfStreamException();
+
+                var plaintext = _crypto.Decrypt(block, _roomKey);
+                await outStream.WriteAsync(plaintext.AsMemory());
+            }
+
+            outStream.Position = 0;
+            return outStream;
         }
 
         /// <summary>

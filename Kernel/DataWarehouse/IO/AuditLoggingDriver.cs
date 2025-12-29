@@ -3,6 +3,7 @@ using Core.Primitives;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 namespace DataWarehouse.IO
@@ -10,11 +11,17 @@ namespace DataWarehouse.IO
     /// <summary>
     /// Driver that wraps another driver and logs everything
     /// </summary>
-    public class AuditLoggingDriver(IStorageDriver inner, string logRoot, string contextName) : IStorageDriver
+    public class AuditLoggingDriver : IStorageDriver, IDisposable, IAsyncDisposable
     {
-        private readonly IStorageDriver _inner = inner;
-        private readonly string _logPath = Path.Combine(logRoot, "audit_access.log");
-        private readonly string _contextName = contextName; // e.g., "ModuleA" or "System"
+        private readonly IStorageDriver _inner;
+        private readonly string _logRoot;
+        private readonly string _contextName; // e.g., "ModuleA" or "System"
+        private const long MaxLogSizeBytes = 10 * 1024 * 1024; // 10MB
+
+        // Async Batching
+        private readonly Channel<string> _logChannel;
+        private readonly Task _workerTask;
+        private readonly CancellationTokenSource _cts;
 
         /// <summary>
         /// Storage capabilities of the inner driver
@@ -22,41 +29,89 @@ namespace DataWarehouse.IO
         public StorageCapabilities Capabilities => _inner.Capabilities;
 
         /// <summary>
-        /// Log everything async
+        /// Constructor
         /// </summary>
-        /// <param name="action"></param>
-        /// <param name="path"></param>
-        /// <param name="details"></param>
-        /// <returns></returns>
-        private async Task LogAsync(string action, string path, string details = "")
+        /// <param name="inner"></param>
+        /// <param name="logRoot"></param>
+        /// <param name="contextName"></param>
+        public AuditLoggingDriver(IStorageDriver inner, string logRoot, string contextName)
         {
-            // Format: Timestamp | Context | Action | Path | Details
-            var line = $"{DateTime.UtcNow:O}|{_contextName}|{action}|{path}|{details}{Environment.NewLine}";
+            _inner = inner;
+            _logRoot = logRoot;
+            _contextName = contextName;
 
-            // Simple append. In high-scale, use a proper logging queue.
-            await File.AppendAllTextAsync(_logPath, line);
+            _logChannel = Channel.CreateUnbounded<string>();
+            _cts = new CancellationTokenSource();
+            _workerTask = Task.Run(ProcessLogsAsync);
+        }
+
+        private void EnqueueLog(string action, string path, string details = "")
+        {
+            var line = $"{DateTime.UtcNow:O}|{_contextName}|{action}|{path}|{details}{Environment.NewLine}";
+            _logChannel.Writer.TryWrite(line);
+        }
+
+        private async Task ProcessLogsAsync()
+        {
+            var batch = new List<string>();
+            var logFile = Path.Combine(_logRoot, "audit_access.log");
+
+            try
+            {
+                while (await _logChannel.Reader.WaitToReadAsync(_cts.Token))
+                {
+                    // Read all available items
+                    while (_logChannel.Reader.TryRead(out var item))
+                    {
+                        batch.Add(item);
+                        if (batch.Count >= 50) break; // Batch limit
+                    }
+
+                    if (batch.Count > 0)
+                    {
+                        await CheckRotationAsync(logFile);
+                        await File.AppendAllLinesAsync(logFile, batch, _cts.Token);
+                        batch.Clear();
+                    }
+                }
+            }
+            catch (OperationCanceledException) { /* Graceful shutdown */ }
+        }
+
+        private Task CheckRotationAsync(string logFile)
+        {
+            if (File.Exists(logFile) && new FileInfo(logFile).Length > MaxLogSizeBytes)
+            {
+                var archiveName = $"audit_{DateTime.UtcNow:yyyy-MM-dd_HHmmss}.log";
+                try
+                {
+                    File.Move(logFile, Path.Combine(_logRoot, archiveName));
+                }
+                catch { /* Ignore */ }
+            }
+            return Task.CompletedTask;
         }
 
         /// <summary>
-        /// Log the write and call the inner save async
+        /// Log the write and call inner Save async
         /// </summary>
         /// <param name="path"></param>
         /// <param name="data"></param>
         /// <returns></returns>
         public async Task SaveAsync(string path, Stream data)
         {
-            await LogAsync("WRITE", path, $"Size: {data.Length}");
+            EnqueueLog("WRITE", path, $"Size: {data.Length}");
             await _inner.SaveAsync(path, data);
         }
 
         /// <summary>
-        /// Log the read and call inner load async
+        /// Log the read and call inner read async
         /// </summary>
         /// <param name="path"></param>
         /// <returns></returns>
         public async Task<Stream> LoadAsync(string path)
         {
-            await LogAsync("READ", path);
+            EnqueueLog("READ", path);
             return await _inner.LoadAsync(path);
         }
 
@@ -67,7 +122,7 @@ namespace DataWarehouse.IO
         /// <returns></returns>
         public async Task DeleteAsync(string path)
         {
-            await LogAsync("DELETE", path);
+            EnqueueLog("DELETE", path);
             await _inner.DeleteAsync(path);
         }
 
@@ -99,7 +154,7 @@ namespace DataWarehouse.IO
         /// <returns></returns>
         public async Task SaveBatchAsync(IDictionary<string, Stream> files)
         {
-            await LogAsync("BATCH_WRITE", $"{files.Count} files");
+            EnqueueLog("BATCH_WRITE", $"{files.Count} files");
             await _inner.SaveBatchAsync(files);
         }
 
@@ -110,8 +165,28 @@ namespace DataWarehouse.IO
         /// <returns></returns>
         public async Task DeleteBatchAsync(IEnumerable<string> paths)
         {
-            await LogAsync("BATCH_DELETE", "Multiple files");
+            EnqueueLog("BATCH_DELETE", "Multiple files");
             await _inner.DeleteBatchAsync(paths);
+        }
+
+        /// <summary>
+        /// Safe disposal
+        /// </summary>
+        public void Dispose()
+        {
+            _cts.Cancel();
+            GC.SuppressFinalize(this);
+        }
+
+        /// <summary>
+        /// Safe disposal
+        /// </summary>
+        /// <returns></returns>
+        public async ValueTask DisposeAsync()
+        {
+            _cts.Cancel();
+            try { await _workerTask; } catch { }
+            GC.SuppressFinalize(this);
         }
     }
 }

@@ -55,33 +55,30 @@ namespace DataWarehouse.Security
             if (!File.Exists(_recoveryPath)) throw new FileNotFoundException("No recovery key found.");
 
             var fileBytes = File.ReadAllBytes(_recoveryPath);
+            var salt = fileBytes.AsSpan(0, SaltSize).ToArray(); // Copy to array for cleanup
+            byte[]? kek = null;
 
-            // Format: [Salt 32b][IV 12b][Tag 16b][Ciphertext 32b]
-            // Total = 92 bytes
+            try
+            {
+                var nonce = fileBytes.AsSpan(SaltSize, 12);
+                var tag = fileBytes.AsSpan(SaltSize + 12, 16);
+                var ciphertext = fileBytes.AsSpan(SaltSize + 12 + 16);
 
-            var salt = fileBytes.AsSpan(0, SaltSize);
-            var nonce = fileBytes.AsSpan(SaltSize, 12);
-            var tag = fileBytes.AsSpan(SaltSize + 12, 16);
-            var ciphertext = fileBytes.AsSpan(SaltSize + 12 + 16);
+                kek = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, 32);
 
-            // 1. Derive Key from Password
-            var kek = Rfc2898DeriveBytes.Pbkdf2(
-                password,
-                salt.ToArray(),
-                Iterations,
-                HashAlgorithmName.SHA256,
-                32 // Output length
-            );
+                using var aes = new AesGcm(kek, 16);
+                var masterKey = new byte[ciphertext.Length];
+                aes.Decrypt(nonce, ciphertext, tag, masterKey);
 
-            // 2. Decrypt Master Key
-            using var aes = new AesGcm(kek, 16);
-            var masterKey = new byte[ciphertext.Length];
-            aes.Decrypt(nonce, ciphertext, tag, masterKey);
-
-            // 3. Re-save as DPAPI (Restore primary access)
-            SaveDpapiKey(masterKey);
-
-            return masterKey;
+                SaveDpapiKey(masterKey);
+                return masterKey;
+            }
+            finally
+            {
+                // HYGIENE: Wipe intermediate secrets
+                CryptographicOperations.ZeroMemory(salt);
+                if (kek != null) CryptographicOperations.ZeroMemory(kek);
+            }
         }
 
         /// <summary>
@@ -91,34 +88,34 @@ namespace DataWarehouse.Security
         /// <param name="password"></param>
         public void SetRecoveryPassword(byte[] masterKey, string password)
         {
-            // 1. Derive KEK (Key Encryption Key)
             var salt = new byte[SaltSize];
             RandomNumberGenerator.Fill(salt);
+            byte[]? kek = null;
 
-            var kek = Rfc2898DeriveBytes.Pbkdf2(
-                password,
-                salt,
-                Iterations,
-                HashAlgorithmName.SHA256,
-                32 // Output length
-            );
+            try
+            {
+                kek = Rfc2898DeriveBytes.Pbkdf2(password, salt, Iterations, HashAlgorithmName.SHA256, 32);
 
-            // 2. Encrypt Master Key
-            using var aes = new AesGcm(kek, 16);
-            var nonce = new byte[12];
-            RandomNumberGenerator.Fill(nonce);
+                using var aes = new AesGcm(kek, 16);
+                var nonce = new byte[12];
+                RandomNumberGenerator.Fill(nonce);
 
-            var ciphertext = new byte[masterKey.Length];
-            var tag = new byte[16];
+                var ciphertext = new byte[masterKey.Length];
+                var tag = new byte[16];
 
-            aes.Encrypt(nonce, masterKey, ciphertext, tag);
+                aes.Encrypt(nonce, masterKey, ciphertext, tag);
 
-            // 3. Write to Disk
-            using var fs = new FileStream(_recoveryPath, FileMode.Create);
-            fs.Write(salt);
-            fs.Write(nonce);
-            fs.Write(tag);
-            fs.Write(ciphertext);
+                using var fs = new FileStream(_recoveryPath, FileMode.Create);
+                fs.Write(salt);
+                fs.Write(nonce);
+                fs.Write(tag);
+                fs.Write(ciphertext);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(salt);
+                if (kek != null) CryptographicOperations.ZeroMemory(kek);
+            }
         }
 
         private byte[] GenerateKey()

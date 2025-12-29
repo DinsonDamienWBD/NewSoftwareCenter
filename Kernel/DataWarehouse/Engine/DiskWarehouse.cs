@@ -1,5 +1,6 @@
 ﻿using Core.Contracts;
 using Core.Data;
+using Core.Diagnostics;
 using Core.Infrastructure;
 using Core.Security;
 using DataWarehouse.IO;
@@ -8,6 +9,7 @@ using DataWarehouse.Serialization;
 using Microsoft.Extensions.Configuration;
 using System.Collections.Concurrent;
 using System.Runtime.Versioning;
+using System.Security.Cryptography;
 
 namespace DataWarehouse.Engine
 {
@@ -18,7 +20,7 @@ namespace DataWarehouse.Engine
     /// </summary>
     [SupportedOSPlatform("windows")]
     
-    public class DiskWarehouse : IDataWarehouse
+    public class DiskWarehouse : IDataWarehouse, IDisposable
     {
         private string _rootPath = string.Empty;
         private string _logsPath = string.Empty;
@@ -86,8 +88,7 @@ namespace DataWarehouse.Engine
         /// <returns></returns>
         public Task DismountAsync()
         {
-            _openVolumes.Clear();
-            if (_masterKey != null) Array.Clear(_masterKey, 0, _masterKey.Length);
+            Dispose();
             return Task.CompletedTask;
         }
 
@@ -99,14 +100,41 @@ namespace DataWarehouse.Engine
         {
             return _openVolumes.GetOrAdd(volumeName, name =>
             {
-                // 1. Create Encrypted View
                 var encrypted = new EncryptedVolume(_physicalDriver!, _crypto!, volumeKey, name);
-
-                // 2. Wrap in Auditor
-                var audited = new AuditLoggingDriver(encrypted, _logsPath, contextName: name);
-
-                return audited;
+                return new AuditLoggingDriver(encrypted, _logsPath, contextName: name);
             });
+        }
+
+        /// <summary>
+        /// Health Probes
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<IProbe> GetProbes()
+        {
+            // Pass the Index to the probe to check for background errors
+            yield return new WarehouseProbe(_rootPath, _masterKey != null, _index);
+        }
+
+        /// <summary>
+        /// Security Hygiene
+        /// </summary>
+        public void Dispose()
+        {
+            _index?.Dispose();
+
+            // Dispose all open volumes (AuditLoggingDriver needs to stop its thread)
+            foreach (var vol in _openVolumes.Values)
+            {
+                if (vol is IDisposable d) d.Dispose();
+            }
+            _openVolumes.Clear();
+
+            if (_masterKey != null)
+            {
+                CryptographicOperations.ZeroMemory(_masterKey);
+                _masterKey = null;
+            }
+            GC.SuppressFinalize(this);
         }
 
         // Key Management Extensions
@@ -125,5 +153,49 @@ namespace DataWarehouse.Engine
         /// <param name="password"></param>
         public void RecoverAccess(string password)
             => _masterKey = _keyStore?.UnlockWithPassword(password);
+    }
+
+    /// <summary>
+    /// Probe for health check
+    /// </summary>
+    public class WarehouseProbe(string path, bool unlocked, RamIndexDriver? index) : IProbe
+    {
+        private readonly string _path = path;
+        private readonly bool _unlocked = unlocked;
+        private readonly RamIndexDriver? _index = index;
+
+        /// <summary>
+        /// Name
+        /// </summary>
+        public string Name => "Data Warehouse";
+
+        /// <summary>
+        /// Run health check
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public Task<HealthCheckResult> CheckHealthAsync(CancellationToken ct)
+        {
+            if (!_unlocked) return Task.FromResult(HealthCheckResult.Unhealthy("Warehouse Locked"));
+
+            // Check if Index failed silently
+            if (_index?.LastError != null)
+            {
+                return Task.FromResult(HealthCheckResult.Degraded("Index Persistence Failed", _index.LastError));
+            }
+
+            try
+            {
+                var drive = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(_path)) ?? _path);
+                if (drive.AvailableFreeSpace < 100 * 1024 * 1024)
+                    return Task.FromResult(HealthCheckResult.Degraded("Low Disk Space"));
+
+                return Task.FromResult(HealthCheckResult.Healthy());
+            }
+            catch (Exception ex)
+            {
+                return Task.FromResult(HealthCheckResult.Unhealthy("Storage Access Failed", ex));
+            }
+        }
     }
 }

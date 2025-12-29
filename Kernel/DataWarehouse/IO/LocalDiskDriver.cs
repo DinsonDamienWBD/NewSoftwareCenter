@@ -14,6 +14,9 @@ namespace DataWarehouse.IO
     public class LocalDiskDriver : IStorageDriver
     {
         private readonly string _rootPath;
+        private const long MinFreeSpaceBytes = 500 * 1024 * 1024; // 500 MB Safety Buffer
+        private const int MaxPathLength = 240; // Windows Limit Safety
+        private const int MaxRetries = 3;
 
         /// <summary>
         /// Storage capabilities
@@ -31,6 +34,38 @@ namespace DataWarehouse.IO
             _rootPath = rootPath;
         }
 
+        private void ValidatePath(string fullPath)
+        {
+            if (fullPath.Length > MaxPathLength)
+                throw new PathTooLongException($"Path exceeds {MaxPathLength} characters.");
+        }
+
+        private void EnsureDiskSpace(string path)
+        {
+            var drive = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(path)) ?? _rootPath);
+            if (drive.AvailableFreeSpace < MinFreeSpaceBytes)
+            {
+                throw new IOException("Critical: Disk space is below safety threshold (500MB). Writes rejected.");
+            }
+        }
+
+        private async Task RetryPolicyAsync(Func<Task> operation)
+        {
+            for (int i = 0; i < MaxRetries; i++)
+            {
+                try
+                {
+                    await operation();
+                    return;
+                }
+                catch (IOException) when (i < MaxRetries - 1)
+                {
+                    // Locked file (Anti-virus, Backup). Wait and retry.
+                    await Task.Delay(50 * (i + 1));
+                }
+            }
+        }
+
         /// <summary>
         /// Save data with atomic writes
         /// </summary>
@@ -40,6 +75,10 @@ namespace DataWarehouse.IO
         public async Task SaveAsync(string path, Stream data)
         {
             var fullPath = PathSanitizer.Resolve(_rootPath, path);
+
+            ValidatePath(fullPath);
+            EnsureDiskSpace(fullPath);
+
             var dir = Path.GetDirectoryName(fullPath);
             if (dir != null && !Directory.Exists(dir)) Directory.CreateDirectory(dir);
 
@@ -68,12 +107,13 @@ namespace DataWarehouse.IO
             var fullPath = PathSanitizer.Resolve(_rootPath, path);
             if (!File.Exists(fullPath)) throw new FileNotFoundException($"File not found: {path}");
 
-            // Open with FileShare.Read to allow concurrent readers
             var memory = new MemoryStream();
-            using (var fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true))
+            await RetryPolicyAsync(async () =>
             {
+                using var fileStream = new FileStream(fullPath, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, true);
                 await fileStream.CopyToAsync(memory);
-            }
+            });
+
             memory.Position = 0;
             return memory;
         }
