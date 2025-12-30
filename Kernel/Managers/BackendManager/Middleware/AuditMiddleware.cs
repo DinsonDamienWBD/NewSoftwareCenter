@@ -3,7 +3,7 @@ using Core.Log;
 using Core.Pipeline;
 using System.Diagnostics;
 
-namespace BackendManager.Middleware
+namespace Manager.Middleware
 {
     /// <summary>
     /// Audit Middleware for logging message executions.

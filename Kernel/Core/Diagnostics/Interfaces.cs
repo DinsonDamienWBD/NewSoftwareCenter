@@ -50,21 +50,6 @@ namespace Core.Diagnostics
     }
 
     /// <summary>
-    /// Contract for collecting operational telemetry (Counters, Gauges, Histograms).
-    /// </summary>
-    public interface IMetricsProvider
-    {
-        /// <summary>Increments a counter (e.g., "Requests_Total").</summary>
-        void IncrementCounter(string metricName, int value = 1, Dictionary<string, string>? tags = null);
-
-        /// <summary>Records a point-in-time value (e.g., "Memory_Usage_MB").</summary>
-        void RecordGauge(string metricName, double value, Dictionary<string, string>? tags = null);
-
-        /// <summary>Records a duration or distribution (e.g., "Request_Latency_Ms").</summary>
-        void RecordHistogram(string metricName, double durationMs, Dictionary<string, string>? tags = null);
-    }
-
-    /// <summary>
     /// Rich Health Check Result and Cancellation
     /// </summary>
     /// <remarks>

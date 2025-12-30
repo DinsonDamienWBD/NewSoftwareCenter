@@ -4,14 +4,14 @@ using Core.Validation;
 using Core.ServiceRegistry;
 using System.ComponentModel.DataAnnotations;
 
-namespace BackendManager.Middleware
+namespace Manager.Middleware
 {
     /// <summary>
     /// Validation Middleware to validate incoming messages.
     /// </summary>
-    public class ValidationMiddleware(BackendManager.Registry.ServiceRegistry registry)
+    public class ValidationMiddleware(Manager.Registry.ServiceRegistry registry)
     {
-        private readonly BackendManager.Registry.ServiceRegistry _registry = registry;
+        private readonly Manager.Registry.ServiceRegistry _registry = registry;
 
         /// <summary>
         /// Validates the incoming message using Data Annotations (e.g. [Required], [MaxLength]).

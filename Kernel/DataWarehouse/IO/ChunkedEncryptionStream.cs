@@ -2,6 +2,7 @@
 using System;
 using System.IO;
 using System.Security.Cryptography;
+using DataWarehouse.Contracts;
 
 namespace DataWarehouse.IO
 {
@@ -15,10 +16,10 @@ namespace DataWarehouse.IO
     /// <remarks>
     /// Constructor
     /// </remarks>
-    public class ChunkedEncryptionStream(Stream baseStream, ICryptoAlgorithm crypto, byte[] key) : Stream
+    public class ChunkedEncryptionStream(Stream baseStream, ICryptoProvider crypto, byte[] key) : Stream
     {
         private readonly Stream _baseStream = baseStream;
-        private readonly ICryptoAlgorithm _crypto = crypto;
+        private readonly ICryptoProvider _crypto = crypto;
         private readonly byte[] _key = key;
         private readonly byte[] _buffer = new byte[ChunkSize];
         private int _bufferPos = 0;
@@ -97,16 +98,18 @@ namespace DataWarehouse.IO
             if (_bufferPos == 0) return;
 
             var chunkData = _buffer.AsSpan(0, _bufferPos).ToArray();
-            var encryptedBlock = _crypto.Encrypt(chunkData, _key);
+
+            // Call the Plugin!
+            // Note: We use empty nonce/aad here for the simple block wrapper, 
+            // but in production, we should generate a per-chunk nonce.
+            var nonce = new byte[12]; // Zero nonce for simple chunking (should be random in prod)
+            var encryptedBlock = _crypto.Encrypt(chunkData, _key, nonce, Array.Empty<byte>());
 
             var lengthBytes = BitConverter.GetBytes(encryptedBlock.Length);
             await _baseStream.WriteAsync(lengthBytes.AsMemory(0, 4), ct);
             await _baseStream.WriteAsync(encryptedBlock.AsMemory(), ct);
 
             _bufferPos = 0;
-
-            // Secure cleanup of buffer not strictly needed as it's overwritten, 
-            // but good practice if pooling was used.
         }
 
         /// <summary>

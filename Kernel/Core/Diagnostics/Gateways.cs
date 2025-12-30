@@ -15,28 +15,18 @@ namespace Core.Diagnostics
         /// <summary>
         /// Info Level Log Entry.
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="eventId"></param>
-        /// <param name="source"></param>
         public static void Info(string message, int eventId = 0, [CallerMemberName] string source = "")
             => _provider?.Write(LogLevel.Info, source, message, null, eventId);
 
         /// <summary>
         /// Error Level Log Entry.
         /// </summary>
-        /// <param name="ex"></param>
-        /// <param name="message"></param>
-        /// <param name="eventId"></param>
-        /// <param name="source"></param>
         public static void Error(Exception ex, string message, int eventId = 0, [CallerMemberName] string source = "")
             => _provider?.Write(LogLevel.Error, source, message, ex, eventId);
 
         /// <summary>
         /// Warning Level Log Entry.
         /// </summary>
-        /// <param name="message"></param>
-        /// <param name="eventId"></param>
-        /// <param name="source"></param>
         public static void Warn(string message, int eventId = 0, [CallerMemberName] string source = "")
             => _provider?.Write(LogLevel.Warning, source, message, null, eventId);
     }
@@ -57,25 +47,19 @@ namespace Core.Diagnostics
         /// <summary>
         /// Count Metric.
         /// </summary>
-        /// <param name="metricName"></param>
-        /// <param name="value"></param>
         public static void Count(string metricName, int value = 1)
             => _provider?.IncrementCounter(metricName, value);
 
         /// <summary>
         /// Gauge Metric.
         /// </summary>
-        /// <param name="metricName"></param>
-        /// <param name="value"></param>
         public static void Gauge(string metricName, double value)
-            => _provider?.RecordGauge(metricName, value);
+            => _provider?.RecordMetric(metricName, value);
 
         /// <summary>
-        /// Time Metric.
+        /// Time Metric (Duration in ms).
         /// </summary>
-        /// <param name="metricName"></param>
-        /// <param name="ms"></param>
         public static void Time(string metricName, double ms)
-            => _provider?.RecordHistogram(metricName, ms);
+            => _provider?.RecordMetric(metricName, ms);
     }
 }

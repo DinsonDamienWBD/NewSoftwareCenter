@@ -1,5 +1,5 @@
-﻿using BackendManager.Middleware;
-using BackendManager.Registry;
+﻿using Manager.Middleware;
+using Manager.Registry;
 using Core;
 using Core.Backend.Contracts;
 using Core.Backend.Messages;
@@ -11,7 +11,7 @@ using System.Collections.Concurrent;
 using System.Reflection;
 using System.Text.Json;
 
-namespace BackendManager.Pipeline
+namespace Manager.Pipeline
 {
     /// <summary>
     /// Backend Bus Implementation with Middleware Pipeline.

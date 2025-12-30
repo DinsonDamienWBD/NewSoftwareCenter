@@ -3,7 +3,7 @@ using Core.DataWarehouse;
 using Core.Log;
 using Microsoft.Extensions.Logging; // System Logger fallback
 
-namespace BackendManager.Middleware
+namespace Manager.Middleware
 {
     /// <summary>
     /// Exception Middleware

@@ -8,7 +8,7 @@ using Core.Services;
 using System.Collections.Concurrent;
 using System.Reflection;
 
-namespace BackendManager.Registry
+namespace Manager.Registry
 {
     /// <summary>
     /// Service Registry for Backend Handlers and Services.

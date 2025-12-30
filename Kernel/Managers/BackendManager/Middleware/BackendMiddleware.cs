@@ -4,7 +4,7 @@ using Core.Pipeline; // For RequestContext
 using Microsoft.AspNetCore.Http;
 using System.Text.Json;
 
-namespace BackendManager.Middleware
+namespace Manager.Middleware
 {
     /// <summary>
     /// Middleware to handle backend API requests

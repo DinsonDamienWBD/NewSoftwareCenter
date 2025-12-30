@@ -2,7 +2,7 @@
 using System.Security.Cryptography;
 using System.Text;
 
-namespace BackendManager.Security
+namespace Manager.Security
 {
     /// <summary>
     /// DPAPI-based Crypto Provider for encrypting and decrypting data using Windows Data Protection API.

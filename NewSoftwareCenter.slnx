@@ -4,7 +4,7 @@
     <Project Path="Kernel/DataWarehouse/DataWarehouse.csproj" />
   </Folder>
   <Folder Name="/Kernel/Managers/">
-    <Project Path="Kernel/Managers/BackendManager/BackendManager.csproj" />
+    <Project Path="Kernel/Managers/BackendManager/Manager.csproj" />
     <Project Path="Kernel/Managers/FrontendManager/FrontendManager.csproj" />
   </Folder>
   <Folder Name="/Solution Items/">

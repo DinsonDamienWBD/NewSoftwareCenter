@@ -1,7 +1,7 @@
 ﻿using Core.Backend.Contracts.Models;
 using Core.Log;
 
-namespace BackendManager.Middleware
+namespace Manager.Middleware
 {
     /// <summary>
     /// Deprecation Middleware

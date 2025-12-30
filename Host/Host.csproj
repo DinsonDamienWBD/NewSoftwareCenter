@@ -20,7 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Kernel\DataWarehouse\DataWarehouse.csproj" />
-    <ProjectReference Include="..\Kernel\Managers\BackendManager\BackendManager.csproj" />
+    <ProjectReference Include="..\Kernel\Managers\BackendManager\Manager.csproj" />
     <ProjectReference Include="..\Kernel\Managers\FrontendManager\FrontendManager.csproj" />
   </ItemGroup>
 

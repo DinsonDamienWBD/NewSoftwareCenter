@@ -1,5 +1,3 @@
-using BackendManager.Extensions;
-using BackendManager.Pipeline;
 using Core;
 using Core.Backend.Contracts;
 using Core.Frontend.Contracts;
@@ -9,16 +7,20 @@ using Core.Modules.Contracts;
 using Core.ServiceRegistry;
 using Core.Services;
 using DataWarehouse;
+using DataWarehouse.Contracts.Messages;
 using FrontendManager.Extensions;
 using FrontendManager.Handlers;
 using FrontendManager.Services;
 using Host.Infrastructure;
 using Host.Modules;
 using Host.Services;
+using Manager.Extensions;
+using Manager.Pipeline;
 using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.Extensions.FileProviders;
 using System.Diagnostics;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -161,6 +163,43 @@ lifetime.ApplicationStarted.Register(() =>
 
 // 7. Launch
 app.Run();
+
+// Example usage of DataWarehouse
+// The Host doesn't need to know about 'CosmicWarehouse' class or 'IStorageProvider'.
+// It just creates a Command DTO.
+
+var cmd = new StoreBlobCommand
+{
+    Bucket = "invoices",
+    Key = "2025-01.pdf",
+    Data = fileStream
+};
+
+// Fire and Forget (or Await)
+var result = await _bus.Send(cmd);
+
+
+// User writes this line only.
+services.AddCosmicDataWarehouse(opts => opts.RootPath = "C:/MyData");
+
+// Result:
+// RuntimeOptimizer detects "Laptop" -> Checks container status.
+// Result -> Uses SQLite (Persistent) so tags aren't lost on reboot.
+
+// User wants a super-fast cache that wipes on restart.
+services.AddCosmicDataWarehouse(opts =>
+{
+    opts.RootPath = "/mnt/ramdisk";
+    opts.IndexType = IndexStorageType.Volatile; // Force Speed
+});
+
+// Running in Kubernetes.
+services.AddCosmicDataWarehouse(opts => opts.RootPath = "/data");
+
+// Result:
+// RuntimeOptimizer sees DOTNET_RUNNING_IN_CONTAINER = true.
+// Result -> Uses InMemory (Volatile) to keep the container image light and fast.
+
 
 
 // --- HELPER FUNCTION ---

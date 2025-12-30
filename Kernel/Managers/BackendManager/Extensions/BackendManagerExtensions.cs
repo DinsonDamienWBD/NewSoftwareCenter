@@ -1,13 +1,13 @@
-﻿using BackendManager.Middleware;
-using BackendManager.Pipeline;
-using BackendManager.Registry;
-using BackendManager.Security;
+﻿using Manager.Middleware;
+using Manager.Pipeline;
+using Manager.Registry;
+using Manager.Security;
 using Core.Backend.Contracts;
 using Core.Security;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace BackendManager.Extensions
+namespace Manager.Extensions
 {
     /// <summary>
     /// Extension methods for integrating the Backend Manager into the ASP.NET Core pipeline.

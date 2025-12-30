@@ -1,5 +1,6 @@
-﻿using System.Threading.Tasks;
+﻿using Core.Data;
 using Microsoft.Extensions.Configuration;
+using System.Threading.Tasks;
 
 namespace Core.Infrastructure
 {
@@ -28,5 +29,20 @@ namespace Core.Infrastructure
         /// </summary>
         /// <returns></returns>
         Task DismountAsync();
+
+        /// <summary>
+        /// Saves a binary blob.
+        /// </summary>
+        Task StoreObjectAsync(string bucket, string key, Stream data, StorageIntent intent);
+
+        /// <summary>
+        /// Retrieves a binary blob.
+        /// </summary>
+        Task<Stream> RetrieveObjectAsync(string bucket, string key);
+
+        /// <summary>
+        /// Checks system health (Storage, Keys, Plugins).
+        /// </summary>
+        void CheckHealth();
     }
 }

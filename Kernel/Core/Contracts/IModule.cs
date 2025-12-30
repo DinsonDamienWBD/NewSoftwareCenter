@@ -1,4 +1,5 @@
-﻿using Core.Diagnostics;
+﻿using Core.AI;
+using Core.Diagnostics;
 using Core.Registry;
 using Microsoft.Extensions.Configuration;
 
@@ -66,5 +67,18 @@ namespace Core.Contracts
         /// </summary>
         /// <returns></returns>
         IEnumerable<IProbe> GetProbes();
+
+        /// <summary>
+        /// Initialize Module
+        /// </summary>
+        /// <param name="kernel"></param>
+        void Initialize(ISystemKernel kernel);
+
+        /// <summary>
+        /// Modules explicitly register "Skills" or "Tools" that the AI Agent can use.
+        /// e.g., CalendarModule registers "BookMeeting", EmailModule registers "SendEmail".
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<AiToolDefinition> GetAiTools();
     }
 }
