@@ -25,16 +25,15 @@ namespace DataWarehouse.Drivers
         /// </summary>
         public string Scheme => "net"; // URI: net://server-ip/bucket/key
 
-        private readonly IFederationNode _client; // gRPC Client
-
         private readonly string _address;
         private readonly ILogger _logger;
+        private readonly GrpcChannel _channel;
+        private readonly IFederationNode _client;
 
-        // Circuit Breaker State
-        private bool _isOnline = true;
+        private readonly Timer _heartbeat;
+        private volatile bool _isOnline = true;
         private DateTimeOffset _nextRetry = DateTimeOffset.MinValue;
         private const int RetryDelaySeconds = 30;
-        private readonly Timer _heartbeat;
 
         /// <summary>
         /// Check if DW is online
@@ -48,43 +47,51 @@ namespace DataWarehouse.Drivers
         /// <param name="logger"></param>
         public NetworkStorageProvider(string address, ILogger logger)
         {
+
             _address = address;
             _logger = logger;
 
-            var channel = GrpcChannel.ForAddress(address);
-            _client = channel.CreateGrpcService<IFederationNode>();
+            // 1. Configure SocketsHttpHandler for KeepAlive and Performance
+            var httpHandler = new SocketsHttpHandler
+            {
+                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(1),
+                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                KeepAlivePingTimeout = TimeSpan.FromSeconds(30),
+                EnableMultipleHttp2Connections = true
+            };
 
+            // 2. Create Channel
+            var options = new GrpcChannelOptions { HttpHandler = httpHandler };
+            _channel = GrpcChannel.ForAddress(address, options);
+
+            // 3. Create Client Proxy (Code-First)
+            _client = _channel.CreateGrpcService<IFederationNode>();
+
+            // 4. Start Health Check
             _heartbeat = new Timer(async _ => await CheckHealthAsync(), null, 10000, 10000);
         }
 
         private async Task CheckHealthAsync()
         {
-            if (_isOnline) return;
+            if (_isOnline) return; // Only actively check if we think it's offline
+            if (DateTimeOffset.UtcNow < _nextRetry) return;
 
             try
             {
-                // Ping logic would go here
-                // If successful:
+                // Simple handshake to verify connectivity
+                await _client.HandshakeAsync("PROBE");
                 _isOnline = true;
-
-                // FIX: CA2254 - Structured Logging
-                _logger.LogInformation("Node {Address} is back ONLINE.", _address);
+                _logger.LogInformation($"[NetworkStorage] Node {_address} restored.");
             }
             catch
             {
-                // Still dead
+                _nextRetry = DateTimeOffset.UtcNow.AddSeconds(RetryDelaySeconds);
             }
         }
 
         private void EnsureOnline()
         {
-            if (!_isOnline)
-            {
-                if (DateTimeOffset.UtcNow < _nextRetry)
-                    throw new IOException($"Node {_address} is OFFLINE.");
-
-                // Retry interval passed, let one request through (Half-Open)
-            }
+            if (!_isOnline) throw new IOException($"Node {_address} is OFFLINE. Next retry at {_nextRetry}");
         }
 
         private void TripCircuit()
@@ -107,16 +114,15 @@ namespace DataWarehouse.Drivers
             EnsureOnline();
             try
             {
-                // Transparently fetch stream from remote peer
-                // For efficiency, this returns a stream that buffers chunks over the network
+                // Returns a stream that reads from the network
                 return await _client.OpenReadStreamAsync(uri.ToString(), 0, -1);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                TripCircuit();
-                throw new IOException($"Node {_address} is unreachable.");
+                _logger.LogError(ex, $"[NetworkStorage] Read failed from {_address}");
+                _isOnline = false;
+                throw;
             }
-            
         }
 
 
@@ -131,14 +137,15 @@ namespace DataWarehouse.Drivers
             EnsureOnline();
             try
             {
-                // Simulate Network Call
-                // await _client.WriteStreamAsync(uri, data);
+                // gRPC Streaming Call
+                // protobuf-net.Grpc handles Stream serialization efficiently
                 await _client.WriteStreamAsync(uri.ToString(), data);
             }
-            catch (Exception)
+            catch (Exception ex)
             {
-                TripCircuit();
-                throw new IOException($"Node {_address} is unreachable. Save failed.");
+                _logger.LogError(ex, $"[NetworkStorage] Write failed to {_address}");
+                _isOnline = false;
+                throw;
             }
         }
 
@@ -158,8 +165,7 @@ namespace DataWarehouse.Drivers
         /// <returns></returns>
         public async Task<bool> ExistsAsync(Uri uri)
         {
-            if (!_isOnline) return false; // Fail fast -> "File doesn't exist" (or UI shows offline icon)
-
+            if (!_isOnline) return false;
             try
             {
                 var manifest = await _client.GetManifestAsync(uri.ToString());
@@ -167,7 +173,6 @@ namespace DataWarehouse.Drivers
             }
             catch
             {
-                TripCircuit();
                 return false;
             }
         }
@@ -178,6 +183,7 @@ namespace DataWarehouse.Drivers
         public void Dispose()
         {
             _heartbeat.Dispose();
+            _channel.Dispose();
             GC.SuppressFinalize(this);
         }
     }

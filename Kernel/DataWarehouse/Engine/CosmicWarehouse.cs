@@ -11,6 +11,7 @@ using DataWarehouse.Security;
 using Microsoft.Extensions.Configuration; // For IConfiguration
 using Microsoft.Extensions.Logging;
 using System.IO.Compression;
+using System.Security.Cryptography;
 using System.Text;
 
 namespace DataWarehouse.Engine
@@ -145,13 +146,11 @@ namespace DataWarehouse.Engine
         /// <returns></returns>
         async Task IDataWarehouse.StoreObjectAsync(string bucket, string key, Stream data, Core.Data.StorageIntent coreIntent)
         {
-            // Map Core.Data.StorageIntent -> DataWarehouse.StorageIntent
             var intent = new StorageIntent(
                 (SecurityLevel)(int)coreIntent.Security,
                 (CompressionLevel)(int)coreIntent.Compression,
                 (AvailabilityLevel)(int)coreIntent.Availability
             );
-
             await StoreObjectAsync(bucket, key, data, intent);
         }
 
@@ -197,8 +196,7 @@ namespace DataWarehouse.Engine
             => _federation?.GetLinks() ?? [];
 
         /// <summary>
-        /// Store object
-        /// Uses DataWarehouse.StorageIntent (Native)
+        /// Store object async
         /// </summary>
         /// <param name="bucket"></param>
         /// <param name="key"></param>
@@ -207,8 +205,24 @@ namespace DataWarehouse.Engine
         /// <param name="meta"></param>
         /// <param name="expectedETag"></param>
         /// <returns></returns>
-        /// <exception cref="InvalidOperationException"></exception>
         public async Task StoreObjectAsync(string bucket, string key, Stream data, StorageIntent intent, Manifest? meta = null, string? expectedETag = null)
+        {
+            await StoreObjectInternalAsync(bucket, key, data, intent, meta, expectedETag);
+        }
+
+        /// <summary>
+        /// Store object
+        /// Uses DataWarehouse.StorageIntent (Native)
+        /// </summary>
+        /// <param name="bucket"></param>
+        /// <param name="key"></param>
+        /// <param name="data"></param>
+        /// <param name="intent"></param>
+        /// <param name="metaOverride"></param>
+        /// <param name="expectedETag"></param>
+        /// <returns></returns>
+        /// <exception cref="InvalidOperationException"></exception>
+        private async Task StoreObjectInternalAsync(string bucket, string key, Stream data, StorageIntent intent, Manifest? metaOverride = null, string? expectedETag = null)
         {
             using var timer = _metrics.TrackDuration("dw_write_latency");
             _recorder.Record("WRITE_START", $"{bucket}/{key} ({data.Length} bytes)");
@@ -231,31 +245,31 @@ namespace DataWarehouse.Engine
                         throw new InvalidOperationException($"Concurrency Conflict");
                 }
 
-                // 3. DEDUPLICATION
-                string contentHash = CalculateHash(data);
-                bool skipDedupe = !_runtimeOptimizer.ShouldEnableDeduplication() || intent.Compression == CompressionLevel.Fast;
-
-                if (!skipDedupe && _dedupe != null && _features.IsEnabled("Dedupe"))
-                {
-                    if (_dedupe.TryGetExisting(contentHash, out var existingBlobUri))
-                    {
-                        var dedupeManifest = CreateManifest(bucket, key, existingBlobUri, contentHash, data.Length, intent);
-                        if (meta != null) { dedupeManifest.ContentSummary = meta.ContentSummary; dedupeManifest.Tags = meta.Tags; }
-                        await SaveManifestAsync(dedupeManifest);
-                        _metrics.IncrementCounter("dw_dedupe_hit");
-                        return;
-                    }
-                }
-
-                // 4. PIPELINE
+                // 3. PIPELINE SETUP
                 var pipelineConfig = _pipelineOptimizer.Resolve(intent);
                 pipelineConfig.KeyId = await _keyStore.GetCurrentKeyIdAsync();
 
-                // 5. WRITE
-                string blobUri;
-                if (data.CanSeek) data.Position = 0;
+                // 4. HASHER SETUP
+                HashAlgorithm? hasher = null;
+                bool enableDedupe = _runtimeOptimizer.ShouldEnableDeduplication() && intent.Compression != CompressionLevel.Fast;
+                if (enableDedupe && _dedupe != null && _features.IsEnabled("Dedupe"))
+                {
+                    hasher = SHA256.Create();
+                }
 
-                using (var pipelineStream = BuildWritePipeline(data, pipelineConfig))
+                // 5. STREAM WRAPPING
+                Stream sourceStream = data;
+                if (hasher != null)
+                {
+                    // Use CryptoStream to hash while reading (Pull Model)
+                    sourceStream = new CryptoStream(data, hasher, CryptoStreamMode.Read);
+                }
+
+                string blobUri = $"file:///{bucket}/{key}.blob";
+                var provider = _registry.GetStorage("file");
+
+                // 6. EXECUTE PIPELINE
+                using (var pipelineStream = BuildReadableWritePipeline(sourceStream, pipelineConfig))
                 {
                     if (_pool != null && _features.IsEnabled("Fabric"))
                     {
@@ -263,24 +277,39 @@ namespace DataWarehouse.Engine
                     }
                     else
                     {
-                        var provider = _registry.GetStorage("file");
-                        blobUri = $"file:///{bucket}/{key}.blob";
                         await provider.SaveAsync(new Uri(blobUri), pipelineStream);
                     }
                 }
 
-                // 6. FINALIZE
-                if (!skipDedupe && _dedupe != null) _dedupe.Register(contentHash, blobUri);
+                // 7. FINALIZE HASH & DEDUPE
+                string? contentHash = null;
+                if (hasher != null)
+                {
+                    // CryptoStream in Read mode finalizes hash when stream is fully read (which SaveAsync does)
+                    // But we must access the hash from the instance
+                    if (hasher.Hash != null)
+                    {
+                        contentHash = Convert.ToHexString(hasher.Hash);
+                        _dedupe?.Register(contentHash, blobUri);
+                    }
+                    hasher.Dispose();
+                }
 
+                // 8. MANIFEST SAVING
                 if (intent.Security == SecurityLevel.High)
                     _worm.LockBlob(blobUri, TimeSpan.FromDays(365 * 7));
 
-                var newManifest = CreateManifest(bucket, key, blobUri, contentHash, data.Length, intent, pipelineConfig);
-                if (meta != null) { newManifest.ContentSummary = meta.ContentSummary; newManifest.Tags = meta.Tags; }
+                var newManifest = CreateManifest(bucket, key, blobUri, contentHash ?? "pending", data.Length, intent, pipelineConfig);
+                if (metaOverride != null)
+                {
+                    newManifest.ContentSummary = metaOverride.ContentSummary;
+                    newManifest.Tags = metaOverride.Tags;
+                }
 
                 await SaveManifestAsync(newManifest);
                 await _index.IndexManifestAsync(newManifest);
 
+                // 9. EVENTS
                 _metrics.IncrementCounter("dw_writes_success");
                 _recorder.Record("WRITE_SUCCESS", $"{bucket}/{key}");
                 await _bus.PublishAsync(new StorageEvent(blobUri, newManifest.ETag, "UPDATE", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()));
@@ -307,11 +336,7 @@ namespace DataWarehouse.Engine
 
             if (_federation != null && _federation.Resolve(uri) is IStorageProvider remote)
             {
-                try { return await remote.LoadAsync(uri); }
-                catch (IOException ex) when (ex.Message.Contains("OFFLINE"))
-                {
-                    throw new RemoteResourceUnavailableException($"Node offline: {bucket}", ex);
-                }
+                return await remote.LoadAsync(uri);
             }
 
             var manifestUri = new Uri($"file:///{bucket}/{key}.manifest");
@@ -324,12 +349,13 @@ namespace DataWarehouse.Engine
 
         // --- HELPERS ---
 
-        private static string CalculateHash(Stream data)
+        private static string? CalculateHash(Stream data)
         {
-            if (!data.CanSeek) return "unavailable";
-            using var sha = System.Security.Cryptography.SHA256.Create();
+            if (!data.CanSeek) return null; // Skip dedupe for network streams to prevent crash
+    
+            using var sha = SHA256.Create();
             var hashBytes = sha.ComputeHash(data);
-            data.Position = 0;
+            data.Position = 0; 
             return Convert.ToHexString(hashBytes);
         }
 
@@ -469,31 +495,39 @@ namespace DataWarehouse.Engine
 
         // --- PIPELINE IMPL ---
 
-        private Stream BuildWritePipeline(Stream input, PipelineConfig config)
+        private Stream BuildReadableWritePipeline(Stream input, PipelineConfig config)
         {
             Stream current = input;
-            if (config.CompressionAlgo == "GZip")
+
+            // 1. Dynamic Compression (Using Registry)
+            if (config.CompressionAlgo != "None")
             {
-                var ms = new MemoryStream();
-                using (var gzip = new System.IO.Compression.GZipStream(ms, System.IO.Compression.CompressionLevel.Optimal, true))
+                // We use SimplexStream to bridge the "Push" (Write) compressor to a "Pull" (Read) pipeline
+                current = new SimplexStream(async (output, ct) =>
                 {
-                    input.CopyTo(gzip);
-                }
-                ms.Position = 0;
-                current = ms;
+                    // Registry Lookup
+                    var compressor = _registry.GetCompression(config.CompressionAlgo);
+
+                    // Create the compression stream wrapping the output
+                    using var compressionStream = compressor.CreateCompressionStream(output);
+
+                    // Pump input into it
+                    await input.CopyToAsync(compressionStream, ct);
+
+                    // Flush handled by disposal/closing of compressionStream
+                });
             }
+
+            // 2. Dynamic Encryption (Using Registry)
             if (config.CryptoAlgo != "None")
             {
                 var crypto = _registry.GetCrypto(config.CryptoAlgo);
                 var keyBytes = _keyCache.GetOrAdd(config.KeyId, id => _keyStore.GetKey(id));
-                var ms = new MemoryStream();
-                using (var enc = new DataWarehouse.IO.ChunkedEncryptionStream(ms, crypto, keyBytes))
-                {
-                    current.CopyToAsync(enc).Wait();
-                }
-                ms.Position = 0;
-                current = ms;
+
+                // Use Readable Chunked Encryptor
+                current = new ReadableChunkedEncryptionStream(current, crypto, keyBytes);
             }
+
             return current;
         }
 
@@ -501,22 +535,19 @@ namespace DataWarehouse.Engine
         {
             Stream current = input;
 
-            // FIX: IDE0059 - Remove redundant check for "None" return
-            // Flow: Storage -> Decrypt -> Decompress -> Output
-
-            // 1. Decryption (Reverse of Encryption)
+            // 1. Dynamic Decryption
             if (config.CryptoAlgo != "None")
             {
                 var crypto = _registry.GetCrypto(config.CryptoAlgo);
                 var keyBytes = _keyCache.GetOrAdd(config.KeyId, id => _keyStore.GetKey(id));
-                // Wraps the raw file stream to decrypt on the fly
                 current = new ChunkedDecryptionStream(current, crypto, keyBytes);
             }
 
-            // 2. Decompression (Reverse of Compression)
-            if (config.CompressionAlgo == "GZip")
+            // 2. Dynamic Decompression
+            if (config.CompressionAlgo != "None")
             {
-                current = new GZipStream(current, CompressionMode.Decompress);
+                var compressor = _registry.GetCompression(config.CompressionAlgo);
+                current = compressor.CreateDecompressionStream(current);
             }
 
             return current;

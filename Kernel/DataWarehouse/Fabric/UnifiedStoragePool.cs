@@ -1,4 +1,5 @@
 ﻿using DataWarehouse.Contracts;
+using DataWarehouse.Drivers;
 using DataWarehouse.Primitives;
 using Microsoft.Extensions.Logging;
 
@@ -7,22 +8,20 @@ namespace DataWarehouse.Fabric
     /// <summary>
     /// The Hypervisor. It turns 10 different drives into 1 massive, tiered drive.
     /// </summary>
-    public class UnifiedStoragePool
+    /// <remarks>
+    /// Logger for the storage pool
+    /// </remarks>
+    /// <param name="logger"></param>
+    public class UnifiedStoragePool(ILogger logger)
     {
         // The physical locations (Nodes)
-        private readonly List<StorageNode> _nodes = new();
-        private readonly ILogger _logger;
+        private readonly List<StorageNode> _nodes = [];
+        private readonly ILogger _logger = logger;
 
         /// <summary>
         /// FAST CHECK: Used by Kernel to skip logic
         /// </summary>
         public bool IsSingleNode => _nodes.Count == 1;
-
-        /// <summary>
-        /// Logger for the storage pool
-        /// </summary>
-        /// <param name="logger"></param>
-        public UnifiedStoragePool(ILogger logger) => _logger = logger;
 
         /// <summary>
         /// Attach a DW node
@@ -33,6 +32,20 @@ namespace DataWarehouse.Fabric
         {
             _nodes.Add(new StorageNode(provider, tier));
             _logger.LogInformation($"Attached {provider.Scheme} to Tier {tier}");
+        }
+
+        /// <summary>
+        /// Attach a mirrored node
+        /// </summary>
+        /// <param name="primary"></param>
+        /// <param name="secondary"></param>
+        /// <param name="tier"></param>
+        public void AttachMirroredNode(IStorageProvider primary, IStorageProvider secondary, StorageTier tier)
+        {
+            // Wrap them in the Governor
+            var mirror = new SelfHealingMirror(primary, secondary, _logger);
+            _nodes.Add(new StorageNode(mirror, tier));
+            _logger.LogInformation($"Attached MIRROR ({primary.Id}+{secondary.Id}) to Tier {tier}");
         }
 
         /// <summary>
@@ -76,7 +89,7 @@ namespace DataWarehouse.Fabric
             return blobUri;
         }
 
-        private StorageTier SelectTier(StorageIntent intent)
+        private static StorageTier SelectTier(StorageIntent intent)
         {
             if (intent.Compression == CompressionLevel.None) return StorageTier.Hot; // Assume Low Latency needed
             if (intent.Availability == AvailabilityLevel.GeoRedundant) return StorageTier.Cold; // Assume Archive
