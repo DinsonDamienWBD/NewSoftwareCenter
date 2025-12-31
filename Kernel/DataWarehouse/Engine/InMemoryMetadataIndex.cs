@@ -159,5 +159,31 @@ namespace DataWarehouse.Engine
                 await Task.Yield(); // Async shim to ensure UI/Thread responsiveness
             }
         }
+
+        /// <summary>
+        /// Track last access
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="timestamp"></param>
+        /// <returns></returns>
+        public Task UpdateLastAccessAsync(string id, long timestamp)
+        {
+            if (_index.TryGetValue(id, out var manifest))
+            {
+                manifest.LastAccessedAt = timestamp;
+            }
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Get manifest
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public Task<Manifest?> GetManifestAsync(string id)
+        {
+            _index.TryGetValue(id, out var manifest);
+            return Task.FromResult(manifest);
+        }
     }
 }

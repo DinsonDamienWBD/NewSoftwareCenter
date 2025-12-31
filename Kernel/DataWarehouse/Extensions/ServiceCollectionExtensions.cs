@@ -3,7 +3,7 @@ using Core.Infrastructure;
 using DataWarehouse.Configuration;
 using DataWarehouse.Contracts;
 using DataWarehouse.Engine;
-using DataWarehouse.Plugins;
+using DataWarehouse.Implementations;
 using DataWarehouse.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

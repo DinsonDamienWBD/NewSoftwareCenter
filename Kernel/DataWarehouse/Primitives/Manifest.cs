@@ -71,6 +71,27 @@
         /// Version
         /// </summary>
         public int Version { get; set; } = 1;
+
+        /// <summary>
+        /// Linked list for history
+        /// </summary>
+        public string? PreviousVersionId { get; set; }
+
+        /// <summary>
+        /// Soft delete
+        /// </summary>
+        public bool IsDeleted { get; set; } = false;
+
+        /// <summary>
+        /// Lifecycle tracking
+        /// Last accessed at
+        /// </summary>
+        public long LastAccessedAt { get; set; } = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+
+        /// <summary>
+        /// Current tier: Hot, Warm, Cold
+        /// </summary>
+        public string CurrentTier { get; set; } = "Hot";
     }
 
     /// <summary>

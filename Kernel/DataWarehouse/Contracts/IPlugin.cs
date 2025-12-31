@@ -152,6 +152,21 @@ namespace DataWarehouse.Contracts
         /// <param name="ct"></param>
         /// <returns></returns>
         IAsyncEnumerable<Manifest> EnumerateAllAsync(CancellationToken ct = default);
+
+        /// <summary>
+        /// Update last access
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="timestamp"></param>
+        /// <returns></returns>
+        Task UpdateLastAccessAsync(string id, long timestamp);
+
+        /// <summary>
+        /// Get manifest
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        Task<Primitives.Manifest?> GetManifestAsync(string id);
     }
 
     /// <summary>

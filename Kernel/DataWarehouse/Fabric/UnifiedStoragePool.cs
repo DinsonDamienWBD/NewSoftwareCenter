@@ -14,6 +14,16 @@ namespace DataWarehouse.Fabric
     /// <param name="logger"></param>
     public class UnifiedStoragePool(ILogger logger)
     {
+        /// <summary>
+        /// ID
+        /// </summary>
+        public static string Id => "UnifiedStoragePool";
+
+        /// <summary>
+        /// Version
+        /// </summary>
+        public static string Version => "1.0";
+
         // The physical locations (Nodes)
         private readonly List<StorageNode> _nodes = [];
         private readonly ILogger _logger = logger;
@@ -100,6 +110,56 @@ namespace DataWarehouse.Fabric
         private record StorageNode(IStorageProvider Provider, StorageTier Tier)
         {
             public long FreeSpace { get; set; } = 1024L * 1024 * 1024 * 1024; // Mock 1TB
+        }
+
+        /// <summary>
+        /// Moves data from one tier to another (e.g., NVMe -> S3) and returns the new URI.
+        /// </summary>
+        public async Task<string> MoveToTierAsync(Manifest manifest, StorageTier targetTier)
+        {
+            var sourceUri = new Uri(manifest.BlobUri);
+
+            // 1. Find Source Provider
+            // We match based on the URI Scheme (e.g., "file", "s3")
+            var sourceNode = _nodes.FirstOrDefault(n => n.Provider.Scheme.Equals(sourceUri.Scheme, StringComparison.OrdinalIgnoreCase)) ?? throw new InvalidOperationException($"Source provider for scheme '{sourceUri.Scheme}' not attached to pool.");
+
+            // 2. Find Target Provider
+            var targetNode = _nodes.FirstOrDefault(n => n.Tier == targetTier);
+            if (targetNode == null)
+            {
+                _logger.LogWarning("No storage node found for tier {Tier}. Move cancelled.", targetTier);
+                return manifest.BlobUri; // No-op
+            }
+
+            if (sourceNode == targetNode) return manifest.BlobUri; // Already there
+
+            // 3. Construct New URI
+            // Preserve the path structure: file:///bucket/key -> s3:///bucket/key
+            // Note: Some providers might need bucket mapping logic here. 
+            // For V1 Kernel, we assume path compatibility.
+            var relativePath = sourceUri.AbsolutePath.TrimStart('/');
+            var targetUriString = $"{targetNode.Provider.Scheme}://{relativePath}";
+            var targetUri = new Uri(targetUriString);
+
+            _logger.LogInformation("[Tiering] Moving {Id} from {Source} to {Target}", manifest.Id, sourceNode.Tier, targetTier);
+
+            // 4. Copy (Load -> Save)
+            using (var stream = await sourceNode.Provider.LoadAsync(sourceUri))
+            {
+                await targetNode.Provider.SaveAsync(targetUri, stream);
+            }
+
+            // 5. Verify & Delete Old
+            // (Paranoid check: Ensure exists before deleting old)
+            if (await targetNode.Provider.ExistsAsync(targetUri))
+            {
+                await sourceNode.Provider.DeleteAsync(sourceUri);
+                return targetUriString;
+            }
+            else
+            {
+                throw new IOException("Tier move failed: Target write unverified.");
+            }
         }
     }
 

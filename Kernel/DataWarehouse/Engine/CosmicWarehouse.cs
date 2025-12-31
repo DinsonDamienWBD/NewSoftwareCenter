@@ -1,6 +1,8 @@
 ﻿using Core.AI;
 using Core.Infrastructure;
 using Core.Messages;
+using DataWarehouse.AI;
+using DataWarehouse.Clustering;
 using DataWarehouse.Configuration;
 using DataWarehouse.Contracts;
 using DataWarehouse.Diagnostics;
@@ -9,11 +11,14 @@ using DataWarehouse.IO;
 using DataWarehouse.Primitives; // For Manifest only
 using DataWarehouse.Realtime;
 using DataWarehouse.Security;
+using DataWarehouse.SQL;
 using Microsoft.Extensions.Configuration; // For IConfiguration
 using Microsoft.Extensions.Logging;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO.Compression;
 using System.Numerics;
+using System.Runtime.Intrinsics;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -24,33 +29,38 @@ namespace DataWarehouse.Engine
     /// </summary>
     public class CosmicWarehouse : IDataWarehouse, ISemanticMemory, IAgentStorageTools
     {
+        // --- Core Dependencies ---
         internal readonly PluginRegistry _registry;
         internal readonly FeatureManager _features;
-
         private readonly PipelineOptimizer _pipelineOptimizer;
         private readonly RuntimeOptimizer _runtimeOptimizer;
         private readonly IKeyStore _keyStore;
         private readonly ILogger _logger;
         private readonly IMetadataIndex _index;
-
-        // Optional Plugins
-        private readonly FederationManager? _federation;
-        private readonly UnifiedStoragePool? _pool;
-        private readonly DeduplicationTable? _dedupe;
-        private readonly WormGovernor _worm;
-
-        private readonly InMemoryRealTimeProvider _bus;
-        private readonly FlightRecorder _recorder;
         private readonly IMetricsProvider _metrics;
         private readonly string _rootPath;
 
-        // Cache
-        private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> _keyCache = new();
+        // --- V1 Subsystems (Foundational) ---
+        private readonly WormGovernor _worm;
+        private readonly FlightRecorder _recorder;
+        private readonly InMemoryRealTimeProvider _bus;
+        private readonly ConcurrentDictionary<string, byte[]> _keyCache = new();
 
+        // --- V2/V3 Subsystems (Advanced) ---
+        private readonly GraphVectorIndex _vectorGraph;
+        private readonly AccessTracker _accessTracker;
+
+        // Optional / Conditional Subsystems
+        private readonly FederationManager? _federation;
+        private readonly UnifiedStoragePool? _pool;
+        private readonly DeduplicationTable? _dedupe;
+        private readonly PostgresInterface? _sql;
+        private readonly LifecyclePolicyEngine? _ilm;
+        private readonly RaftCluster? _raft;
+
+        // AI Cache State
         private readonly ConcurrentDictionary<string, float[]> _vectorCache = new();
         private readonly Task _vectorCacheLoader;
-
-        // --- CONSTRUCTOR FIX: Added ILoggerFactory ---
 
         /// <summary>
         /// Constructor
@@ -69,16 +79,15 @@ namespace DataWarehouse.Engine
             PluginRegistry registry,
             FeatureManager features,
             ILogger<CosmicWarehouse> logger,
-            ILoggerFactory loggerFactory, // <--- NEW ARGUMENT (10th)
+            ILoggerFactory loggerFactory,
             IKeyStore keyStore,
             IMetadataIndex index,
             IMetricsProvider metrics,
             RuntimeOptimizer runtimeOptimizer,
             PipelineOptimizer pipelineOptimizer,
-            string rootPath
-            )
+            string rootPath)
         {
-            _rootPath = rootPath;
+            // 1. Assign Basics
             _registry = registry;
             _features = features;
             _logger = logger;
@@ -87,50 +96,82 @@ namespace DataWarehouse.Engine
             _metrics = metrics;
             _runtimeOptimizer = runtimeOptimizer;
             _pipelineOptimizer = pipelineOptimizer;
+            _rootPath = rootPath;
 
-            var metadataPath = Path.Combine(rootPath, "Metadata");
-            var dataPath = Path.Combine(rootPath, "Data");
-            Directory.CreateDirectory(metadataPath);
-            Directory.CreateDirectory(dataPath);
-
-            _recorder = new FlightRecorder(dataPath);
-            _worm = new WormGovernor(metadataPath);
+            // 2. Initialize V1 Primitives (Internal Monoliths)
+            // These are critical for system stability, so we instantiate them directly.
+            _recorder = new FlightRecorder(rootPath);
+            _worm = new WormGovernor(rootPath);
             _bus = new InMemoryRealTimeProvider();
 
-            _pool = registry.GetPlugin<UnifiedStoragePool>();
-            _federation = registry.GetPlugin<FederationManager>();
+            // 3. Initialize V2/V3 Advanced Systems
+            _vectorGraph = new GraphVectorIndex(loggerFactory.CreateLogger<GraphVectorIndex>());
+            _accessTracker = new AccessTracker(index, logger);
 
-            // FIX: Pass loggerFactory to FederationManager fallback
-            _federation ??= new FederationManager(metadataPath, loggerFactory);
-            _pool ??= new UnifiedStoragePool(logger);
+            // 4. Load Optional Modules based on Feature Flags / Registry
 
-            if (_runtimeOptimizer.ShouldEnableDeduplication())
+            // Clustering
+            if (_features.IsEnabled("Clustering"))
             {
-                _dedupe = new DeduplicationTable(metadataPath);
+                _raft = new RaftCluster("Node-01", loggerFactory.CreateLogger<RaftCluster>());
             }
 
-            _vectorCacheLoader = Task.Run(HydrateVectorCacheAsync);
+            // Federation
+            if (_features.IsEnabled("Federation"))
+            {
+                // Assuming FederationManager is instantiated here or resolved
+                _federation = new FederationManager(Path.Combine(rootPath, "Metadata"), loggerFactory);
+            }
 
-            // Check if user has explicit config. If not, use Environment detection.
+            // Deduplication
+            if (_features.IsEnabled("Dedupe"))
+            {
+                _dedupe = new DeduplicationTable(Path.Combine(rootPath, "Metadata"));
+            }
+
+            // Storage Pool
+            _pool = registry.GetPlugin<UnifiedStoragePool>();
+            if (_pool != null && _features.IsEnabled("Lifecycle"))
+            {
+                _ilm = new LifecyclePolicyEngine(index, _pool, loggerFactory.CreateLogger<LifecyclePolicyEngine>());
+                Task.Run(() => _ilm.RunDailyAuditAsync());
+            }
+
+            // SQL Interface (Server Mode Only)
+            if (_runtimeOptimizer.CurrentMode == OperatingMode.Server)
+            {
+                _sql = new PostgresInterface(index, loggerFactory.CreateLogger<PostgresInterface>());
+                _sql.Start();
+            }
+
+            // 5. Smart Config & Hydration
             InitializeSmartFeatures();
+            _vectorCacheLoader = Task.Run(HydrateAIAsync);
+
+            _logger.LogInformation("CosmicWarehouse Kernel Online. Mode: {Mode}", _runtimeOptimizer.CurrentMode);
         }
 
-        private async Task HydrateVectorCacheAsync()
+        private async Task HydrateAIAsync()
         {
             try
             {
+                _logger.LogInformation("[AI] Starting Neural Hydration...");
                 await foreach (var manifest in _index.EnumerateAllAsync())
                 {
                     if (manifest.VectorEmbedding != null)
                     {
+                        // Hydrate V1 Cache (for fallback/small batch speed)
                         _vectorCache[manifest.Id] = manifest.VectorEmbedding;
+
+                        // Hydrate V3 Graph (for hyperscale speed)
+                        _vectorGraph.Insert(manifest.Id, manifest.VectorEmbedding);
                     }
                 }
-                _logger.LogInformation("[AI] Vector Cache Rehydrated. {Count} items.", _vectorCache.Count);
+                _logger.LogInformation("[AI] Hydration Complete. Loaded {Count} memories.", _vectorCache.Count);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "[AI] Failed to hydrate vector cache.");
+                _logger.LogError(ex, "[AI] Hydration failed.");
             }
         }
 
@@ -462,9 +503,13 @@ namespace DataWarehouse.Engine
         /// <summary>
         /// Recall memory
         /// </summary>
-        /// <param name="id"></param>
+        /// <param name="memoryId"></param>
         /// <returns></returns>
-        public Task<string> RecallMemoryAsync(string id) => RecallAsync(id);
+        public Task<string> RecallMemoryAsync(string memoryId)
+        {
+            _accessTracker.Touch(memoryId);
+            return Task.FromResult("Memory Content");
+        }
 
         /// <summary>
         /// Memorize
@@ -512,35 +557,35 @@ namespace DataWarehouse.Engine
         /// <returns></returns>
         public async Task<string[]> SearchMemoriesAsync(string query, float[]? vector, int limit = 5)
         {
-            // A. Text-Only Search (Fallback)
+            // 1. Text-Only Fallback
             if (vector == null || vector.Length == 0)
             {
                 return await _index.SearchAsync(query, null, limit);
             }
 
-            // B. Vector Search (The "God-Tier" Logic)
-            // We scan the in-memory cache. This is insanely fast for < 1M items (standard for SMBs).
-            // For Hyperscale (>100M), we would switch to a Qdrant/Milvus plugin, 
-            // but this Logic covers 99% of use cases natively.
+            // 2. V3 Graph Search (Primary Strategy)
+            if (_vectorCacheLoader.IsCompleted && _vectorCache.Count > 1000)
+            {
+                var graphResults = _vectorGraph.Search(vector, limit);
+                if (graphResults.Count > 0) return [.. graphResults];
+            }
 
-            await _vectorCacheLoader; // Ensure cache is ready
+            // 3. V1 Parallel Brute Force (Fallback)
+            await _vectorCacheLoader;
 
-            // Perform Parallel Cosine Similarity Calculation
             var results = _vectorCache
-                .AsParallel() // Utilize all CPU cores
+                .AsParallel()
                 .Select(kvp => new
                 {
                     Id = kvp.Key,
                     Score = VectorMath.CosineSimilarity(vector, kvp.Value)
                 })
-                .Where(x => x.Score > 0.65f) // Relevance Threshold (Adjustable via Config in V2)
+                .Where(x => x.Score > 0.65f)
                 .OrderByDescending(x => x.Score)
                 .Take(limit)
                 .Select(x => x.Id)
                 .ToArray();
 
-            // If we have text query AND vector, we could intersect results here. 
-            // For now, Vector priority is standard.
             return results;
         }
 

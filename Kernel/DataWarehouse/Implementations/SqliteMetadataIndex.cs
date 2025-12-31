@@ -4,7 +4,7 @@ using Microsoft.Data.Sqlite;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
-namespace DataWarehouse.Plugins
+namespace DataWarehouse.Implementations
 {
     /// <summary>
     /// Sqlite based queryable metadata index
@@ -221,6 +221,50 @@ namespace DataWarehouse.Plugins
                     yield return manifest;
                 }
             }
+        }
+
+        /// <summary>
+        /// Track last access
+        /// </summary>
+        /// <param name="id"></param>
+        /// <param name="timestamp"></param>
+        /// <returns></returns>
+        public async Task UpdateLastAccessAsync(string id, long timestamp)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            using var cmd = conn.CreateCommand();
+
+            // GOD-TIER OPTIMIZATION: 
+            // Use json_set to patch the JSON in place. 
+            // This avoids the overhead of Deserialize -> Modify -> Serialize.
+            cmd.CommandText = "UPDATE Manifests SET Json = json_set(Json, '$.LastAccessedAt', @time) WHERE Id = @id";
+
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.Parameters.AddWithValue("@time", timestamp);
+
+            await cmd.ExecuteNonQueryAsync();
+        }
+
+        /// <summary>
+        /// Get manifest
+        /// </summary>
+        /// <param name="id"></param>
+        /// <returns></returns>
+        public async Task<Manifest?> GetManifestAsync(string id)
+        {
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync();
+
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "SELECT Json FROM Manifests WHERE Id = @id";
+            cmd.Parameters.AddWithValue("@id", id);
+
+            var json = (string?)await cmd.ExecuteScalarAsync();
+            if (string.IsNullOrEmpty(json)) return null;
+
+            return JsonSerializer.Deserialize<Manifest>(json);
         }
 
         /// <summary>
