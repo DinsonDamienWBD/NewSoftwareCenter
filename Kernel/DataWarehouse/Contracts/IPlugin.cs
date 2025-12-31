@@ -145,6 +145,13 @@ namespace DataWarehouse.Contracts
         /// <param name="limit"></param>
         /// <returns></returns>
         Task<string[]> SearchAsync(string query, float[]? vector, int limit);
+
+        /// <summary>
+        /// Required for DataVacuum and Vector Cache Rehydration
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        IAsyncEnumerable<Manifest> EnumerateAllAsync(CancellationToken ct = default);
     }
 
     /// <summary>

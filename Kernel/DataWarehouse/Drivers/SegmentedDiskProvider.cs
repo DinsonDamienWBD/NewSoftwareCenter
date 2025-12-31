@@ -24,7 +24,7 @@ namespace DataWarehouse.Drivers
 
         private readonly string _rootPath;
         private const long SegmentSizeLimit = 1024 * 1024 * 1024; // 1GB Segments
-        private readonly SemaphoreSlim _writeLock = new(1, 1);
+        private readonly SemaphoreSlim _stateLock = new(1, 1);
 
         // State
         private int _currentSegmentId = 0;
@@ -43,13 +43,17 @@ namespace DataWarehouse.Drivers
 
         private void RecoverState()
         {
-            // Scan for the last segment
             var files = Directory.GetFiles(_rootPath, "segment_*.dat");
             if (files.Length > 0)
             {
-                _currentSegmentId = files.Length - 1;
-                var info = new FileInfo(Path.Combine(_rootPath, GetSegmentName(_currentSegmentId)));
-                _currentOffset = info.Length;
+                Array.Sort(files); // Ensure we find the actual last one
+                var lastFile = files.Last();
+                string name = Path.GetFileNameWithoutExtension(lastFile);
+                if (int.TryParse(name.Replace("segment_", ""), out int id))
+                {
+                    _currentSegmentId = id;
+                    _currentOffset = new FileInfo(lastFile).Length;
+                }
             }
         }
 
@@ -63,42 +67,42 @@ namespace DataWarehouse.Drivers
         /// <returns></returns>
         public async Task SaveAsync(Uri uri, Stream data)
         {
-            // URI format: file:///pool/{virtual_id}
-            // We ignore the virtual_id for physical placement; we pack it.
-            // But we must RETURN the physical location so the Manifest knows where to look.
+            int assignedSegment;
+            long assignedOffset;
+            long length = data.Length;
 
-            // NOTE: The Manifest logic needs to be updated to store "PhysicalURI" separate from "LogicalURI".
-            // For this implementation, we assume the caller manages the mapping or we return a composite key.
-
-            await _writeLock.WaitAsync();
+            // 1. FAST STATE RESERVATION (Optimistic)
+            await _stateLock.WaitAsync();
             try
             {
-                // 1. Check if we need a new segment
-                if (_currentOffset + data.Length > SegmentSizeLimit)
+                if (_currentOffset + length > SegmentSizeLimit)
                 {
                     _currentSegmentId++;
                     _currentOffset = 0;
                 }
-
-                string segmentPath = Path.Combine(_rootPath, GetSegmentName(_currentSegmentId));
-
-                // 2. Append Data (Efficient Sequential Write)
-                using var fs = new FileStream(segmentPath, FileMode.Append, FileAccess.Write, FileShare.Read);
-                // Record start position BEFORE writing
-                long startPos = fs.Position;
-                await data.CopyToAsync(fs);
-                _currentOffset = fs.Position;
-
-                // CRITICAL: We need to tell the Index where we put it!
-                // We can't change the void return type of IStorageProvider.SaveAsync.
-                // Solution: The 'uri' passed in acts as the KEY.
-                // We must update the "Manifest" with: Key -> {SegmentID, Offset, Length}
-                // This implies the 'SegmentedDiskProvider' is a lower-level primitive.
+                assignedSegment = _currentSegmentId;
+                assignedOffset = _currentOffset;
+                _currentOffset += length;
             }
             finally
             {
-                _writeLock.Release();
+                _stateLock.Release();
             }
+
+            // 2. SLOW IO (Parallel)
+            string path = Path.Combine(_rootPath, GetSegmentName(assignedSegment));
+
+            // FileShare.ReadWrite is CRITICAL here to allow concurrent access
+            using var fs = new FileStream(path, FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
+
+            if (fs.Position != assignedOffset) fs.Seek(assignedOffset, SeekOrigin.Begin);
+
+            await data.CopyToAsync(fs);
+
+            // 3. FLUSH BARRIER (God Tier Reliability)
+            // Forces the OS to empty the page cache to the physical disk controller.
+            // Prevents data loss on power failure.
+            fs.Flush(flushToDisk: true);
         }
 
         /// <summary>

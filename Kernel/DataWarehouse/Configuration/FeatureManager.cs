@@ -1,4 +1,5 @@
-﻿using DataWarehouse.Fabric; // For DurableState
+﻿using DataWarehouse.Fabric;
+using System.Collections.Concurrent; // For DurableState
 
 namespace DataWarehouse.Configuration
 {
@@ -7,11 +8,14 @@ namespace DataWarehouse.Configuration
     /// </summary>
     public class FeatureManager(string metadataPath)
     {
-        // Map: PluginID -> IsEnabled (bool)
-        private readonly DurableState<bool> _settings = new DurableState<bool>(metadataPath, "feature_flags");
+        // Layer 1: Persistent User Overrides (Disk)
+        private readonly DurableState<bool> _settings = new(metadataPath, "feature_flags");
 
-        // Defines default behavior for new plugins (Safety first: Default to ON or OFF?)
+        // Layer 2: Ephemeral/Smart Auto-Settings (RAM only)
+        private readonly ConcurrentDictionary<string, bool> _ephemeral = new();
+
         private const bool DefaultState = true;
+
 
         /// <summary>
         /// Check if plugin is enabled
@@ -20,11 +24,24 @@ namespace DataWarehouse.Configuration
         /// <returns></returns>
         public bool IsEnabled(string pluginId)
         {
-            if (_settings.TryGet(pluginId, out var isEnabled))
-            {
-                return isEnabled;
-            }
+            // 1. User Explicit Setting (Highest Priority)
+            if (_settings.TryGet(pluginId, out var userSetting)) return userSetting;
+
+            // 2. Smart/Ephemeral Setting
+            if (_ephemeral.TryGetValue(pluginId, out var autoSetting)) return autoSetting;
+
+            // 3. Global Default
             return DefaultState;
+        }
+
+        /// <summary>
+        /// Checks if explicit settings exist
+        /// </summary>
+        /// <param name="pluginId"></param>
+        /// <returns></returns>
+        public bool HasExplicitSetting(string pluginId)
+        {
+            return _settings.TryGet(pluginId, out _);
         }
 
         /// <summary>
@@ -32,9 +49,22 @@ namespace DataWarehouse.Configuration
         /// </summary>
         /// <param name="pluginId"></param>
         /// <param name="isEnabled"></param>
-        public void SetFeatureState(string pluginId, bool isEnabled)
+        /// <param name="ephemeral"></param>
+        public void SetFeatureState(string pluginId, bool isEnabled, bool ephemeral = false)
         {
-            _settings.Set(pluginId, isEnabled);
+            if (ephemeral)
+            {
+                // Set only in RAM
+                _ephemeral[pluginId] = isEnabled;
+            }
+            else
+            {
+                // User is making a manual decision. Persist it.
+                _settings.Set(pluginId, isEnabled);
+
+                // Clear ephemeral so persistent takes precedence immediately
+                _ephemeral.TryRemove(pluginId, out _);
+            }
         }
 
         /// <summary>
@@ -45,10 +75,7 @@ namespace DataWarehouse.Configuration
         public Dictionary<string, bool> GetAllStates(IEnumerable<string> installedPluginIds)
         {
             var result = new Dictionary<string, bool>();
-            foreach (var id in installedPluginIds)
-            {
-                result[id] = IsEnabled(id);
-            }
+            foreach (var id in installedPluginIds) result[id] = IsEnabled(id);
             return result;
         }
     }

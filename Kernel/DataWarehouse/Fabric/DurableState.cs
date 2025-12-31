@@ -11,8 +11,11 @@ namespace DataWarehouse.Fabric
         private readonly ConcurrentDictionary<string, T> _state = new();
         private readonly string _walPath;
         private readonly string _snapshotPath;
-        private readonly object _lock = new object();
+        private readonly Lock _lock = new();
         private bool _isDirty;
+
+        private long _walLength = 0;
+        private const long CompactionThreshold = 5 * 1024 * 1024; // 5MB
 
         /// <summary>
         /// Check and reconnect on startup
@@ -45,13 +48,21 @@ namespace DataWarehouse.Fabric
         {
             _state[key] = value;
 
-            // Immediate WAL persistence (Crash Consistency)
-            // In high-perf server mode, we might batch this. For safety, we append immediately.
             lock (_lock)
             {
                 var json = System.Text.Json.JsonSerializer.Serialize(value);
-                File.AppendAllText(_walPath, $"SET|{key}|{json}{Environment.NewLine}");
+                var entry = $"SET|{key}|{json}{Environment.NewLine}";
+                File.AppendAllText(_walPath, entry);
+
+                _walLength += entry.Length;
                 _isDirty = true;
+            }
+
+            // SMART: Trigger background compaction if WAL is too big
+            if (_walLength > CompactionThreshold)
+            {
+                // Fire and forget to avoid stalling the write
+                Task.Run(() => Snapshot());
             }
         }
 
@@ -98,6 +109,7 @@ namespace DataWarehouse.Fabric
                 File.Move(temp, _snapshotPath, overwrite: true);
                 File.WriteAllText(_walPath, ""); // Truncate WAL
                 _isDirty = false;
+                _walLength = 0; // Reset counter
             }
         }
 
@@ -124,7 +136,7 @@ namespace DataWarehouse.Fabric
         /// <returns></returns>
         public IEnumerable<KeyValuePair<string, T>> GetAll()
         {
-            return _state.ToArray();
+            return [.. _state];
         }
 
         /// <summary>

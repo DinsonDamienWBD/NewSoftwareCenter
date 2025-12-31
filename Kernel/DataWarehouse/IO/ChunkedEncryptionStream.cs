@@ -1,8 +1,9 @@
 ﻿using Core.Security;
+using DataWarehouse.Contracts;
 using System;
 using System.IO;
 using System.Security.Cryptography;
-using DataWarehouse.Contracts;
+using System.Text;
 
 namespace DataWarehouse.IO
 {
@@ -16,13 +17,15 @@ namespace DataWarehouse.IO
     /// <remarks>
     /// Constructor
     /// </remarks>
-    public class ChunkedEncryptionStream(Stream baseStream, ICryptoProvider crypto, byte[] key) : Stream
+    public class ChunkedEncryptionStream(Stream baseStream, ICryptoProvider crypto, byte[] key, string contextId) : Stream
     {
         private readonly Stream _baseStream = baseStream;
         private readonly ICryptoProvider _crypto = crypto;
         private readonly byte[] _key = key;
+        private readonly byte[] _contextId = Encoding.UTF8.GetBytes(contextId);
         private readonly byte[] _buffer = new byte[ChunkSize];
         private int _bufferPos = 0;
+        private int _chunkIndex = 0;
         private const int ChunkSize = 1024 * 1024; // 1MB
 
         /// <summary>
@@ -97,19 +100,29 @@ namespace DataWarehouse.IO
         {
             if (_bufferPos == 0) return;
 
+            // 1. Generate Unique Random Nonce
+            var nonce = new byte[12];
+            RandomNumberGenerator.Fill(nonce);
+
+            // 2. Construct AAD (Context ID + Chunk Index)
+            // This prevents moving chunks between files OR reordering chunks within a file.
+            byte[] chunkIndexBytes = BitConverter.GetBytes(_chunkIndex);
+            byte[] aad = new byte[_contextId.Length + chunkIndexBytes.Length];
+            Buffer.BlockCopy(_contextId, 0, aad, 0, _contextId.Length);
+            Buffer.BlockCopy(chunkIndexBytes, 0, aad, _contextId.Length, chunkIndexBytes.Length);
+
+            // 3. Encrypt
             var chunkData = _buffer.AsSpan(0, _bufferPos).ToArray();
+            var encryptedPayload = _crypto.Encrypt(chunkData, _key, nonce, aad);
 
-            // Call the Plugin!
-            // Note: We use empty nonce/aad here for the simple block wrapper, 
-            // but in production, we should generate a per-chunk nonce.
-            var nonce = new byte[12]; // Zero nonce for simple chunking (should be random in prod)
-            var encryptedBlock = _crypto.Encrypt(chunkData, _key, nonce, Array.Empty<byte>());
-
-            var lengthBytes = BitConverter.GetBytes(encryptedBlock.Length);
-            await _baseStream.WriteAsync(lengthBytes.AsMemory(0, 4), ct);
-            await _baseStream.WriteAsync(encryptedBlock.AsMemory(), ct);
+            // 4. Write Packet: [Length 4][Nonce 12][Payload N]
+            int packetSize = 12 + encryptedPayload.Length;
+            await _baseStream.WriteAsync(BitConverter.GetBytes(packetSize), ct);
+            await _baseStream.WriteAsync(nonce, ct);
+            await _baseStream.WriteAsync(encryptedPayload, ct);
 
             _bufferPos = 0;
+            _chunkIndex++;
         }
 
         /// <summary>

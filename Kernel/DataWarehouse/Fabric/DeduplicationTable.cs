@@ -26,7 +26,7 @@ namespace DataWarehouse.Fabric
         /// </summary>
         /// <param name="hash"></param>
         /// <param name="uri"></param>
-        public void Register(string? hash, string uri)
+        public void Register(string hash, string uri)
         {
             _store.Set(hash, uri);
         }

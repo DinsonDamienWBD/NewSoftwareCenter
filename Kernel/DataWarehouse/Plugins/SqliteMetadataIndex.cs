@@ -1,6 +1,7 @@
 ﻿using DataWarehouse.Contracts;
 using DataWarehouse.Primitives;
 using Microsoft.Data.Sqlite;
+using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 namespace DataWarehouse.Plugins
@@ -102,7 +103,7 @@ namespace DataWarehouse.Plugins
             foreach (var f in query.Filters)
             {
                 string jsonPath = f.Field.StartsWith("Tags.")
-                    ? $"$.Tags.\"{f.Field.Substring(5)}\"" // Handle Tag lookup
+                    ? $"$.Tags.\"{f.Field[5..]}\"" // Handle Tag lookup
                     : $"$.{f.Field}";                      // Handle Root lookup
 
                 string paramName = $"@p{pIndex++}";
@@ -140,7 +141,7 @@ namespace DataWarehouse.Plugins
                 sql = $"SELECT Id FROM Manifests WHERE {sql} LIMIT {limit}";
             }
 
-            return await RunSqlInternal(sql, new List<SqliteParameter>());
+            return await RunSqlInternal(sql, []);
         }
 
         /// <summary>
@@ -165,7 +166,7 @@ namespace DataWarehouse.Plugins
                 results.Add(reader.GetString(0));
             }
 
-            return results.ToArray();
+            return [.. results];
         }
 
         /// <summary>
@@ -179,10 +180,10 @@ namespace DataWarehouse.Plugins
         {
             // Basic LIKE search implementation
             string sql = $"SELECT Id FROM Manifests WHERE ContentSummary LIKE @q LIMIT {limit}";
-            return RunSqlInternal(sql, new[] { new SqliteParameter("@q", $"%{query}%") });
+            return RunSqlInternal(sql, [new SqliteParameter("@q", $"%{query}%")]);
         }
 
-        private string MapOperator(string op)
+        private static string MapOperator(string op)
         {
             return op switch
             {
@@ -196,8 +197,42 @@ namespace DataWarehouse.Plugins
         }
 
         /// <summary>
+        /// Enumerate all
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async IAsyncEnumerable<Manifest> EnumerateAllAsync([EnumeratorCancellation] CancellationToken ct = default)
+        {
+            // Create a new connection for the enumeration to avoid threading conflicts with other active reads
+            using var conn = new SqliteConnection(_connectionString);
+            await conn.OpenAsync(ct);
+
+            using var cmd = conn.CreateCommand();
+            // Select the raw JSON blob so we can hydrate the full object
+            cmd.CommandText = "SELECT Json FROM Manifests";
+
+            using var reader = await cmd.ExecuteReaderAsync(ct);
+            while (await reader.ReadAsync(ct))
+            {
+                var json = reader.GetString(0);
+                var manifest = JsonSerializer.Deserialize<Manifest>(json);
+                if (manifest != null)
+                {
+                    yield return manifest;
+                }
+            }
+        }
+
+        /// <summary>
         /// Safely dispose
         /// </summary>
-        public void Dispose() { /* No persistent resources to close */ }
+        public void Dispose()
+        {
+            // If we held onto a specific connection field (e.g. _persistentConnection), we would dispose it here.
+            // Even if we don't, implementing the pattern correctly prevents static analysis warnings.
+
+            // [FIX CA1816] Suppress Finalize
+            GC.SuppressFinalize(this);
+        }
     }
 }

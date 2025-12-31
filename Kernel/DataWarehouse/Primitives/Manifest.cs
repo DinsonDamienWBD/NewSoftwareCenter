@@ -92,5 +92,10 @@
         /// Key ID in the KeyStore
         /// </summary>
         public string KeyId { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Transformation Order
+        /// </summary>
+        public List<string> TransformationOrder { get; set; } = new() { "Compression", "Encryption" };
     }
 }

@@ -1,5 +1,6 @@
-﻿using System.Collections.Concurrent;
-using DataWarehouse.Contracts;
+﻿using DataWarehouse.Contracts;
+using System.Collections.Concurrent;
+using System.Threading.Channels;
 
 namespace DataWarehouse.Realtime
 {
@@ -21,23 +22,55 @@ namespace DataWarehouse.Realtime
 
         // Map: SubscriptionID -> Handler
         private readonly ConcurrentDictionary<Guid, Subscription> _subs = new();
+        private readonly Channel<StorageEvent> _channel;
+        private readonly CancellationTokenSource _cts = new();
+        private readonly Task _dispatcher;
+
+        /// <summary>
+        /// Constructor
+        /// </summary>
+        public InMemoryRealTimeProvider()
+        {
+            // Bounded Channel: Holds 5000 events. If full, publishers wait (Backpressure).
+            // This prevents memory explosions during traffic spikes.
+            var options = new BoundedChannelOptions(5000)
+            {
+                FullMode = BoundedChannelFullMode.Wait
+            };
+            _channel = Channel.CreateBounded<StorageEvent>(options);
+
+            // Start the background dispatcher
+            _dispatcher = Task.Run(DispatchLoop);
+        }
 
         /// <summary>
         /// Publish
         /// </summary>
         /// <param name="evt"></param>
         /// <returns></returns>
-        public Task PublishAsync(StorageEvent evt)
+        public async Task PublishAsync(StorageEvent evt)
         {
-            foreach (var sub in _subs.Values)
+            await _channel.Writer.WriteAsync(evt);
+        }
+
+        private async Task DispatchLoop()
+        {
+            try
             {
-                if (IsMatch(sub.Pattern, evt.Uri))
+                await foreach (var evt in _channel.Reader.ReadAllAsync(_cts.Token))
                 {
-                    // Fire and forget to avoid blocking the writer
-                    Task.Run(() => sub.Handler(evt));
+                    // Dispatch to all matching subscribers sequentially (or parallel limited)
+                    // This ensures we process events at a sustainable rate.
+                    foreach (var sub in _subs.Values)
+                    {
+                        if (IsMatch(sub.Pattern, evt.Uri))
+                        {
+                            try { sub.Handler(evt); } catch { /* Log Error in Prod */ }
+                        }
+                    }
                 }
             }
-            return Task.CompletedTask;
+            catch (OperationCanceledException) { }
         }
 
         /// <summary>
@@ -55,7 +88,7 @@ namespace DataWarehouse.Realtime
             return Task.FromResult<IAsyncDisposable>(new DisposableSubscription(() => _subs.TryRemove(id, out _)));
         }
 
-        private bool IsMatch(string pattern, string uri)
+        private static bool IsMatch(string pattern, string uri)
         {
             // Simple glob matching (production would use Regex or Prefix Tree)
             if (pattern == "*") return true;
@@ -64,11 +97,20 @@ namespace DataWarehouse.Realtime
 
         private record Subscription(Guid Id, string Pattern, Action<StorageEvent> Handler);
 
-        private class DisposableSubscription : IAsyncDisposable
+        private class DisposableSubscription(Action action) : IAsyncDisposable
         {
-            private readonly Action _action;
-            public DisposableSubscription(Action action) => _action = action;
+            private readonly Action _action = action;
+
             public ValueTask DisposeAsync() { _action(); return ValueTask.CompletedTask; }
+        }
+
+        /// <summary>
+        /// Safely dispose
+        /// </summary>
+        public void Dispose()
+        {
+            _cts.Cancel();
+            _channel.Writer.TryComplete();
         }
     }
 }

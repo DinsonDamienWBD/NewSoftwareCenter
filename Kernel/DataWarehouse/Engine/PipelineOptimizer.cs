@@ -1,7 +1,8 @@
-﻿using System.Linq;
+﻿using Core.Data;
 using DataWarehouse.Contracts;
 using DataWarehouse.Primitives;
-using Core.Data;
+using Microsoft.Extensions.Configuration;
+using System.Linq;
 
 namespace DataWarehouse.Engine
 {
@@ -9,9 +10,12 @@ namespace DataWarehouse.Engine
     /// Optimize pipeline for best performance and effeciency
     /// </summary>
     /// <param name="registry"></param>
-    public class PipelineOptimizer(PluginRegistry registry)
+    /// <param name="config"></param>
+    public class PipelineOptimizer(PluginRegistry registry, IConfiguration config)
     {
         private readonly PluginRegistry _registry = registry;
+
+        private readonly IConfiguration _config = config;
 
         /// <summary>
         /// Resolve a storage intent
@@ -20,29 +24,52 @@ namespace DataWarehouse.Engine
         /// <returns></returns>
         public PipelineConfig Resolve(StorageIntent intent)
         {
-            var config = new PipelineConfig();
+            var pipeline = new PipelineConfig();
 
-            // 1. Compression
+            // 1. Resolve Compression
             if (intent.Compression != CompressionLevel.None)
             {
+                // Prefer user config algo, else fallback to best match
+                string preferred = _config["Defaults:Compression"] ?? "";
+
                 var algo = _registry.CompressionAlgos
-                    .OrderByDescending(x => x.Level == intent.Compression)
-                    .ThenByDescending(x => x.Level)
+                    .OrderByDescending(x => x.Id.Equals(preferred, StringComparison.OrdinalIgnoreCase)) // Priority 1: Config Match
+                    .ThenByDescending(x => x.Level == intent.Compression)                               // Priority 2: Level Match
+                    .ThenByDescending(x => x.Level)                                                     // Priority 3: Highest Level
                     .FirstOrDefault();
-                config.CompressionAlgo = algo?.Id ?? "None";
+
+                pipeline.CompressionAlgo = algo?.Id ?? "None";
             }
 
-            // 2. Security
+            // 2. Resolve Encryption
             if (intent.Security != SecurityLevel.None)
             {
+                string preferred = _config["Defaults:Encryption"] ?? "";
+
                 var algo = _registry.CryptoAlgos
-                    .OrderByDescending(x => x.Level == intent.Security)
-                    .ThenByDescending(x => x.Level)
+                    .OrderByDescending(x => x.Id.Equals(preferred, StringComparison.OrdinalIgnoreCase))
+                    .ThenByDescending(x => x.Level == intent.Security)
+                    .ThenByDescending(x => x.Level) // Default to strongest if exact match fails
                     .FirstOrDefault();
-                config.CryptoAlgo = algo?.Id ?? "AES-GCM";
+
+                pipeline.CryptoAlgo = algo?.Id ?? "AES-GCM"; // Hard fallback if registry empty
             }
 
-            return config;
+            // 3. Resolve Order (Runtime Configurable)
+            // appsettings.json: { "Pipeline": { "Order": ["Encryption", "Compression"] } }
+            var configuredOrder = _config.GetSection("Pipeline:Order").Get<List<string>>();
+
+            if (configuredOrder != null && configuredOrder.Count > 0)
+            {
+                pipeline.TransformationOrder = configuredOrder;
+            }
+            else
+            {
+                // Default: Compress -> Encrypt
+                pipeline.TransformationOrder = ["Compression", "Encryption"];
+            }
+
+            return pipeline;
         }
     }
 }

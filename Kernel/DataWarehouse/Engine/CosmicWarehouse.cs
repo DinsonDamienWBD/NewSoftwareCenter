@@ -1,5 +1,6 @@
 ﻿using Core.AI;
 using Core.Infrastructure;
+using Core.Messages;
 using DataWarehouse.Configuration;
 using DataWarehouse.Contracts;
 using DataWarehouse.Diagnostics;
@@ -10,7 +11,9 @@ using DataWarehouse.Realtime;
 using DataWarehouse.Security;
 using Microsoft.Extensions.Configuration; // For IConfiguration
 using Microsoft.Extensions.Logging;
+using System.Collections.Concurrent;
 using System.IO.Compression;
+using System.Numerics;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -43,6 +46,9 @@ namespace DataWarehouse.Engine
 
         // Cache
         private readonly System.Collections.Concurrent.ConcurrentDictionary<string, byte[]> _keyCache = new();
+
+        private readonly ConcurrentDictionary<string, float[]> _vectorCache = new();
+        private readonly Task _vectorCacheLoader;
 
         // --- CONSTRUCTOR FIX: Added ILoggerFactory ---
 
@@ -101,6 +107,45 @@ namespace DataWarehouse.Engine
             if (_runtimeOptimizer.ShouldEnableDeduplication())
             {
                 _dedupe = new DeduplicationTable(metadataPath);
+            }
+
+            _vectorCacheLoader = Task.Run(HydrateVectorCacheAsync);
+
+            // Check if user has explicit config. If not, use Environment detection.
+            InitializeSmartFeatures();
+        }
+
+        private async Task HydrateVectorCacheAsync()
+        {
+            try
+            {
+                await foreach (var manifest in _index.EnumerateAllAsync())
+                {
+                    if (manifest.VectorEmbedding != null)
+                    {
+                        _vectorCache[manifest.Id] = manifest.VectorEmbedding;
+                    }
+                }
+                _logger.LogInformation("[AI] Vector Cache Rehydrated. {Count} items.", _vectorCache.Count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[AI] Failed to hydrate vector cache.");
+            }
+        }
+
+        private void InitializeSmartFeatures()
+        {
+            // Example: Deduplication
+            if (!_features.HasExplicitSetting("Dedupe"))
+            {
+                // Auto-enable only on Server/Hyperscale
+                bool autoEnable = _runtimeOptimizer.ShouldEnableDeduplication();
+                _features.SetFeatureState("Dedupe", autoEnable, ephemeral: true);
+                _logger.LogInformation(
+                    "SMART: Auto-{Action} Deduplication based on {Mode}",
+                    autoEnable ? "Enabled" : "Disabled",
+                    _runtimeOptimizer.CurrentMode);
             }
         }
 
@@ -308,6 +353,10 @@ namespace DataWarehouse.Engine
 
                 await SaveManifestAsync(newManifest);
                 await _index.IndexManifestAsync(newManifest);
+                if (newManifest.VectorEmbedding != null)
+                {
+                    _vectorCache[newManifest.Id] = newManifest.VectorEmbedding;
+                }
 
                 // 9. EVENTS
                 _metrics.IncrementCounter("dw_writes_success");
@@ -447,21 +496,53 @@ namespace DataWarehouse.Engine
         }
 
         /// <summary>
-        /// Search memory
+        /// Search memories
         /// </summary>
-        /// <param name="q"></param>
-        /// <param name="v"></param>
-        /// <param name="l"></param>
+        /// <param name="vector"></param>
+        /// <param name="limit"></param>
         /// <returns></returns>
-        public Task<string[]> SearchMemoriesAsync(string q, float[]? v, int l) => _index.SearchAsync(q, v, l);
+        public Task<string[]> SearchMemoriesAsync(float[] vector, int limit) => SearchMemoriesAsync(string.Empty, vector, limit);
 
         /// <summary>
         /// Search memory
         /// </summary>
-        /// <param name="v"></param>
-        /// <param name="l"></param>
+        /// <param name="query"></param>
+        /// <param name="vector"></param>
+        /// <param name="limit"></param>
         /// <returns></returns>
-        public Task<string[]> SearchMemoriesAsync(float[] v, int l) => _index.SearchAsync("", v, l);
+        public async Task<string[]> SearchMemoriesAsync(string query, float[]? vector, int limit = 5)
+        {
+            // A. Text-Only Search (Fallback)
+            if (vector == null || vector.Length == 0)
+            {
+                return await _index.SearchAsync(query, null, limit);
+            }
+
+            // B. Vector Search (The "God-Tier" Logic)
+            // We scan the in-memory cache. This is insanely fast for < 1M items (standard for SMBs).
+            // For Hyperscale (>100M), we would switch to a Qdrant/Milvus plugin, 
+            // but this Logic covers 99% of use cases natively.
+
+            await _vectorCacheLoader; // Ensure cache is ready
+
+            // Perform Parallel Cosine Similarity Calculation
+            var results = _vectorCache
+                .AsParallel() // Utilize all CPU cores
+                .Select(kvp => new
+                {
+                    Id = kvp.Key,
+                    Score = VectorMath.CosineSimilarity(vector, kvp.Value)
+                })
+                .Where(x => x.Score > 0.65f) // Relevance Threshold (Adjustable via Config in V2)
+                .OrderByDescending(x => x.Score)
+                .Take(limit)
+                .Select(x => x.Id)
+                .ToArray();
+
+            // If we have text query AND vector, we could intersect results here. 
+            // For now, Vector priority is standard.
+            return results;
+        }
 
         /// <summary>
         /// Query file
@@ -499,35 +580,45 @@ namespace DataWarehouse.Engine
         {
             Stream current = input;
 
-            // 1. Dynamic Compression (Using Registry)
-            if (config.CompressionAlgo != "None")
+            // Iterate over the configured transformation order
+            foreach (var step in config.TransformationOrder)
             {
-                // We use SimplexStream to bridge the "Push" (Write) compressor to a "Pull" (Read) pipeline
-                current = new SimplexStream(async (output, ct) =>
+                switch (step)
                 {
-                    // Registry Lookup
-                    var compressor = _registry.GetCompression(config.CompressionAlgo);
+                    case "Compression":
+                        if (config.CompressionAlgo != "None")
+                        {
+                            current = new SimplexStream(async (output, ct) =>
+                            {
+                                var compressor = _registry.GetCompression(config.CompressionAlgo);
+                                using var compressionStream = compressor.CreateCompressionStream(output);
+                                await input.CopyToAsync(compressionStream, ct);
+                            });
+                        }
+                        break;
 
-                    // Create the compression stream wrapping the output
-                    using var compressionStream = compressor.CreateCompressionStream(output);
+                    case "Encryption":
+                        if (config.CryptoAlgo != "None")
+                        {
+                            var crypto = _registry.GetCrypto(config.CryptoAlgo);
+                            var keyBytes = _keyCache.GetOrAdd(config.KeyId, id => _keyStore.GetKey(id));
+                            // Wraps current stream (which might be the compressor)
+                            current = new ReadableChunkedEncryptionStream(current, crypto, keyBytes);
+                        }
+                        break;
+                }
+                // Update 'input' reference for next loop iteration if we chained streams?
+                // Actually, the 'current' becomes the input for the next layer in a Pull model.
+                // Correction: In a Pull model (Readable Stream), the OUTERMOST stream is the one you read from.
+                // So if we want Encrypt(Compress(Data)), the stream structure is EncryptStream(CompressStream(Data)).
+                // This means we must build the pipeline from Inner (Data) to Outer.
 
-                    // Pump input into it
-                    await input.CopyToAsync(compressionStream, ct);
+                // The 'TransformationOrder' list should be "First Operation on Data" -> "Last Operation".
+                // e.g. ["Compression", "Encryption"] means Data -> Compress -> Encrypt.
+                // In a Pull stream, Encrypt wraps Compress.
 
-                    // Flush handled by disposal/closing of compressionStream
-                });
+                input = current; // Chain for next iteration
             }
-
-            // 2. Dynamic Encryption (Using Registry)
-            if (config.CryptoAlgo != "None")
-            {
-                var crypto = _registry.GetCrypto(config.CryptoAlgo);
-                var keyBytes = _keyCache.GetOrAdd(config.KeyId, id => _keyStore.GetKey(id));
-
-                // Use Readable Chunked Encryptor
-                current = new ReadableChunkedEncryptionStream(current, crypto, keyBytes);
-            }
-
             return current;
         }
 

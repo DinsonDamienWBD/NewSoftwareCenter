@@ -7,6 +7,7 @@ using DataWarehouse.Plugins;
 using DataWarehouse.Security;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 
 namespace DataWarehouse.Extensions
 {
@@ -31,13 +32,23 @@ namespace DataWarehouse.Extensions
 
             if (string.IsNullOrEmpty(options.RootPath)) throw new ArgumentException("RootPath required.");
 
+            // 1. Core Services
             services.AddSingleton<PluginRegistry>();
-            services.AddSingleton(sp => new RuntimeOptimizer(sp.GetRequiredService<ILogger<RuntimeOptimizer>>()));
-            services.AddSingleton(sp => new PipelineOptimizer(sp.GetRequiredService<PluginRegistry>()));
-            services.AddSingleton(sp => new FeatureManager(Path.Combine(options.RootPath, "Metadata")));
 
+            // 2. Optimizers
+            services.AddSingleton(sp => new RuntimeOptimizer(sp.GetRequiredService<ILogger<RuntimeOptimizer>>()));
+
+            // FIX CS7036: Inject IConfiguration into PipelineOptimizer
+            services.AddSingleton(sp => new PipelineOptimizer(
+                sp.GetRequiredService<PluginRegistry>(),
+                sp.GetRequiredService<IConfiguration>()
+            ));
+
+            // 3. Managers & Adapters
+            services.AddSingleton(sp => new FeatureManager(Path.Combine(options.RootPath, "Metadata")));
             services.AddSingleton<IKeyStore>(sp => new KeyStoreAdapter(options.RootPath));
 
+            // 4. Index Selection (Smart Logic)
             services.AddSingleton<IMetadataIndex>(sp =>
             {
                 var optimizer = sp.GetRequiredService<RuntimeOptimizer>();
@@ -48,12 +59,13 @@ namespace DataWarehouse.Extensions
                 return new InMemoryMetadataIndex();
             });
 
+            // 5. The Engine Kernel
             services.AddSingleton<CosmicWarehouse>(sp =>
                 new CosmicWarehouse(
                     sp.GetRequiredService<PluginRegistry>(),
                     sp.GetRequiredService<FeatureManager>(),
                     sp.GetRequiredService<ILogger<CosmicWarehouse>>(),
-                    sp.GetRequiredService<ILoggerFactory>(), // FIX: Added Factory
+                    sp.GetRequiredService<ILoggerFactory>(),
                     sp.GetRequiredService<IKeyStore>(),
                     sp.GetRequiredService<IMetadataIndex>(),
                     sp.GetRequiredService<IMetricsProvider>(),
@@ -62,6 +74,7 @@ namespace DataWarehouse.Extensions
                     options.RootPath
                 ));
 
+            // 6. Public Interface Alias
             services.AddSingleton<IDataWarehouse>(sp => sp.GetRequiredService<CosmicWarehouse>());
 
             return services;

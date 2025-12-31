@@ -1,11 +1,12 @@
 ﻿using DataWarehouse.Contracts;
+using System.Runtime.CompilerServices;
 
 namespace DataWarehouse.Drivers
 {
     /// <summary>
     /// Local disk provider: the concrete driver
     /// </summary>
-    public class LocalDiskProvider : IStorageProvider
+    public class LocalDiskProvider : IStorageProvider, IListableStorage
     {
         /// <summary>
         /// ID
@@ -91,5 +92,43 @@ namespace DataWarehouse.Drivers
         /// <param name="uri"></param>
         /// <returns></returns>
         public Task<bool> ExistsAsync(Uri uri) => Task.FromResult(File.Exists(GetPath(uri)));
+
+        /// <summary>
+        /// List all files
+        /// </summary>
+        /// <param name="prefix"></param>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async IAsyncEnumerable<StorageListItem> ListFilesAsync(
+            string prefix = "",
+            [EnumeratorCancellation] CancellationToken ct = default)
+        {
+            var dirInfo = new DirectoryInfo(_rootPath);
+            if (!dirInfo.Exists) yield break;
+
+            // EnumerateFiles is more efficient than GetFiles (Streaming vs Buffering)
+            foreach (var file in dirInfo.EnumerateFiles("*", SearchOption.AllDirectories))
+            {
+                if (ct.IsCancellationRequested) yield break;
+
+                // Convert physical path back to URI scheme
+                // C:\Root\Bucket\Key.blob -> Bucket/Key.blob
+                var relative = Path.GetRelativePath(_rootPath, file.FullName)
+                                   .Replace(Path.DirectorySeparatorChar, '/');
+
+                // Prefix Filter Logic
+                if (!string.IsNullOrEmpty(prefix) && !relative.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                // Construct full URI: file:///Bucket/Key.blob
+                var uri = new Uri($"{Scheme}:///{relative}");
+
+                yield return new StorageListItem(uri, file.Length);
+
+                await Task.Yield(); // Ensure async context is respected
+            }
+        }
     }
 }

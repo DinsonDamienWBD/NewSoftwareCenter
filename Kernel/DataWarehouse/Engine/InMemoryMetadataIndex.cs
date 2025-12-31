@@ -1,6 +1,7 @@
-﻿using System.Collections.Concurrent;
-using DataWarehouse.Contracts;
+﻿using DataWarehouse.Contracts;
 using DataWarehouse.Primitives;
+using System.Collections.Concurrent;
+using System.Runtime.CompilerServices;
 
 namespace DataWarehouse.Engine
 {
@@ -45,8 +46,8 @@ namespace DataWarehouse.Engine
             // Naive Linear Search (Production would use Lucene/VectorDB)
             var q = query.ToLowerInvariant();
             var results = _index.Values
-                .Where(m => (m.ContentSummary?.ToLowerInvariant().Contains(q) ?? false) ||
-                            m.Tags.Keys.Any(k => k.ToLowerInvariant().Contains(q)))
+                .Where(m => (m.ContentSummary?.ToLowerInvariant().Contains(q, StringComparison.InvariantCultureIgnoreCase) ?? false) ||
+                            m.Tags.Keys.Any(k => k.Contains(q, StringComparison.InvariantCultureIgnoreCase)))
                 .Take(limit)
                 .Select(m => m.Id)
                 .ToArray();
@@ -109,7 +110,7 @@ namespace DataWarehouse.Engine
             return Task.FromResult(Array.Empty<string>());
         }
 
-        private bool Matches(Manifest m, QueryFilter f)
+        private static bool Matches(Manifest m, QueryFilter f)
         {
             // 1. Get Value via Reflection / Property Access
             object? actualVal = GetValue(m, f.Field);
@@ -130,16 +131,33 @@ namespace DataWarehouse.Engine
             };
         }
 
-        private object? GetValue(Manifest m, string field)
+        private static object? GetValue(Manifest m, string field)
         {
             if (field.Equals("SizeBytes", StringComparison.OrdinalIgnoreCase)) return m.SizeBytes;
             if (field.Equals("BlobUri", StringComparison.OrdinalIgnoreCase)) return m.BlobUri;
             if (field.StartsWith("Tags.", StringComparison.OrdinalIgnoreCase))
             {
-                var key = field.Substring(5);
+                var key = field[5..];
                 return m.Tags.TryGetValue(key, out var val) ? val : null;
             }
             return null;
+        }
+
+        /// <summary>
+        /// We use ToArray() to avoid "Collection Modified" errors while iterating
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public async IAsyncEnumerable<Manifest> EnumerateAllAsync([EnumeratorCancellation] CancellationToken ct = default)
+        {
+            foreach (var item in _index.Values)
+            {
+                // [FIX] Check for cancellation
+                if (ct.IsCancellationRequested) yield break;
+
+                yield return item;
+                await Task.Yield(); // Async shim to ensure UI/Thread responsiveness
+            }
         }
     }
 }
