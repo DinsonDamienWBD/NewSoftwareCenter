@@ -1,7 +1,22 @@
 <Solution>
   <Folder Name="/Kernel/">
     <Project Path="Kernel/Core/Core.csproj" />
-    <Project Path="Kernel/DataWarehouse/DataWarehouse.csproj" />
+  </Folder>
+  <Folder Name="/Kernel/DataWarehouse/">
+    <Project Path="Kernel/DataWarehouse/DataWarehouse.Kernel/DataWarehouse.Kernel.csproj" />
+    <Project Path="Kernel/DataWarehouse/DataWarehouse.SDK/DataWarehouse.SDK.csproj" Id="0404519b-1fc1-41ee-913a-b6f752826620" />
+  </Folder>
+  <Folder Name="/Kernel/DataWarehouse/Plugins/">
+    <Project Path="Kernel/DataWarehouse/Plugins/Cosmic.Plugins.Features.EnterpriseStorage/DataWarehouse.Plugins.Features.EnterpriseStorage.csproj" Id="bf8f7eb3-4f03-43fb-a6e0-70da4a308f59" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Compression.Standard/DataWarehouse.Plugins.Compression.Standard.csproj" Id="a3dd9e98-90e7-414f-bbcf-6aa6813c709f" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Crypto.Standard/DataWarehouse.Plugins.Crypto.Standard.csproj" Id="6d523e57-5705-4946-9019-5759da00d623" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.AI/DataWarehouse.Plugins.Features.AI.csproj" Id="f30a415d-6c53-4778-a14e-ce96565d89ee" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.Consensus/DataWarehouse.Plugins.Features.Consensus.csproj" Id="1f8b8c5b-16a3-4c71-9074-83dd147ad251" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.Governance/DataWarehouse.Plugins.Features.Governance.csproj" Id="d778603c-153a-4f30-a4af-e98130944bf4" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.SQL/DataWarehouse.Plugins.Features.SQL.csproj" Id="839b962c-e774-4ad1-8ddf-f17ca3932d8d" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Indexing.Sqlite/DataWarehouse.Plugins.Indexing.Sqlite.csproj" Id="27bfad8e-a96c-4a51-9296-cd2cf8cd71c9" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Security.Granular/DataWarehouse.Plugins.Security.Granular.csproj" Id="e0b27a83-784f-4ee8-934e-d070845c4363" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.Local/DataWarehouse.Plugins.Storage.LocalFileSystem.csproj" Id="f1252fab-fc68-4e90-b671-01bf341782c8" />
   </Folder>
   <Folder Name="/Kernel/Managers/">
     <Project Path="Kernel/Managers/BackendManager/Manager.csproj" />

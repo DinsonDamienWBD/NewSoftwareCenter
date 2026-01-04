@@ -38,7 +38,7 @@ namespace FrontendManager.Middleware
             if (!message.GetType().Name.EndsWith("Query") && !message.GetType().Name.EndsWith("Event"))
             {
                 await _dwauditLogger.LogAsync(
-                    Core.DataWarehouse.AuditAction.Update,
+                    Core.DataWarehouse.Kernel.AuditAction.Update,
                     "UiBus",
                     message.GetType().Name,
                     requestorId,

@@ -1,93 +1,544 @@
-﻿. C:\Users\ddamien\Downloads\Upgrade scripts\C# ASP.NET Kestrel Version\NewSoftwareCenter\Kernel\DataWarehouse
-├── AI
-│   ├── GraphVectorIndex.cs_______________________________________________________________[2025-12-31 16:36:54]
-│   └── VectorMath.cs_____________________________________________________________________[2025-12-31 15:37:00]
-├── bin
-│   └── Debug
-│       └── net10.0
-│           ├── Core.dll__________________________________________________________________[2025-12-31 17:06:56]
-│           ├── Core.pdb__________________________________________________________________[2025-12-31 17:06:56]
-│           ├── Core.xml__________________________________________________________________[2025-12-31 17:06:56]
-│           ├── DataWarehouse.deps.json___________________________________________________[2025-12-31 17:07:00]
-│           ├── DataWarehouse.dll_________________________________________________________[2025-12-31 17:06:59]
-│           ├── DataWarehouse.pdb_________________________________________________________[2025-12-31 17:06:59]
-│           └── DataWarehouse.xml_________________________________________________________[2025-12-31 17:06:59]
-├── Clustering
-│   └── RaftCluster.cs____________________________________________________________________[2025-12-31 16:56:15]
-├── Configuration
-│   └── FeatureManager.cs_________________________________________________________________[2025-12-31 12:26:49]
-├── Contracts
-│   ├── IFederationNode.cs________________________________________________________________[2025-12-30 12:33:02]
-│   ├── IListableStorage.cs_______________________________________________________________[2025-12-31 13:29:04]
-│   ├── IPlugin.cs________________________________________________________________________[2025-12-31 17:01:21]
-│   ├── IQueryableIndex.cs________________________________________________________________[2025-12-30 12:19:25]
-│   ├── IRealTimeProvider.cs______________________________________________________________[2025-12-30 11:44:37]
-│   ├── Messages.cs_______________________________________________________________________[2025-12-30 14:38:43]
-│   └── PublicTypes.cs____________________________________________________________________[2025-12-30 14:47:57]
-├── Diagnostics
-│   └── FlightRecorder.cs_________________________________________________________________[2025-12-30 11:52:09]
-├── Drivers
-│   ├── LocalDiskProvider.cs______________________________________________________________[2025-12-31 13:23:54]
-│   ├── NetworkStorageProvider.cs_________________________________________________________[2025-12-31 11:04:07]
-│   ├── SegmentedDiskProvider.cs__________________________________________________________[2025-12-31 12:30:21]
-│   ├── SelfHealingMirror.cs______________________________________________________________[2025-12-30 10:49:37]
-│   └── SlicedStream.cs___________________________________________________________________[2025-12-30 14:14:44]
-├── Engine
-│   ├── AccessTracker.cs__________________________________________________________________[2025-12-31 16:31:28]
-│   ├── CosmicMessenger.cs________________________________________________________________[2025-12-30 14:56:29]
-│   ├── CosmicWarehouse.cs________________________________________________________________[2025-12-31 16:40:47]
-│   ├── DataVacuum.cs_____________________________________________________________________[2025-12-31 13:19:57]
-│   ├── InMemoryMetadataIndex.cs__________________________________________________________[2025-12-31 17:02:01]
-│   ├── PipelineOptimizer.cs______________________________________________________________[2025-12-31 12:29:43]
-│   ├── PluginLoader.cs___________________________________________________________________[2025-12-30 12:56:16]
-│   ├── PluginRegistry.cs_________________________________________________________________[2025-12-30 14:16:57]
-│   └── RuntimeOptimizer.cs_______________________________________________________________[2025-12-30 12:25:49]
-├── Extensions
-│   ├── DataWarehouseOptions.cs___________________________________________________________[2025-12-30 12:24:22]
-│   └── ServiceCollectionExtensions.cs____________________________________________________[2025-12-31 12:36:24]
-├── Fabric
-│   ├── DeduplicationTable.cs_____________________________________________________________[2025-12-31 12:06:30]
-│   ├── DurableState.cs___________________________________________________________________[2025-12-31 12:16:33]
-│   ├── FederationManager.cs______________________________________________________________[2025-12-30 14:54:49]
-│   ├── LifecyclePolicyEngine.cs__________________________________________________________[2025-12-31 17:06:34]
-│   ├── UnifiedStoragePool.cs_____________________________________________________________[2025-12-31 17:05:07]
-│   └── WormGovernor.cs___________________________________________________________________[2025-12-30 11:41:37]
-├── IO
-│   ├── ChunkedDecryptionStream.cs________________________________________________________[2025-12-30 15:18:58]
-│   ├── ChunkedEncryptionStream.cs________________________________________________________[2025-12-31 12:32:51]
-│   ├── LocalDiskDriver.cs________________________________________________________________[2025-12-29 18:50:50]
-│   ├── PathSanitizer.cs__________________________________________________________________[2025-12-29 17:48:28]
-│   ├── ReadableChunkedEncryptionStream.cs________________________________________________[2025-12-31 11:32:11]
-│   ├── SimplexStream.cs__________________________________________________________________[2025-12-31 11:22:18]
-│   └── TeeStream.cs______________________________________________________________________[2025-12-31 10:42:13]
-├── obj
-│   ├── Debug
-│   │   └── net10.0
-│   │       ├── ref
-│   │       │   └── DataWarehouse.dll_____________________________________________________[2025-12-31 17:06:59]
-│   │       ├── refint
-│   │       ├── DataWarehouse.csproj.FileListAbsolute.txt_________________________________[2025-12-31 17:07:00]
-│   │       ├── DataWarehouse.dll_________________________________________________________[2025-12-31 17:06:59]
-│   │       ├── DataWarehouse.GeneratedMSBuildEditorConfig.editorconfig___________________[2025-12-31 17:06:57]
-│   │       ├── DataWarehouse.GlobalUsings.g.cs___________________________________________[2025-12-16 19:54:05]
-│   │       ├── DataWarehouse.pdb_________________________________________________________[2025-12-31 17:06:59]
-│   │       ├── DataWarehouse.sourcelink.json_____________________________________________[2025-12-31 17:06:57]
-│   │       └── DataWarehouse.xml_________________________________________________________[2025-12-31 17:06:59]
-│   ├── DataWarehouse.csproj.nuget.dgspec.json____________________________________________[2025-12-31 17:06:49]
-│   ├── DataWarehouse.csproj.nuget.g.props________________________________________________[2025-12-16 19:54:05]
-│   ├── DataWarehouse.csproj.nuget.g.targets______________________________________________[2025-12-31 12:34:34]
-│   ├── project.assets.json_______________________________________________________________[2025-12-31 12:34:34]
-│   └── project.nuget.cache_______________________________________________________________[2025-12-31 17:06:49]
-├── Plugins
-│   └── SqliteMetadataIndex.cs____________________________________________________________[2025-12-31 17:02:33]
-├── Primitives
-│   └── Manifest.cs_______________________________________________________________________[2025-12-31 15:34:05]
-├── Realtime
-│   └── InMemoryRealTimeProvider.cs_______________________________________________________[2025-12-31 12:44:53]
-├── Security
-│   └── KeyStoreAdapter.cs________________________________________________________________[2025-12-31 12:05:34]
-├── Serialization
-│   └── JsonSerializerAdapter.cs__________________________________________________________[2025-12-29 17:54:35]
-├── SQL
-│   └── PostgresInterface.cs______________________________________________________________[2025-12-31 17:05:51]
-└── DataWarehouse.csproj__________________________________________________________________[2025-12-31 15:46:26]
+﻿. C:\Users\ddamien\Downloads\Upgrade scripts\Kestrel Version\NewSoftwareCenter\Kernel\DataWarehouse
+├── DataWarehouse.Kernel
+│   ├── bin
+│   │   └── Debug
+│   │       └── net10.0
+│   │           ├── Plugins
+│   │           │   └── Debug
+│   │           │       └── net10.0
+│   │           ├── Core.dll______________________________________________________________[2026-01-01 08:36:54]
+│   │           ├── Core.pdb______________________________________________________________[2026-01-01 08:36:54]
+│   │           ├── Core.xml______________________________________________________________[2026-01-01 08:36:54]
+│   │           ├── DataWarehouse.deps.json_______________________________________________[2026-01-01 08:36:55]
+│   │           ├── DataWarehouse.dll_____________________________________________________[2026-01-01 08:36:55]
+│   │           ├── DataWarehouse.Kernel.deps.json________________________________________[2026-01-04 01:33:35]
+│   │           ├── DataWarehouse.Kernel.dll______________________________________________[2026-01-04 01:33:35]
+│   │           ├── DataWarehouse.Kernel.pdb______________________________________________[2026-01-04 01:33:35]
+│   │           ├── DataWarehouse.Kernel.xml______________________________________________[2026-01-04 01:33:34]
+│   │           ├── DataWarehouse.pdb_____________________________________________________[2026-01-01 08:36:55]
+│   │           ├── DataWarehouse.SDK.dll_________________________________________________[2026-01-04 01:33:33]
+│   │           ├── DataWarehouse.SDK.pdb_________________________________________________[2026-01-04 01:33:33]
+│   │           └── DataWarehouse.xml_____________________________________________________[2026-01-01 08:36:55]
+│   ├── Configuration
+│   │   └── FeatureManager.cs_____________________________________________________________[2026-01-03 01:20:59]
+│   ├── Engine
+│   │   ├── DataWarehouse.cs______________________________________________________________[2026-01-04 01:26:51]
+│   │   ├── HotPluginLoader.cs____________________________________________________________[2026-01-02 11:53:37]
+│   │   ├── PipelineOptimizer.cs__________________________________________________________[2026-01-04 00:05:59]
+│   │   ├── PluginRegistry.cs_____________________________________________________________[2026-01-03 11:12:20]
+│   │   ├── PolicyEnforcer.cs_____________________________________________________________[2026-01-04 00:06:34]
+│   │   └── RuntimeOptimizer.cs___________________________________________________________[2026-01-02 00:58:37]
+│   ├── Extensions
+│   │   ├── DataWarehouseOptions.cs_______________________________________________________[2026-01-02 00:58:37]
+│   │   └── ServiceCollectionExtensions.cs________________________________________________[2026-01-03 00:53:56]
+│   ├── Indexing
+│   │   └── InMemoryMetadataIndex.cs______________________________________________________[2026-01-04 01:31:07]
+│   ├── IO
+│   │   ├── InMemoryStorageProvider.cs____________________________________________________[2026-01-03 10:29:36]
+│   │   ├── LocalDiskProvider.cs__________________________________________________________[2026-01-02 10:16:53]
+│   │   ├── PathSanitizer.cs______________________________________________________________[2026-01-02 00:58:37]
+│   │   └── TeeStream.cs__________________________________________________________________[2026-01-02 00:58:37]
+│   ├── obj
+│   │   ├── Debug
+│   │   │   └── net10.0
+│   │   │       ├── ref
+│   │   │       │   ├── DataWarehouse.dll_________________________________________________[2026-01-01 08:36:55]
+│   │   │       │   └── DataWarehouse.Kernel.dll__________________________________________[2026-01-04 01:33:35]
+│   │   │       ├── refint
+│   │   │       │   ├── DataWarehouse.dll_________________________________________________[2026-01-01 08:36:55]
+│   │   │       │   └── DataWarehouse.Kernel.dll__________________________________________[2026-01-04 01:33:35]
+│   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs_______________________[2025-12-16 19:54:05]
+│   │   │       ├── DataWare.1A558AAD.Up2Date_____________________________________________[2026-01-04 01:33:35]
+│   │   │       ├── DataWare.7B114011.Up2Date_____________________________________________[2026-01-01 08:36:55]
+│   │   │       ├── DataWarehouse.AssemblyInfo.cs_________________________________________[2026-01-01 08:36:54]
+│   │   │       ├── DataWarehouse.AssemblyInfoInputs.cache________________________________[2026-01-01 08:36:54]
+│   │   │       ├── DataWarehouse.assets.cache____________________________________________[2026-01-01 08:36:54]
+│   │   │       ├── DataWarehouse.csproj.AssemblyReference.cache__________________________[2026-01-01 08:36:54]
+│   │   │       ├── DataWarehouse.csproj.CoreCompileInputs.cache__________________________[2026-01-01 08:36:54]
+│   │   │       ├── DataWarehouse.csproj.FileListAbsolute.txt_____________________________[2026-01-01 08:36:55]
+│   │   │       ├── DataWarehouse.dll_____________________________________________________[2026-01-01 08:36:55]
+│   │   │       ├── DataWarehouse.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-01 08:36:54]
+│   │   │       ├── DataWarehouse.GlobalUsings.g.cs_______________________________________[2025-12-16 19:54:05]
+│   │   │       ├── DataWarehouse.Kernel.AssemblyInfo.cs__________________________________[2026-01-04 01:33:34]
+│   │   │       ├── DataWarehouse.Kernel.AssemblyInfoInputs.cache_________________________[2026-01-04 01:33:34]
+│   │   │       ├── DataWarehouse.Kernel.assets.cache_____________________________________[2026-01-04 01:31:25]
+│   │   │       ├── DataWarehouse.Kernel.csproj.AssemblyReference.cache___________________[2026-01-04 01:33:34]
+│   │   │       ├── DataWarehouse.Kernel.csproj.CoreCompileInputs.cache___________________[2026-01-04 01:33:34]
+│   │   │       ├── DataWarehouse.Kernel.csproj.FileListAbsolute.txt______________________[2026-01-04 01:33:35]
+│   │   │       ├── DataWarehouse.Kernel.dll______________________________________________[2026-01-04 01:33:35]
+│   │   │       ├── DataWarehouse.Kernel.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+│   │   │       ├── DataWarehouse.Kernel.GlobalUsings.g.cs________________________________[2026-01-02 00:55:49]
+│   │   │       ├── DataWarehouse.Kernel.pdb______________________________________________[2026-01-04 01:33:35]
+│   │   │       ├── DataWarehouse.Kernel.sourcelink.json__________________________________[2026-01-04 01:33:34]
+│   │   │       ├── DataWarehouse.Kernel.xml______________________________________________[2026-01-04 01:33:34]
+│   │   │       ├── DataWarehouse.pdb_____________________________________________________[2026-01-01 08:36:55]
+│   │   │       ├── DataWarehouse.sourcelink.json_________________________________________[2026-01-01 08:36:54]
+│   │   │       └── DataWarehouse.xml_____________________________________________________[2026-01-01 08:36:55]
+│   │   ├── DataWarehouse.csproj.nuget.dgspec.json________________________________________[2026-01-01 08:36:51]
+│   │   ├── DataWarehouse.csproj.nuget.g.props____________________________________________[2025-12-16 19:54:05]
+│   │   ├── DataWarehouse.csproj.nuget.g.targets__________________________________________[2025-12-31 12:34:34]
+│   │   ├── DataWarehouse.Kernel.csproj.nuget.dgspec.json_________________________________[2026-01-04 01:31:24]
+│   │   ├── DataWarehouse.Kernel.csproj.nuget.g.props_____________________________________[2026-01-02 00:56:48]
+│   │   ├── DataWarehouse.Kernel.csproj.nuget.g.targets___________________________________[2026-01-02 00:55:50]
+│   │   ├── project.assets.json___________________________________________________________[2026-01-02 15:27:33]
+│   │   └── project.nuget.cache___________________________________________________________[2026-01-04 01:33:33]
+│   ├── Realtime
+│   │   └── InMemoryRealTimeProvider.cs___________________________________________________[2026-01-03 01:11:11]
+│   ├── Security
+│   │   ├── AccessControlManager.cs_______________________________________________________[2026-01-02 13:30:42]
+│   │   └── KeyStoreAdapter.cs____________________________________________________________[2026-01-03 00:55:08]
+│   ├── Serialization
+│   │   └── JsonSerializerAdapter.cs______________________________________________________[2026-01-03 01:04:22]
+│   └── DataWarehouse.Kernel.csproj_______________________________________________________[2026-01-03 11:18:36]
+├── DataWarehouse.SDK
+│   ├── bin
+│   │   └── Debug
+│   │       └── net10.0
+│   │           ├── Plugins
+│   │           │   └── neural_skills.json________________________________________________[2026-01-04 00:17:18]
+│   │           ├── DataWarehouse.SDK.deps.json___________________________________________[2026-01-04 01:33:33]
+│   │           ├── DataWarehouse.SDK.dll_________________________________________________[2026-01-04 01:33:33]
+│   │           └── DataWarehouse.SDK.pdb_________________________________________________[2026-01-04 01:33:33]
+│   ├── Contracts
+│   │   ├── ICloudEnvironment.cs__________________________________________________________[2026-01-02 14:08:32]
+│   │   ├── IConsensusEngine.cs___________________________________________________________[2026-01-02 14:05:12]
+│   │   ├── IDataTransformation.cs________________________________________________________[2026-01-03 10:57:34]
+│   │   ├── IDataWarehouse.cs_____________________________________________________________[2026-01-02 10:23:21]
+│   │   ├── IFederationNode.cs____________________________________________________________[2026-01-02 17:19:29]
+│   │   ├── IListableStorage.cs___________________________________________________________[2026-01-02 14:08:55]
+│   │   ├── IMetadataIndex.cs_____________________________________________________________[2026-01-04 01:20:38]
+│   │   ├── IPlugin.cs____________________________________________________________________[2026-01-02 17:08:21]
+│   │   ├── IRealTimeProvider.cs__________________________________________________________[2026-01-02 12:43:12]
+│   │   ├── IReplicationService.cs________________________________________________________[2026-01-04 01:15:29]
+│   │   ├── ISerializer.cs________________________________________________________________[2026-01-03 01:04:12]
+│   │   ├── ITieredStorage.cs_____________________________________________________________[2026-01-02 23:46:50]
+│   │   ├── Messages.cs___________________________________________________________________[2026-01-02 15:11:10]
+│   │   ├── ProviderInterfaces.cs_________________________________________________________[2026-01-03 11:01:58]
+│   │   ├── PublicTypes.cs________________________________________________________________[2026-01-02 17:52:40]
+│   │   └── StorageTier.cs________________________________________________________________[2026-01-02 23:45:47]
+│   ├── Extensions
+│   │   └── KernelLoggingExtensions.cs____________________________________________________[2026-01-02 17:13:15]
+│   ├── Governance
+│   │   └── GovernanceContracts.cs________________________________________________________[2026-01-04 01:33:29]
+│   ├── IO
+│   │   └── PushToPullStreamAdapter.cs____________________________________________________[2026-01-03 11:06:24]
+│   ├── obj
+│   │   ├── Debug
+│   │   │   └── net10.0
+│   │   │       ├── ref
+│   │   │       │   └── DataWarehouse.SDK.dll_____________________________________________[2026-01-04 01:33:33]
+│   │   │       ├── refint
+│   │   │       │   └── DataWarehouse.SDK.dll_____________________________________________[2026-01-04 01:33:33]
+│   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs_______________________[2026-01-02 00:59:37]
+│   │   │       ├── DataWarehouse.SDK.AssemblyInfo.cs_____________________________________[2026-01-04 01:33:33]
+│   │   │       ├── DataWarehouse.SDK.AssemblyInfoInputs.cache____________________________[2026-01-04 01:33:33]
+│   │   │       ├── DataWarehouse.SDK.assets.cache________________________________________[2026-01-04 01:31:24]
+│   │   │       ├── DataWarehouse.SDK.csproj.CoreCompileInputs.cache______________________[2026-01-04 01:33:33]
+│   │   │       ├── DataWarehouse.SDK.csproj.FileListAbsolute.txt_________________________[2026-01-04 01:33:33]
+│   │   │       ├── DataWarehouse.SDK.dll_________________________________________________[2026-01-04 01:33:33]
+│   │   │       ├── DataWarehouse.SDK.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:33]
+│   │   │       ├── DataWarehouse.SDK.GlobalUsings.g.cs___________________________________[2026-01-02 00:59:37]
+│   │   │       ├── DataWarehouse.SDK.pdb_________________________________________________[2026-01-04 01:33:33]
+│   │   │       └── DataWarehouse.SDK.sourcelink.json_____________________________________[2026-01-04 01:33:33]
+│   │   ├── DataWarehouse.SDK.csproj.nuget.dgspec.json____________________________________[2026-01-04 01:31:24]
+│   │   ├── DataWarehouse.SDK.csproj.nuget.g.props________________________________________[2026-01-02 00:59:37]
+│   │   ├── DataWarehouse.SDK.csproj.nuget.g.targets______________________________________[2026-01-02 00:59:37]
+│   │   ├── project.assets.json___________________________________________________________[2026-01-02 11:43:00]
+│   │   └── project.nuget.cache___________________________________________________________[2026-01-04 01:33:33]
+│   ├── Primitives
+│   │   ├── CompositeQuery.cs_____________________________________________________________[2026-01-03 00:25:35]
+│   │   ├── Configuration.cs______________________________________________________________[2026-01-03 11:18:07]
+│   │   ├── Manifest.cs___________________________________________________________________[2026-01-04 00:08:12]
+│   │   ├── NodeHandshake.cs______________________________________________________________[2026-01-02 16:59:17]
+│   │   ├── PipelineConfig.cs_____________________________________________________________[2026-01-03 00:53:56]
+│   │   └── StorageIntent.cs______________________________________________________________[2026-01-02 17:42:12]
+│   ├── Security
+│   │   ├── AccessControl.cs______________________________________________________________[2026-01-02 01:09:13]
+│   │   ├── IKeyStore.cs__________________________________________________________________[2026-01-02 15:04:06]
+│   │   ├── ISecurityContext.cs___________________________________________________________[2026-01-02 01:06:15]
+│   │   └── SecurityContracts.cs__________________________________________________________[2026-01-03 02:30:01]
+│   ├── Utilities
+│   │   └── DurableState.cs_______________________________________________________________[2026-01-02 16:46:48]
+│   └── DataWarehouse.SDK.csproj__________________________________________________________[2026-01-03 13:20:41]
+└── Plugins
+    ├── Cosmic.Plugins.Features.EnterpriseStorage
+    │   ├── bin
+    │   │   └── Debug
+    │   │       └── net10.0
+    │   ├── Bootstrapper
+    │   │   └── EnterpriseStoragePlugin.cs________________________________________________[2026-01-02 23:47:52]
+    │   ├── Engine
+    │   │   ├── NetworkStorageProvider.cs_________________________________________________[2026-01-02 17:57:31]
+    │   │   ├── SegmentedDiskProvider.cs__________________________________________________[2026-01-02 12:57:43]
+    │   │   ├── SelfHealingMirror.cs______________________________________________________[2026-01-02 13:48:00]
+    │   │   └── SlicedStream.cs___________________________________________________________[2026-01-02 11:09:25]
+    │   ├── obj
+    │   │   ├── Debug
+    │   │   │   └── net10.0
+    │   │   │       ├── ref
+    │   │   │       │   └── DataWarehouse.Plugins.Features.EnterpriseStorage.dll_______________[2026-01-04 01:33:34]
+    │   │   │       ├── refint
+    │   │   │       │   └── DataWarehouse.Plugins.Features.EnterpriseStorage.dll_______________[2026-01-04 01:33:34]
+    │   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-02 11:42:53]
+    │   │   │       ├── Cosmic.Plugins.Features.EnterpriseStorage.assets.cache_______________[2026-01-02 10:57:10]
+    │   │   │       ├── Cosmic.Plugins.Features.EnterpriseStorage.GlobalUsings.g.cs_______________[2026-01-02 10:57:08]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.AssemblyInfo.cs_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.assets.cache_______________[2026-01-04 01:31:25]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:35]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.dll_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.GlobalUsings.g.cs_______________[2026-01-02 10:57:20]
+    │   │   │       ├── DataWarehouse.Plugins.Features.EnterpriseStorage.pdb_______________[2026-01-04 01:33:34]
+    │   │   │       └── DataWarehouse.Plugins.Features.EnterpriseStorage.sourcelink.json_______________[2026-01-04 01:33:34]
+    │   │   ├── Cosmic.Plugins.Features.EnterpriseStorage.csproj.nuget.dgspec.json_______________[2026-01-02 10:57:09]
+    │   │   ├── Cosmic.Plugins.Features.EnterpriseStorage.csproj.nuget.g.props_______________[2026-01-02 10:57:09]
+    │   │   ├── Cosmic.Plugins.Features.EnterpriseStorage.csproj.nuget.g.targets_______________[2026-01-02 10:57:09]
+    │   │   ├── DataWarehouse.Plugins.Features.EnterpriseStorage.csproj.nuget.dgspec.json_______________[2026-01-04 01:31:24]
+    │   │   ├── DataWarehouse.Plugins.Features.EnterpriseStorage.csproj.nuget.g.props_______________[2026-01-02 10:57:21]
+    │   │   ├── DataWarehouse.Plugins.Features.EnterpriseStorage.csproj.nuget.g.targets_______________[2026-01-02 11:46:00]
+    │   │   ├── project.assets.json_______________________________________________________[2026-01-02 13:39:32]
+    │   │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+    │   ├── Services
+    │   │   ├── DeduplicationTable.cs_____________________________________________________[2026-01-02 17:47:16]
+    │   │   └── UnifiedStoragePool.cs_____________________________________________________[2026-01-02 23:45:58]
+    │   └── DataWarehouse.Plugins.Features.EnterpriseStorage.csproj_______________________[2026-01-02 13:40:05]
+    ├── DataWarehouse.Plugins.Compression.Standard
+    │   ├── bin
+    │   │   └── Debug
+    │   │       └── net10.0
+    │   ├── BootStrapper
+    │   │   └── StandardGzipPlugin.cs_____________________________________________________[2026-01-03 11:05:51]
+    │   ├── Engine
+    │   │   └── SimplexStream.cs__________________________________________________________[2026-01-02 11:44:58]
+    │   ├── obj
+    │   │   ├── Debug
+    │   │   │   └── net10.0
+    │   │   │       ├── ref
+    │   │   │       │   └── DataWarehouse.Plugins.Compression.Standard.dll________________[2026-01-04 01:33:35]
+    │   │   │       ├── refint
+    │   │   │       │   └── DataWarehouse.Plugins.Compression.Standard.dll________________[2026-01-04 01:33:35]
+    │   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-02 11:42:51]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.AssemblyInfo.cs_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.assets.cache_______________[2026-01-04 01:31:25]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:35]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.dll____________________[2026-01-04 01:33:35]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.GlobalUsings.g.cs_______________[2026-01-02 10:32:54]
+    │   │   │       ├── DataWarehouse.Plugins.Compression.Standard.pdb____________________[2026-01-04 01:33:35]
+    │   │   │       └── DataWarehouse.Plugins.Compression.Standard.sourcelink.json_______________[2026-01-04 01:33:34]
+    │   │   ├── DataWarehouse.Plugins.Compression.Standard.csproj.nuget.dgspec.json_______________[2026-01-04 01:31:24]
+    │   │   ├── DataWarehouse.Plugins.Compression.Standard.csproj.nuget.g.props_______________[2026-01-02 10:32:55]
+    │   │   ├── DataWarehouse.Plugins.Compression.Standard.csproj.nuget.g.targets_______________[2026-01-02 10:32:55]
+    │   │   ├── project.assets.json_______________________________________________________[2026-01-02 11:43:00]
+    │   │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+    │   └── DataWarehouse.Plugins.Compression.Standard.csproj_____________________________[2026-01-02 10:53:24]
+    ├── DataWarehouse.Plugins.Crypto.Standard
+    │   ├── bin
+    │   │   └── Debug
+    │   │       └── net10.0
+    │   ├── Bootstrapper
+    │   │   └── StandardAesPlugin.cs______________________________________________________[2026-01-03 11:03:08]
+    │   ├── Engine
+    │   │   ├── ChunkedDecryptionStream.cs________________________________________________[2026-01-02 14:53:54]
+    │   │   ├── ChunkedEncryptionStream.cs________________________________________________[2026-01-02 15:12:58]
+    │   │   └── ReadableChunkedEncryptionStream.cs________________________________________[2026-01-02 16:18:39]
+    │   ├── obj
+    │   │   ├── Debug
+    │   │   │   └── net10.0
+    │   │   │       ├── ref
+    │   │   │       │   └── DataWarehouse.Plugins.Crypto.Standard.dll_____________________[2026-01-04 01:33:34]
+    │   │   │       ├── refint
+    │   │   │       │   └── DataWarehouse.Plugins.Crypto.Standard.dll_____________________[2026-01-04 01:33:34]
+    │   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-02 10:31:57]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.AssemblyInfo.cs_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.assets.cache________________[2026-01-04 01:31:25]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.dll_________________________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.GlobalUsings.g.cs_______________[2026-01-02 10:31:57]
+    │   │   │       ├── DataWarehouse.Plugins.Crypto.Standard.pdb_________________________[2026-01-04 01:33:34]
+    │   │   │       └── DataWarehouse.Plugins.Crypto.Standard.sourcelink.json_______________[2026-01-04 01:33:34]
+    │   │   ├── DataWarehouse.Plugins.Crypto.Standard.csproj.nuget.dgspec.json_______________[2026-01-04 01:31:24]
+    │   │   ├── DataWarehouse.Plugins.Crypto.Standard.csproj.nuget.g.props________________[2026-01-02 10:31:58]
+    │   │   ├── DataWarehouse.Plugins.Crypto.Standard.csproj.nuget.g.targets_______________[2026-01-02 10:31:58]
+    │   │   ├── project.assets.json_______________________________________________________[2026-01-02 11:43:00]
+    │   │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+    │   └── DataWarehouse.Plugins.Crypto.Standard.csproj__________________________________[2026-01-02 10:51:39]
+    ├── DataWarehouse.Plugins.Features.AI
+    │   ├── bin
+    │   │   └── Debug
+    │   │       └── net10.0
+    │   ├── Bootstrapper
+    │   │   ├── ContextLoggerAdapter.cs___________________________________________________[2026-01-02 14:15:58]
+    │   │   ├── NeuralHydrator.cs_________________________________________________________[2026-01-02 16:21:36]
+    │   │   ├── NeuralSearchPlugin.cs_____________________________________________________[2026-01-02 14:25:13]
+    │   │   └── NeuralSentinelPlugin.cs___________________________________________________[2026-01-04 00:20:09]
+    │   ├── Engine
+    │   │   ├── GraphVectorIndex.cs_______________________________________________________[2026-01-02 14:33:27]
+    │   │   └── VectorMath.cs_____________________________________________________________[2026-01-02 11:27:49]
+    │   ├── Modules
+    │   │   ├── SentinelDaemon.cs_________________________________________________________[2026-01-04 01:23:55]
+    │   │   └── SentinelModules.cs________________________________________________________[2026-01-04 01:23:55]
+    │   ├── obj
+    │   │   ├── Debug
+    │   │   │   └── net10.0
+    │   │   │       ├── ref
+    │   │   │       │   └── DataWarehouse.Plugins.Features.AI.dll_________________________[2026-01-04 01:33:35]
+    │   │   │       ├── refint
+    │   │   │       │   └── DataWarehouse.Plugins.Features.AI.dll_________________________[2026-01-04 01:33:35]
+    │   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-02 11:24:17]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.AssemblyInfo.cs_________________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.assets.cache____________________[2026-01-04 01:31:25]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:35]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.dll_____________________________[2026-01-04 01:33:35]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.GlobalUsings.g.cs_______________[2026-01-02 11:24:17]
+    │   │   │       ├── DataWarehouse.Plugins.Features.AI.pdb_____________________________[2026-01-04 01:33:34]
+    │   │   │       └── DataWarehouse.Plugins.Features.AI.sourcelink.json_________________[2026-01-04 01:33:34]
+    │   │   ├── DataWarehouse.Plugins.Features.AI.csproj.nuget.dgspec.json________________[2026-01-04 01:31:24]
+    │   │   ├── DataWarehouse.Plugins.Features.AI.csproj.nuget.g.props____________________[2026-01-02 11:24:17]
+    │   │   ├── DataWarehouse.Plugins.Features.AI.csproj.nuget.g.targets__________________[2026-01-02 11:44:11]
+    │   │   ├── project.assets.json_______________________________________________________[2026-01-02 11:44:11]
+    │   │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+    │   └── DataWarehouse.Plugins.Features.AI.csproj______________________________________[2026-01-04 00:11:53]
+    ├── DataWarehouse.Plugins.Features.Consensus
+    │   ├── bin
+    │   │   └── Debug
+    │   │       └── net10.0
+    │   ├── Bootstrapper
+    │   │   └── DistributedConsensusPlugin.cs_____________________________________________[2026-01-02 17:08:29]
+    │   ├── Engine
+    │   │   └── CrdtState.cs______________________________________________________________[2026-01-02 11:18:48]
+    │   ├── Models
+    │   │   └── Proposal.cs_______________________________________________________________[2026-01-02 12:53:33]
+    │   ├── obj
+    │   │   ├── Debug
+    │   │   │   └── net10.0
+    │   │   │       ├── ref
+    │   │   │       │   └── DataWarehouse.Plugins.Features.Consensus.dll__________________[2026-01-04 01:33:34]
+    │   │   │       ├── refint
+    │   │   │       │   └── DataWarehouse.Plugins.Features.Consensus.dll__________________[2026-01-04 01:33:34]
+    │   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-02 11:11:11]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.AssemblyInfo.cs_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.assets.cache_______________[2026-01-04 01:31:25]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.dll______________________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.GlobalUsings.g.cs_______________[2026-01-02 11:11:10]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Consensus.pdb______________________[2026-01-04 01:33:34]
+    │   │   │       └── DataWarehouse.Plugins.Features.Consensus.sourcelink.json_______________[2026-01-04 01:33:34]
+    │   │   ├── DataWarehouse.Plugins.Features.Consensus.csproj.nuget.dgspec.json_______________[2026-01-04 01:31:24]
+    │   │   ├── DataWarehouse.Plugins.Features.Consensus.csproj.nuget.g.props_______________[2026-01-02 11:11:11]
+    │   │   ├── DataWarehouse.Plugins.Features.Consensus.csproj.nuget.g.targets_______________[2026-01-02 11:44:50]
+    │   │   ├── project.assets.json_______________________________________________________[2026-01-02 11:44:50]
+    │   │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+    │   ├── Services
+    │   │   ├── FederationManager.cs______________________________________________________[2026-01-02 17:55:27]
+    │   │   └── RaftEngines.cs____________________________________________________________[2026-01-02 17:57:16]
+    │   └── DataWarehouse.Plugins.Features.Consensus.csproj_______________________________[2026-01-02 11:44:58]
+    ├── DataWarehouse.Plugins.Features.Governance
+    │   ├── bin
+    │   │   └── Debug
+    │   │       └── net10.0
+    │   ├── Bootstrapper
+    │   │   └── GovernancePlugin.cs_______________________________________________________[2026-01-02 14:41:36]
+    │   ├── Engine
+    │   │   └── FlightRecorder.cs_________________________________________________________[2026-01-02 11:37:07]
+    │   ├── obj
+    │   │   ├── Debug
+    │   │   │   └── net10.0
+    │   │   │       ├── ref
+    │   │   │       │   └── DataWarehouse.Plugins.Features.Governance.dll_________________[2026-01-04 01:33:34]
+    │   │   │       ├── refint
+    │   │   │       │   └── DataWarehouse.Plugins.Features.Governance.dll_________________[2026-01-04 01:33:34]
+    │   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-02 11:42:51]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.AssemblyInfo.cs_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.assets.cache_______________[2026-01-04 01:31:25]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.dll_____________________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.GlobalUsings.g.cs_______________[2026-01-02 11:34:03]
+    │   │   │       ├── DataWarehouse.Plugins.Features.Governance.pdb_____________________[2026-01-04 01:33:34]
+    │   │   │       └── DataWarehouse.Plugins.Features.Governance.sourcelink.json_______________[2026-01-04 01:33:34]
+    │   │   ├── DataWarehouse.Plugins.Features.Governance.csproj.nuget.dgspec.json_______________[2026-01-04 01:31:24]
+    │   │   ├── DataWarehouse.Plugins.Features.Governance.csproj.nuget.g.props_______________[2026-01-02 11:34:03]
+    │   │   ├── DataWarehouse.Plugins.Features.Governance.csproj.nuget.g.targets_______________[2026-01-02 11:46:47]
+    │   │   ├── project.assets.json_______________________________________________________[2026-01-02 11:46:47]
+    │   │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+    │   ├── Services
+    │   │   ├── AccessTracker.cs__________________________________________________________[2026-01-02 11:46:53]
+    │   │   ├── LifecyclePolicyEngine.cs__________________________________________________[2026-01-02 23:54:30]
+    │   │   └── WormGovernor.cs___________________________________________________________[2026-01-02 23:58:19]
+    │   └── DataWarehouse.Plugins.Features.Governance.csproj______________________________[2026-01-02 12:26:40]
+    ├── DataWarehouse.Plugins.Features.SQL
+    │   ├── bin
+    │   │   └── Debug
+    │   │       └── net10.0
+    │   ├── Bootstrapper
+    │   │   └── SqlListenerPlugin.cs______________________________________________________[2026-01-03 01:20:37]
+    │   ├── Engine
+    │   │   ├── PgPacketWriter.cs_________________________________________________________[2026-01-02 11:32:51]
+    │   │   └── PostgresWireProtocol.cs___________________________________________________[2026-01-03 00:17:29]
+    │   ├── obj
+    │   │   ├── Debug
+    │   │   │   └── net10.0
+    │   │   │       ├── ref
+    │   │   │       │   └── DataWarehouse.Plugins.Features.SQL.dll________________________[2026-01-04 01:33:34]
+    │   │   │       ├── refint
+    │   │   │       │   └── DataWarehouse.Plugins.Features.SQL.dll________________________[2026-01-04 01:33:34]
+    │   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-02 11:28:57]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.AssemblyInfo.cs________________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.assets.cache___________________[2026-01-04 01:31:25]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.dll____________________________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.GlobalUsings.g.cs_______________[2026-01-02 11:28:57]
+    │   │   │       ├── DataWarehouse.Plugins.Features.SQL.pdb____________________________[2026-01-04 01:33:34]
+    │   │   │       └── DataWarehouse.Plugins.Features.SQL.sourcelink.json________________[2026-01-04 01:33:34]
+    │   │   ├── DataWarehouse.Plugins.Features.SQL.csproj.nuget.dgspec.json_______________[2026-01-04 01:31:24]
+    │   │   ├── DataWarehouse.Plugins.Features.SQL.csproj.nuget.g.props___________________[2026-01-02 11:28:57]
+    │   │   ├── DataWarehouse.Plugins.Features.SQL.csproj.nuget.g.targets_________________[2026-01-02 11:47:37]
+    │   │   ├── project.assets.json_______________________________________________________[2026-01-02 11:47:37]
+    │   │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+    │   ├── Services
+    │   │   └── PostgresInterface.cs______________________________________________________[2026-01-03 00:18:57]
+    │   └── DataWarehouse.Plugins.Features.SQL.csproj_____________________________________[2026-01-02 12:26:40]
+    ├── DataWarehouse.Plugins.Indexing.Sqlite
+    │   ├── bin
+    │   │   └── Debug
+    │   │       └── net10.0
+    │   │           ├── DataWarehouse.Plugins.Indexing.Sqlite.deps.json___________________[2026-01-03 01:21:10]
+    │   │           ├── DataWarehouse.Plugins.Indexing.Sqlite.dll_________________________[2026-01-03 01:21:10]
+    │   │           ├── DataWarehouse.Plugins.Indexing.Sqlite.pdb_________________________[2026-01-03 01:21:10]
+    │   │           ├── DataWarehouse.SDK.dll_____________________________________________[2026-01-03 01:21:09]
+    │   │           └── DataWarehouse.SDK.pdb_____________________________________________[2026-01-03 01:21:09]
+    │   ├── Bootstrapper
+    │   │   └── SqliteIndexingPlugin.cs___________________________________________________[2026-01-04 01:29:16]
+    │   ├── Engine
+    │   │   └── SqliteMetadataIndex.cs____________________________________________________[2026-01-03 00:32:49]
+    │   ├── obj
+    │   │   ├── Debug
+    │   │   │   └── net10.0
+    │   │   │       ├── ref
+    │   │   │       │   └── DataWarehouse.Plugins.Indexing.Sqlite.dll_____________________[2026-01-04 01:33:34]
+    │   │   │       ├── refint
+    │   │   │       │   └── DataWarehouse.Plugins.Indexing.Sqlite.dll_____________________[2026-01-04 01:33:34]
+    │   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-02 15:42:36]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.AssemblyInfo.cs_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.assets.cache________________[2026-01-04 01:31:25]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.dll_________________________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.GlobalUsings.g.cs_______________[2026-01-02 15:42:36]
+    │   │   │       ├── DataWarehouse.Plugins.Indexing.Sqlite.pdb_________________________[2026-01-04 01:33:34]
+    │   │   │       └── DataWarehouse.Plugins.Indexing.Sqlite.sourcelink.json_______________[2026-01-04 01:33:34]
+    │   │   ├── DataWarehouse.Plugins.Indexing.Sqlite.csproj.nuget.dgspec.json_______________[2026-01-04 01:31:24]
+    │   │   ├── DataWarehouse.Plugins.Indexing.Sqlite.csproj.nuget.g.props________________[2026-01-02 15:42:37]
+    │   │   ├── DataWarehouse.Plugins.Indexing.Sqlite.csproj.nuget.g.targets_______________[2026-01-02 15:44:24]
+    │   │   ├── project.assets.json_______________________________________________________[2026-01-02 15:44:24]
+    │   │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+    │   └── DataWarehouse.Plugins.Indexing.Sqlite.csproj__________________________________[2026-01-03 10:14:16]
+    ├── DataWarehouse.Plugins.Security.Granular
+    │   ├── bin
+    │   │   └── Debug
+    │   │       └── net10.0
+    │   ├── Bootstrapper
+    │   │   └── GranularAclPlugin.cs______________________________________________________[2026-01-03 10:28:24]
+    │   ├── Engine
+    │   │   └── AclEngine.cs______________________________________________________________[2026-01-03 10:21:41]
+    │   ├── obj
+    │   │   ├── Debug
+    │   │   │   └── net10.0
+    │   │   │       ├── ref
+    │   │   │       │   └── DataWarehouse.Plugins.Security.Granular.dll___________________[2026-01-04 01:33:34]
+    │   │   │       ├── refint
+    │   │   │       │   └── DataWarehouse.Plugins.Security.Granular.dll___________________[2026-01-04 01:33:34]
+    │   │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-03 10:13:10]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.AssemblyInfo.cs_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.assets.cache_______________[2026-01-04 01:31:25]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.dll_______________________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.GlobalUsings.g.cs_______________[2026-01-03 10:13:09]
+    │   │   │       ├── DataWarehouse.Plugins.Security.Granular.pdb_______________________[2026-01-04 01:33:34]
+    │   │   │       └── DataWarehouse.Plugins.Security.Granular.sourcelink.json_______________[2026-01-04 01:33:34]
+    │   │   ├── DataWarehouse.Plugins.Security.Granular.csproj.nuget.dgspec.json_______________[2026-01-04 01:31:24]
+    │   │   ├── DataWarehouse.Plugins.Security.Granular.csproj.nuget.g.props_______________[2026-01-03 10:13:10]
+    │   │   ├── DataWarehouse.Plugins.Security.Granular.csproj.nuget.g.targets_______________[2026-01-03 10:13:10]
+    │   │   ├── project.assets.json_______________________________________________________[2026-01-03 10:14:49]
+    │   │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+    │   └── DataWarehouse.Plugins.Security.Granular.csproj________________________________[2026-01-03 10:21:01]
+    └── DataWarehouse.Plugins.Storage.Local
+        ├── bin
+        │   └── Debug
+        │       └── net10.0
+        ├── Bootstrapper
+        │   └── LocalFileSystemStoragePlugin.cs___________________________________________[2026-01-03 10:28:24]
+        ├── Engine
+        │   ├── PhysicalFolderEngine.cs___________________________________________________[2026-01-03 10:26:03]
+        │   └── VirtualDiskEngine.cs______________________________________________________[2026-01-03 10:28:24]
+        ├── obj
+        │   ├── Debug
+        │   │   └── net10.0
+        │   │       ├── ref
+        │   │       │   └── DataWarehouse.Plugins.Storage.LocalFileSystem.dll_______________[2026-01-04 01:33:34]
+        │   │       ├── refint
+        │   │       │   └── DataWarehouse.Plugins.Storage.LocalFileSystem.dll_______________[2026-01-04 01:33:34]
+        │   │       ├── .NETCoreApp,Version=v10.0.AssemblyAttributes.cs___________________[2026-01-03 10:17:03]
+        │   │       ├── DataWare.9C8CBD78.Up2Date_________________________________________[2026-01-04 01:33:34]
+        │   │       ├── DataWarehouse.Plugins.Storage.Local.AssemblyInfo.cs_______________[2026-01-03 10:17:03]
+        │   │       ├── DataWarehouse.Plugins.Storage.Local.AssemblyInfoInputs.cache_______________[2026-01-03 10:17:03]
+        │   │       ├── DataWarehouse.Plugins.Storage.Local.assets.cache__________________[2026-01-03 10:17:54]
+        │   │       ├── DataWarehouse.Plugins.Storage.Local.csproj.AssemblyReference.cache_______________[2026-01-03 10:17:54]
+        │   │       ├── DataWarehouse.Plugins.Storage.Local.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-03 10:17:03]
+        │   │       ├── DataWarehouse.Plugins.Storage.Local.GlobalUsings.g.cs_______________[2026-01-03 10:17:03]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.AssemblyInfo.cs_______________[2026-01-04 01:33:34]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.AssemblyInfoInputs.cache_______________[2026-01-04 01:33:34]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.assets.cache_______________[2026-01-04 01:31:25]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.csproj.AssemblyReference.cache_______________[2026-01-04 01:33:34]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.csproj.CoreCompileInputs.cache_______________[2026-01-04 01:33:34]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.csproj.FileListAbsolute.txt_______________[2026-01-04 01:33:34]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.dll_________________[2026-01-04 01:33:34]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.GeneratedMSBuildEditorConfig.editorconfig_______________[2026-01-04 01:33:34]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.GlobalUsings.g.cs_______________[2026-01-03 10:22:58]
+        │   │       ├── DataWarehouse.Plugins.Storage.LocalFileSystem.pdb_________________[2026-01-04 01:33:34]
+        │   │       └── DataWarehouse.Plugins.Storage.LocalFileSystem.sourcelink.json_______________[2026-01-04 01:33:34]
+        │   ├── DataWarehouse.Plugins.Storage.Local.csproj.nuget.dgspec.json_______________[2026-01-03 10:17:54]
+        │   ├── DataWarehouse.Plugins.Storage.Local.csproj.nuget.g.props__________________[2026-01-03 10:17:04]
+        │   ├── DataWarehouse.Plugins.Storage.Local.csproj.nuget.g.targets________________[2026-01-03 10:17:04]
+        │   ├── DataWarehouse.Plugins.Storage.LocalFileSystem.csproj.nuget.dgspec.json_______________[2026-01-04 01:31:24]
+        │   ├── DataWarehouse.Plugins.Storage.LocalFileSystem.csproj.nuget.g.props_______________[2026-01-03 10:22:58]
+        │   ├── DataWarehouse.Plugins.Storage.LocalFileSystem.csproj.nuget.g.targets_______________[2026-01-03 10:22:58]
+        │   ├── project.assets.json_______________________________________________________[2026-01-03 10:23:32]
+        │   └── project.nuget.cache_______________________________________________________[2026-01-04 01:33:33]
+        ├── Services
+        │   └── IStorageEngine.cs_________________________________________________________[2026-01-03 10:24:56]
+        ├── DataWarehouse.Plugins.Storage.LocalFileSystem.csproj__________________________[2026-01-03 10:26:43]
+        └── FileSystemStoragePlugin.cs____________________________________________________[2026-01-04 00:03:33]

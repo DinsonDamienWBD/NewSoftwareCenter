@@ -36,7 +36,7 @@ namespace Manager.Middleware
 
             // 2. Standard Audit Log
             await _dwauditLogger.LogAsync(
-                Core.DataWarehouse.AuditAction.Update,
+                Core.DataWarehouse.Kernel.AuditAction.Update,
                 "CommandBus",
                 message.GetType().Name,
                 requestorId,

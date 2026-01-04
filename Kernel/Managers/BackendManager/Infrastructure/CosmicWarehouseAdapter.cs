@@ -10,13 +10,13 @@ namespace Manager.Infrastructure
 {
     /// <summary>
     /// THE BRIDGE.
-    /// Makes the standalone "Cosmic DataWarehouse" look like a "Core DataWarehouse".
+    /// Makes the standalone "DataWarehouse DataWarehouse" look like a "Core DataWarehouse".
     /// </summary>
-    public class CosmicWarehouseAdapter : IDataWarehouse, ISemanticMemory
+    public class DataWarehouseWarehouseAdapter : IDataWarehouse, ISemanticMemory
     {
-        private readonly DW.Engine.CosmicWarehouse _engine;
+        private readonly DW.Engine.DataWarehouseWarehouse _engine;
 
-        public CosmicWarehouseAdapter(DW.Engine.CosmicWarehouse engine)
+        public DataWarehouseWarehouseAdapter(DW.Engine.DataWarehouseWarehouse engine)
         {
             _engine = engine;
         }

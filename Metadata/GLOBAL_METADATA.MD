@@ -138,7 +138,7 @@ C#
 public async Task Handle(SaveConfigCommand cmd)
 {
     // 1. Get my room
-    var room = _dataWarehouse.GetRoom("MyModuleId");
+    var room = _DataWarehouse.Kernel.GetRoom("MyModuleId");
     
     // 2. Atomic Write (Thread-safe)
     await room.SaveAsync("config-key", cmd.ConfigData);

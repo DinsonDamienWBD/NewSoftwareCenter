@@ -7,7 +7,7 @@ using Core.Modules.Contracts;
 using Core.ServiceRegistry;
 using Core.Services;
 using DataWarehouse;
-using DataWarehouse.Contracts.Messages;
+using DataWarehouse.Kernel.Contracts.Messages;
 using FrontendManager.Extensions;
 using FrontendManager.Handlers;
 using FrontendManager.Services;
@@ -165,7 +165,7 @@ lifetime.ApplicationStarted.Register(() =>
 app.Run();
 
 // Example usage of DataWarehouse
-// The Host doesn't need to know about 'CosmicWarehouse' class or 'IStorageProvider'.
+// The Host doesn't need to know about 'DataWarehouseWarehouse' class or 'IStorageProvider'.
 // It just creates a Command DTO.
 
 var cmd = new StoreBlobCommand
@@ -180,21 +180,21 @@ var result = await _bus.Send(cmd);
 
 
 // User writes this line only.
-services.AddCosmicDataWarehouse(opts => opts.RootPath = "C:/MyData");
+services.AddDataWarehouseDataWarehouse(opts => opts.RootPath = "C:/MyData");
 
 // Result:
 // RuntimeOptimizer detects "Laptop" -> Checks container status.
 // Result -> Uses SQLite (Persistent) so tags aren't lost on reboot.
 
 // User wants a super-fast cache that wipes on restart.
-services.AddCosmicDataWarehouse(opts =>
+services.AddDataWarehouseDataWarehouse(opts =>
 {
     opts.RootPath = "/mnt/ramdisk";
     opts.IndexType = IndexStorageType.Volatile; // Force Speed
 });
 
 // Running in Kubernetes.
-services.AddCosmicDataWarehouse(opts => opts.RootPath = "/data");
+services.AddDataWarehouseDataWarehouse(opts => opts.RootPath = "/data");
 
 // Result:
 // RuntimeOptimizer sees DOTNET_RUNNING_IN_CONTAINER = true.
