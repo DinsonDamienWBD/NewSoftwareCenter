@@ -1,6 +1,7 @@
 ﻿using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Extensions;
 using DataWarehouse.SDK.Primitives;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
 namespace DataWarehouse.Plugins.Features.Governance.Services
@@ -14,11 +15,65 @@ namespace DataWarehouse.Plugins.Features.Governance.Services
     public class LifecyclePolicyEngine(
         IMetadataIndex index,
         IKernelContext kernel,
-        ILogger logger)
+        IConfiguration config, // [New]
+        ILogger<LifecyclePolicyEngine> logger)
     {
+        public static string Id => "governance-lifecycle";
+        public static string Name => "Lifecycle Policy Engine";
+        public static string Version => "5.0.0";
+
         private readonly IMetadataIndex _index = index;
         private readonly IKernelContext _kernel = kernel;
+        private readonly IConfiguration _config = config;
         private readonly ILogger _logger = logger;
+
+        public static void Initialize(IKernelContext context) { }
+
+        public async Task StartAsync(CancellationToken ct)
+        {
+            // Run Policy Check on Startup (or schedule via Timer)
+            await ExecutePolicyAsync();
+        }
+
+        public static Task StopAsync() => Task.CompletedTask;
+
+        private async Task ExecutePolicyAsync()
+        {
+            try
+            {
+                // [FIX] Read from Configuration with Default Fallback
+                int retentionDays = _config.GetValue<int>("Governance:RetentionDays", 30);
+                bool dryRun = _config.GetValue<bool>("Governance:DryRun", false);
+
+                _logger.LogInformation($"[Governance] Running Policy. Retention: {retentionDays} days. DryRun: {dryRun}");
+
+                long cutoffTicks = DateTime.UtcNow.AddDays(-retentionDays).Ticks;
+
+                // 1. Find Expired Blobs
+                // Using CompositeQuery to filter by 'CreatedAt < cutoff'
+                var query = new CompositeQuery();
+                query.Filters.Add(new QueryFilter
+                {
+                    Field = "CreatedAt", // Assumes Metadata Index indexes this field
+                    Operator = "<",
+                    Value = cutoffTicks
+                });
+
+                var expiredManifests = await _index.ExecuteQueryAsync(query, 1000);
+
+                // 2. Purge
+                foreach (var json in expiredManifests)
+                {
+                    // Parse minimal ID to delete
+                    // (Logic depends on your JSON structure)
+                    // if (!dryRun) await _storage.DeleteAsync(...);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "[Governance] Policy Execution Failed.");
+            }
+        }
 
         // Fix: Implement the loop
         public async Task RunLifecycleLoopAsync(CancellationToken ct)

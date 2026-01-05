@@ -16,9 +16,9 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
         public string Scheme => "grpc";
 
         private  string _address;
-        private  GrpcChannel _channel;
-        private StorageTransport.StorageTransportClient _client;
-        private IKernelContext _context;
+        private  GrpcChannel? _channel;
+        private StorageTransport.StorageTransportClient? _client;
+        private IKernelContext? _context;
 
         /// <summary>
         /// [FIX] Default Constructor.
@@ -110,15 +110,15 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
                     // Reset stream position for retry
                     if (data.CanSeek) data.Position = 0;
 
-                    _context.LogInfo($"[Network] Uploading {data.Length} bytes to {_address}...");
+                    _context?.LogInfo($"[Network] Uploading {data.Length} bytes to {_address}...");
 
                     // gRPC Client Streaming
-                    using var call = _client.UploadBlob();
+                    using var call = _client?.UploadBlob();
 
                     // 1. Send Header
                     await call.RequestStream.WriteAsync(new UploadRequest
                     {
-                        Metadata = new BlobMetadata { Uri = uri.ToString(), TotalSize = data.Length }
+                        Metadata = new BlobMetadata { Uri = uri?.ToString(), TotalSize = data.Length }
                     });
 
                     // 2. Stream Data Chunks
@@ -141,7 +141,7 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
                         throw new IOException($"Remote write failed: {response.Message}");
                     }
 
-                    _context.LogInfo($"[Network] Upload Complete.");
+                    _context?.LogInfo($"[Network] Upload Complete.");
                 }
                 catch (Exception ex)
                 {
@@ -167,11 +167,11 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
         /// <returns></returns>
         public async Task<Stream> LoadAsync(Uri uri)
         {
-            _context.LogInfo($"[Network] Downloading {uri} from {_address}...");
+            _context?.LogInfo($"[Network] Downloading {uri} from {_address}...");
 
             EnsureOnline();
 
-            var call = _client!.DownloadBlob(new DownloadRequest { Uri = uri.ToString() });
+            var call = _client!.DownloadBlob(new DownloadRequest { Uri = uri?.ToString() });
 
             // We return a wrapper stream that reads from the gRPC response stream
             // This enables true end-to-end streaming without buffering the whole file in RAM
@@ -186,7 +186,7 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
         public async Task DeleteAsync(Uri uri)
         {
             EnsureOnline();
-            await _client!.DeleteBlobAsync(new DeleteRequest { Uri = uri.ToString() });
+            await _client!.DeleteBlobAsync(new DeleteRequest { Uri = uri?.ToString() });
         }
 
         /// <summary>
@@ -199,7 +199,7 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
             EnsureOnline();
             try
             {
-                var resp = await _client!.ExistsBlobAsync(new ExistsRequest { Uri = uri.ToString() });
+                var resp = await _client!.ExistsBlobAsync(new ExistsRequest { Uri = uri?.ToString() });
                 return resp.Exists;
             }
             catch { return false; }
@@ -210,20 +210,20 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
         /// </summary>
         /// <param name="ct"></param>
         /// <returns></returns>
-        public Task StartAsync(System.Threading.CancellationToken ct) => Task.CompletedTask;
+        public static Task StartAsync(System.Threading.CancellationToken ct) => Task.CompletedTask;
 
         /// <summary>
         /// Stop
         /// </summary>
         /// <returns></returns>
-        public Task StopAsync() => Task.CompletedTask;
+        public static Task StopAsync() => Task.CompletedTask;
 
         /// <summary>
         /// Safely dispose
         /// </summary>
         public void Dispose()
         {
-            _channel.Dispose();
+            _channel?.Dispose();
             GC.SuppressFinalize(this);
         }
     }

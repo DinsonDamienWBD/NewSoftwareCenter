@@ -1,6 +1,9 @@
 ﻿using DataWarehouse.Plugins.Features.Governance.Engine;
 using DataWarehouse.Plugins.Features.Governance.Services;
 using DataWarehouse.SDK.Contracts;
+using Microsoft.Extensions.Configuration; // Ensure this using
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions; //
 using System.Text;
 
 namespace DataWarehouse.Plugins.Features.Governance.Bootstrapper
@@ -69,7 +72,17 @@ namespace DataWarehouse.Plugins.Features.Governance.Bootstrapper
             // 4. Initialize Lifecycle Policy Engine (ILM)
             // ILM needs to delete expired data, so it needs access to Storage Providers.
             // We pass the context so it can resolve specific providers dynamically during execution.
-            _ilm = new LifecyclePolicyEngine(metadataIndex, context, new ContextLoggerAdapter<LifecyclePolicyEngine>(context));
+            // [FIX] Create or Fetch Dependencies
+            var config = new ConfigurationBuilder()
+                .AddJsonFile(Path.Combine(context.RootPath, "appsettings.json"), optional: true)
+                .AddEnvironmentVariables()
+                .Build();
+
+            var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+            var logger = loggerFactory.CreateLogger<LifecyclePolicyEngine>();
+
+            // [FIX] Pass dependencies
+            _ilm = new LifecyclePolicyEngine(metadataIndex, context, config, logger);
 
             context.LogInfo($"[{Id}] WORM Governor, Flight Recorder, Access Tracker & ILM ready.");
         }

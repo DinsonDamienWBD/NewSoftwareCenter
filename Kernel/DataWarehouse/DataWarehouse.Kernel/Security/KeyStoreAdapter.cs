@@ -134,11 +134,36 @@ namespace DataWarehouse.Kernel.Security
             }
             else
             {
-                // Linux/Docker: DPAPI unavailable. 
-                // Production Standard: Use a Key Encryption Key (KEK) from Environment or File.
-                // Fallback: Simple obfuscation prevents casual reads, but strict production requires Azure KeyVault/AWS KMS integration.
-                // For this "Self-Contained" build, we simply pass-through but enforce strict file permissions (0600) externally.
-                return data;
+                // [FIX] Linux KEK Strategy
+                string? kekStr = Environment.GetEnvironmentVariable("DW_MASTER_KEK");
+                if (string.IsNullOrEmpty(kekStr))
+                {
+                    // FATAL: In production, we cannot run without a secure root of trust.
+                    throw new InvalidOperationException("Security Critical: DW_MASTER_KEK environment variable is missing. Cannot secure Master Key.");
+                }
+
+                // Derive KEK (SHA256 ensures 32-byte key)
+                byte[] kek = SHA256.HashData(Encoding.UTF8.GetBytes(kekStr));
+
+                using var aes = Aes.Create();
+                aes.Key = kek;
+                aes.GenerateIV(); // Random IV for every save
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+
+                using var encryptor = aes.CreateEncryptor();
+                using var ms = new MemoryStream();
+
+                // Write IV first (Plaintext, 16 bytes)
+                ms.Write(aes.IV);
+
+                // Write Encrypted Data
+                using (var cs = new CryptoStream(ms, encryptor, CryptoStreamMode.Write))
+                {
+                    cs.Write(data);
+                }
+
+                return ms.ToArray();
             }
         }
 
@@ -148,7 +173,36 @@ namespace DataWarehouse.Kernel.Security
             {
                 return ProtectedData.Unprotect(data, LocalEntropy, DataProtectionScope.CurrentUser);
             }
-            return data;
+            else
+            {
+                string? kekStr = Environment.GetEnvironmentVariable("DW_MASTER_KEK");
+                if (string.IsNullOrEmpty(kekStr)) throw new InvalidOperationException("DW_MASTER_KEK missing.");
+
+                byte[] kek = SHA256.HashData(Encoding.UTF8.GetBytes(kekStr));
+
+                // Read IV (First 16 bytes)
+                byte[] iv = new byte[16];
+                Array.Copy(data, 0, iv, 0, 16);
+
+                // Prepare Ciphertext (Rest of array)
+                int cipherLen = data.Length - 16;
+                byte[] ciphertext = new byte[cipherLen];
+                Array.Copy(data, 16, ciphertext, 0, cipherLen);
+
+                using var aes = Aes.Create();
+                aes.Key = kek;
+                aes.IV = iv;
+                aes.Mode = CipherMode.CBC;
+                aes.Padding = PaddingMode.PKCS7;
+
+                using var decryptor = aes.CreateDecryptor();
+                using var ms = new MemoryStream(ciphertext);
+                using var cs = new CryptoStream(ms, decryptor, CryptoStreamMode.Read);
+                using var final = new MemoryStream();
+                cs.CopyTo(final);
+
+                return final.ToArray();
+            }
         }
     }
 }

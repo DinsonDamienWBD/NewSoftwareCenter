@@ -21,7 +21,7 @@ namespace DataWarehouse.Plugins.Security.Granular.Engine
 
         public void SetPermissions(string resource, string subject, Permission allow, Permission deny)
         {
-            if (!_store.TryGet(resource, out var entries))
+            if (!_store.TryGet(resource, out Dictionary<string, AclEntry>? entries))
             {
                 entries = [];
             }
@@ -48,7 +48,7 @@ namespace DataWarehouse.Plugins.Security.Granular.Engine
                 if (_store.TryGet(currentPath, out var entries))
                 {
                     // User Rule
-                    if (entries.TryGetValue(subject, out var userRule))
+                    if (entries.TryGetValue(subject, out AclEntry? userRule))
                     {
                         effectiveAllow |= userRule.Allow;
                         effectiveDeny |= userRule.Deny;

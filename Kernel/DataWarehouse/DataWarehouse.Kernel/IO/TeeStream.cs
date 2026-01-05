@@ -124,5 +124,19 @@ namespace DataWarehouse.Kernel.IO
         /// <param name="value"></param>
         /// <exception cref="NotSupportedException"></exception>
         public override void SetLength(long value) => throw new NotSupportedException();
+
+        /// <summary>
+        /// Safely dispose
+        /// </summary>
+        /// <param name="disposing"></param>
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                // [FIX] Ensure cancellation token is honored or stream is closed properly
+                _sink?.Dispose();
+            }
+            base.Dispose(disposing);
+        }
     }
 }

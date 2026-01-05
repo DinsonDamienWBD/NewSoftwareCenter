@@ -48,22 +48,31 @@ namespace DataWarehouse.Plugins.Storage.S3.Engine
 
         public async Task SaveAsync(Uri uri, Stream data)
         {
-            var (bucket, key) = ParseUri(uri);
-            try
+            int attempts = 0;
+            while (true)
             {
-                var request = new TransferUtilityUploadRequest
+                var (bucket, key) = ParseUri(uri);
+                try
                 {
-                    InputStream = data,
-                    Key = key,
-                    BucketName = bucket,
-                    AutoCloseStream = false
-                };
-                await _transferUtility!.UploadAsync(request);
-            }
-            catch (Exception ex)
-            {
-                _context?.LogError($"[S3] Upload Failed: {uri}", ex);
-                throw;
+                    var request = new TransferUtilityUploadRequest
+                    {
+                        InputStream = data,
+                        Key = key,
+                        BucketName = bucket,
+                        AutoCloseStream = false
+                    };
+                    await _transferUtility!.UploadAsync(request);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    attempts++;
+                    if (attempts > 5) throw;
+                    // [FIX] Exponential Backoff
+                    await Task.Delay((int)Math.Pow(2, attempts) * 100);
+
+                    _context?.LogError($"[S3] Error: {ex.Message}", ex);
+                }
             }
         }
 

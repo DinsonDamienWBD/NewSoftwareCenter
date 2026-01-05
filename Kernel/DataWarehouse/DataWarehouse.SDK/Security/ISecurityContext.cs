@@ -13,7 +13,7 @@
         /// <summary>
         /// Tenant ID
         /// </summary>
-        string TenantId { get; }
+        string? TenantId { get; }
 
         /// <summary>
         /// Roles

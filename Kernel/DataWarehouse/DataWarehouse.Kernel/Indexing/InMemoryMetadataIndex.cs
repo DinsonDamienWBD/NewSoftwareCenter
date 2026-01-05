@@ -1,6 +1,7 @@
 ﻿using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Primitives;
 using System.Collections.Concurrent;
+using System.Text.Json;
 
 namespace DataWarehouse.Kernel.Indexing
 {
@@ -114,18 +115,66 @@ namespace DataWarehouse.Kernel.Indexing
         /// <returns></returns>
         public Task<string[]> ExecuteQueryAsync(CompositeQuery query, int limit = 50)
         {
-            var results = _store.Values.AsEnumerable();
+            // Filter Manifests
+            var matches = _store.Values.Where(m => Match(m, query));
 
-            foreach (var filter in query.Filters)
-            {
-                results = results.Where(m => ApplyFilter(m, filter));
-            }
-
-            var ids = results.Take(limit).Select(m => m.Id).ToArray();
-            return Task.FromResult(ids);
+            // Select results
+            var results = matches.Take(limit).Select(m => JsonSerializer.Serialize(m)).ToArray();
+            return Task.FromResult(results);
         }
 
-        private bool ApplyFilter(Manifest m, QueryFilter filter)
+        private bool Match(Manifest manifest, CompositeQuery query)
+        {
+            // AND Logic: All filters must pass
+            foreach (var filter in query.Filters)
+            {
+                if (!CheckCondition(manifest, filter)) return false;
+            }
+            return true;
+        }
+
+        private bool CheckCondition(Manifest manifest, QueryFilter filter)
+        {
+            // 1. Resolve Value from Manifest
+            // Check Top-Level Properties first
+            object? actualValue = null;
+
+            if (filter.Field.Equals("Id", StringComparison.OrdinalIgnoreCase)) actualValue = manifest.Id;
+            else if (filter.Field.Equals("ContainerId", StringComparison.OrdinalIgnoreCase)) actualValue = manifest.ContainerId;
+            else if (filter.Field.Equals("OwnerId", StringComparison.OrdinalIgnoreCase)) actualValue = manifest.OwnerId;
+            else if (filter.Field.Equals("SizeBytes", StringComparison.OrdinalIgnoreCase)) actualValue = manifest.SizeBytes;
+            else
+            {
+                // Check inside JsonData
+                try
+                {
+                    using var doc = JsonDocument.Parse(JsonSerializer.Serialize(manifest));
+                    if (doc.RootElement.TryGetProperty(filter.Field, out var prop))
+                    {
+                        actualValue = prop.ToString();
+                    }
+                }
+                catch { return false; } // Invalid JSON or Prop missing
+            }
+
+            if (actualValue == null) return false;
+
+            // 2. Compare
+            string sActual = actualValue.ToString() ?? "";
+            string sTarget = filter.Value?.ToString() ?? "";
+
+            return filter.Operator switch
+            {
+                "==" => sActual.Equals(sTarget, StringComparison.OrdinalIgnoreCase),
+                "!=" => !sActual.Equals(sTarget, StringComparison.OrdinalIgnoreCase),
+                "contains" => sActual.Contains(sTarget, StringComparison.OrdinalIgnoreCase),
+                ">" => long.TryParse(sActual, out long n1) && long.TryParse(sTarget, out long n2) && n1 > n2,
+                "<" => long.TryParse(sActual, out long n1) && long.TryParse(sTarget, out long n2) && n1 < n2,
+                _ => false
+            };
+        }
+
+        private static bool ApplyFilter(Manifest m, QueryFilter filter)
         {
             // Manual Property Mapping for Performance/Safety
             object? propValue = filter.Field switch

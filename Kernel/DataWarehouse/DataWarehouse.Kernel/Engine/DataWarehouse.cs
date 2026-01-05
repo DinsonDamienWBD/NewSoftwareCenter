@@ -35,10 +35,10 @@ namespace DataWarehouse.Kernel.Engine
         private readonly ILogger<DataWarehouse> _logger;
 
         // --- Core Plugin Interfaces ---
-        private IAccessControl _acl;
+        private IAccessControl _acl = new UnsafeAclFallback();
         private IStorageProvider _storage;
-        private IMetadataIndex _index;
-        private INeuralSentinel _sentinel;
+        private IMetadataIndex _index = new InMemoryMetadataIndex();
+        private INeuralSentinel _sentinel = new PassiveSentinelFallback();
 
         /// <summary>
         /// The root directory of the Data Warehouse instance.
@@ -77,6 +77,8 @@ namespace DataWarehouse.Kernel.Engine
                 DefaultEnableEncryption = true
             };
             _policy = new PolicyEnforcer(globalConfig);
+
+            _storage = new LocalDiskProvider(_rootPath);
         }
 
         /// <summary>
@@ -216,7 +218,7 @@ namespace DataWarehouse.Kernel.Engine
                         if (compressor != null)
                         {
                             // Note: We use the 'OnWrite' method to wrap the stream
-                            processedStream = compressor.OnWrite(processedStream, this, new Dictionary<string, object>());
+                            processedStream = compressor.OnWrite(processedStream, this, []);
                         }
                     }
 
@@ -453,7 +455,14 @@ namespace DataWarehouse.Kernel.Engine
         /// <typeparam name="T"></typeparam>
         /// <param name="id"></param>
         /// <returns></returns>
-        public T? GetPlugin<T>(string? id = null) where T : class, IPlugin => _registry.GetPlugin<T>(id);
+        public T? GetPlugin<T>(string? id = null) where T : class, IPlugin
+        {
+            // If id is null, Registry.GetPlugin<T>() (no args) is called
+            // If id is set, Registry.GetPlugin<T>(id) is called
+            return string.IsNullOrEmpty(id)
+                ? _registry.GetPlugin<T>()
+                : _registry.GetPlugin<T>(id);
+        }
 
         /// <inheritdoc/>
         public IEnumerable<T> GetPlugins<T>() where T : class, IPlugin => _registry.GetPlugins<T>();
@@ -462,26 +471,26 @@ namespace DataWarehouse.Kernel.Engine
         /// Log info
         /// </summary>
         /// <param name="m"></param>
-        public void LogInfo(string m) => Console.WriteLine($"[INFO] {m}");
+        public void LogInfo(string m) => _logger.LogInformation($"[INFO] {m}");
 
         /// <summary>
         /// Log warning
         /// </summary>
         /// <param name="m"></param>
-        public void LogWarning(string m) => Console.WriteLine($"[WARN] {m}");
+        public void LogWarning(string m) => _logger.LogWarning($"[WARN] {m}");
 
         /// <summary>
         /// Log error
         /// </summary>
         /// <param name="m"></param>
         /// <param name="e"></param>
-        public void LogError(string m, Exception? e) => Console.WriteLine($"[ERR] {m} {e}");
+        public void LogError(string m, Exception? e) => _logger.LogError($"[ERR] {m} {e}");
 
         /// <summary>
         /// Log debug
         /// </summary>
         /// <param name="m"></param>
-        public void LogDebug(string m) { }
+        public void LogDebug(string m) => _logger.LogDebug($"[DBG] {m}");
 
         private async Task<Dictionary<string, object>> PrepareRuntimeArgs(PipelineConfig config, ISecurityContext context)
         {

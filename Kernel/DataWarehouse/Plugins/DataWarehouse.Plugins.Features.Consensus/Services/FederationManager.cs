@@ -84,7 +84,7 @@ namespace DataWarehouse.Plugins.Features.Consensus.Services
 
         // [Internal Class] Represents a directory entry.
         // Implements IFederationNode for discovery purposes only.
-        private class SimpleFederationNode(string id, string addr) : IFederationNode
+        public class SimpleFederationNode(string id, string addr) : IFederationNode
         {
             public string NodeId { get; } = id;
             public string Address { get; } = addr;

@@ -3,6 +3,7 @@ using DataWarehouse.SDK.Primitives;
 using Npgsql;
 using System.Data;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 
 namespace DataWarehouse.Plugins.Indexing.Postgres.Engine
@@ -11,19 +12,46 @@ namespace DataWarehouse.Plugins.Indexing.Postgres.Engine
     /// A high-performance, concurrent Metadata Index backed by PostgreSQL.
     /// Supports JSONB querying and Vector Similarity Search (via pgvector).
     /// </summary>
-    public class PostgresMetadataIndex : IAsyncDisposable
+    public class PostgresMetadataIndex : IMetadataIndex, IAsyncDisposable
     {
+        /// <summary>
+        /// ID
+        /// </summary>
+        public string Id => "postgres-metadata-index";
+
+        /// <summary>
+        /// Name
+        /// </summary>
+        public string Name => "PostgreSQL Metadata Engine";
+
+        /// <summary>
+        /// Version
+        /// </summary>
+        public string Version => "5.0.0";
+
         private readonly NpgsqlDataSource _dataSource;
         private readonly IKernelContext _context;
+        private readonly string _connectionString;
 
         /// <summary>
         /// Initializes the Postgres Engine with a connection string.
         /// </summary>
         public PostgresMetadataIndex(string connectionString, IKernelContext context)
         {
+            _connectionString = connectionString;
             _context = context;
             var builder = new NpgsqlDataSourceBuilder(connectionString);
             _dataSource = builder.Build();
+        }
+
+        /// <summary>
+        /// Initialize
+        /// </summary>
+        /// <param name="context"></param>
+        public void Initialize(IKernelContext context)
+        {
+            // Already initialized via constructor in this specific pattern, 
+            // but required by interface.
         }
 
         /// <summary>
@@ -241,11 +269,13 @@ namespace DataWarehouse.Plugins.Indexing.Postgres.Engine
             return [.. results];
         }
 
-        public Task<string[]> ExecuteQueryAsync(CompositeQuery query, int limit)
+        public async Task<string[]> ExecuteQueryAsync(CompositeQuery query, int limit)
         {
-            // 1. Convert CompositeQuery to SQL WHERE clause
-            var sb = new System.Text.StringBuilder();
-            sb.Append("SELECT JsonData FROM Manifests");
+            using var conn = await _dataSource.OpenConnectionAsync();
+            using var cmd = new NpgsqlCommand();
+            cmd.Connection = conn;
+
+            var sb = new StringBuilder("SELECT JsonData FROM Manifests");
 
             if (query.Filters.Count > 0)
             {
@@ -255,23 +285,38 @@ namespace DataWarehouse.Plugins.Indexing.Postgres.Engine
                     var f = query.Filters[i];
                     if (i > 0) sb.Append(" AND ");
 
-                    // Simple SQL Injection protection: Parameterize in production!
-                    // Here we map fields to JSONB paths
-                    string col = MapField(f.Field);
-                    string op = MapOperator(f.Operator);
+                    // [FIX] Parameterized Queries
+                    string paramName = $"@p{i}";
+                    string col = MapField(f.Field); // Whitelist based mapper
 
-                    // Basic numeric vs string handling
-                    if (decimal.TryParse(f.Value?.ToString(), out _))
-                        sb.Append($"({col})::numeric {op} {f.Value}");
+                    // Handle JSONB vs Columns safely
+                    if (IsNumeric(f.Value))
+                        sb.Append($"({col})::numeric {f.Operator} {paramName}");
                     else
-                        sb.Append($"{col} {op} '{f.Value}'");
+                        sb.Append($"{col} {f.Operator} {paramName}");
+
+                    cmd.Parameters.AddWithValue(paramName, f.Value ?? DBNull.Value);
                 }
             }
 
+            // We construct the query manually here, so we execute it directly 
+            // instead of calling the string overload to avoid recursive parsing logic.
             sb.Append($" LIMIT {limit}");
+            cmd.CommandText = sb.ToString();
 
-            // 2. Execute raw string
-            return ExecuteQueryAsync(sb.ToString(), limit);
+            var results = new List<string>();
+            using var reader = await cmd.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                results.Add(reader.GetString(0));
+            }
+            return [.. results];
+        }
+
+        // [FIX 3] Implement Helper
+        private static bool IsNumeric(object? value)
+        {
+            return value is int || value is long || value is decimal || value is double || value is float;
         }
 
         private static string MapField(string field)

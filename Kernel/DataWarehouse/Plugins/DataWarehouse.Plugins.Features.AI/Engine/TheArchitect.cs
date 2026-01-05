@@ -1,4 +1,5 @@
 ﻿using DataWarehouse.SDK.Contracts;
+using DataWarehouse.SDK.Security;
 using DataWarehouse.SDK.Services;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -22,8 +23,17 @@ namespace DataWarehouse.Plugins.Features.AI.Engine
         /// </summary>
         /// <param name="csharpCode">The raw C# source code.</param>
         /// <returns>The ID of the loaded plugin.</returns>
-        public string Evolve(string csharpCode)
+        public string Evolve(string csharpCode, ISecurityContext context)
         {
+            // [FIX] Security Gate
+            if (!context.Roles.Contains("SystemAdmin"))
+            {
+                _context.LogError($"[Architect] Security Violation: User {context.UserId} attempted RCE.");
+                throw new UnauthorizedAccessException("Only System Administrators can evolve the kernel.");
+            }
+    
+            // [FIX] Audit Log
+            _context.LogInfo($"[Architect] EVOLUTION TRACE: User {context.UserId} compiled new code. Hash: {GetHash(csharpCode)}");
             _context.LogInfo("[Architect] Initiating Self-Evolution...");
 
             // 1. Create Syntax Tree
@@ -78,6 +88,14 @@ namespace DataWarehouse.Plugins.Features.AI.Engine
             }
 
             throw new InvalidOperationException("Code compiled but no IPlugin found.");
+        }
+
+        private static string GetHash(string input)
+        {
+            using var sha = System.Security.Cryptography.SHA256.Create();
+            byte[] bytes = System.Text.Encoding.UTF8.GetBytes(input);
+            byte[] hash = sha.ComputeHash(bytes);
+            return Convert.ToBase64String(hash);
         }
     }
 }

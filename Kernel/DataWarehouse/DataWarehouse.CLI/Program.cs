@@ -1,4 +1,6 @@
-﻿namespace DataWarehouse.CLI
+﻿using System.Text.Json;
+
+namespace DataWarehouse.CLI
 {
     /// <summary>
     /// The 'dw-cli' tool.
@@ -73,6 +75,108 @@
             Console.WriteLine($"[Usage] Used Blocks: {usedBlocks}");
             Console.WriteLine($"[Usage] Free Blocks: {totalBlocks - usedBlocks}");
             Console.WriteLine($"[Usage] Utilization: {(double)usedBlocks / totalBlocks * 100:F2}%");
+        }
+
+        static void RepairVdi(string rootPath)
+        {
+            string mapPath = Path.Combine(rootPath, "main.map");
+            string indexPath = Path.Combine(rootPath, "vdi_metadata.json");
+
+            if (!File.Exists(mapPath) || !File.Exists(indexPath))
+            {
+                Console.WriteLine("Error: Critical files missing.");
+                return;
+            }
+
+            Console.WriteLine("Step 1: Loading Index...");
+            var indexJson = File.ReadAllText(indexPath);
+            // DTOs defined locally or imported from SDK
+            var indexData = JsonSerializer.Deserialize<Dictionary<string, VdiFileRecord>>(indexJson);
+            if (indexData == null) return;
+
+            Console.WriteLine("Step 2: Loading Bitmap...");
+            byte[] diskBitmap = File.ReadAllBytes(mapPath);
+            byte[] computedBitmap = new byte[diskBitmap.Length];
+
+            Console.WriteLine("Step 3: Recomputing Allocation...");
+            long blocksMarked = 0;
+
+            foreach (var file in indexData.Values)
+            {
+                foreach (var extent in file.Extents)
+                {
+                    for (long i = 0; i < extent.BlockCount; i++)
+                    {
+                        long blockAbs = extent.StartBlock + i;
+                        SetBit(computedBitmap, blockAbs);
+                        blocksMarked++;
+                    }
+                }
+            }
+
+            Console.WriteLine($"Step 4: Comparing... (Computed {blocksMarked} active blocks)");
+
+            int fixedLeaks = 0;
+            int fixedCorruption = 0;
+
+            for (int i = 0; i < diskBitmap.Length; i++)
+            {
+                if (diskBitmap[i] == computedBitmap[i]) continue;
+
+                // Iterate bits in byte
+                for (int b = 0; b < 8; b++)
+                {
+                    bool diskSet = (diskBitmap[i] & (1 << b)) != 0;
+                    bool compSet = (computedBitmap[i] & (1 << b)) != 0;
+
+                    if (diskSet && !compSet)
+                    {
+                        // Leak: Disk says used, Index says free. Safe to free.
+                        fixedLeaks++;
+                        diskBitmap[i] &= (byte)~(1 << b);
+                    }
+                    else if (!diskSet && compSet)
+                    {
+                        // Corruption: Index expects data, Bitmap says empty.
+                        // We MUST mark it used to prevent overwriting this data in future allocations.
+                        fixedCorruption++;
+                        diskBitmap[i] |= (byte)(1 << b);
+                    }
+                }
+            }
+
+            if (fixedLeaks > 0 || fixedCorruption > 0)
+            {
+                Console.WriteLine($"Found Issues: {fixedLeaks} Leaked Blocks freed, {fixedCorruption} Corrupt Blocks protected.");
+                File.WriteAllBytes(mapPath, diskBitmap);
+                Console.WriteLine("Success: Bitmap repaired and saved to disk.");
+            }
+            else
+            {
+                Console.WriteLine("Success: VDI structure is healthy. No changes needed.");
+            }
+        }
+
+        // Bitwise Helper
+        static void SetBit(byte[] map, long blockIndex)
+        {
+            long byteIdx = blockIndex / 8;
+            int bitIdx = (int)(blockIndex % 8);
+            if (byteIdx < map.Length)
+            {
+                map[byteIdx] |= (byte)(1 << bitIdx);
+            }
+        }
+
+        // Minimal DTOs for JSON deserialization
+        public class VdiFileRecord
+        {
+            public List<VdiExtent> Extents { get; set; } = new();
+        }
+        public class VdiExtent
+        {
+            public long StartBlock { get; set; }
+            public long BlockCount { get; set; }
         }
     }
 }
