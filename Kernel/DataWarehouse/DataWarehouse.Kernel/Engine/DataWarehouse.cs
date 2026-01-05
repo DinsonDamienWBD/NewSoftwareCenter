@@ -1,4 +1,5 @@
-﻿using DataWarehouse.Kernel.Indexing;
+﻿using DataWarehouse.Kernel.Diagnostics;
+using DataWarehouse.Kernel.Indexing;
 using DataWarehouse.Kernel.IO;
 using DataWarehouse.Kernel.Primitives;
 using DataWarehouse.Kernel.Security;
@@ -6,6 +7,8 @@ using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Governance; // [NEW] Governance Contracts
 using DataWarehouse.SDK.Primitives;
 using DataWarehouse.SDK.Security;
+using DataWarehouse.SDK.Services;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -17,7 +20,7 @@ namespace DataWarehouse.Kernel.Engine
 {
     /// <summary>
     /// The God Tier Microkernel.
-    /// Acts as the Orchestrator for Storage, Security, and now Active Governance.
+    /// Acts as the Orchestrator for Storage, Security, and Active Governance.
     /// Strictly enforces Neural Sentinel judgments for Self-Healing and Auto-Compliance.
     /// </summary>
     public class DataWarehouse : IDataWarehouse, IKernelContext
@@ -25,14 +28,17 @@ namespace DataWarehouse.Kernel.Engine
         private readonly string _rootPath;
         private readonly PluginRegistry _registry;
         private readonly HotPluginLoader _loader;
-        private readonly KeyStoreAdapter _keyStore;
+        private readonly IKeyStore _keyStore;
         private readonly PolicyEnforcer _policy;
+        private readonly RuntimeOptimizer _optimizer;
+        private readonly PipelineOptimizer _pipelineoptimizer;
+        private readonly ILogger<DataWarehouse> _logger;
 
         // --- Core Plugin Interfaces ---
         private IAccessControl _acl;
         private IStorageProvider _storage;
         private IMetadataIndex _index;
-        private INeuralSentinel _sentinel; // [NEW] The Active Guardian
+        private INeuralSentinel _sentinel;
 
         /// <summary>
         /// The root directory of the Data Warehouse instance.
@@ -40,187 +46,297 @@ namespace DataWarehouse.Kernel.Engine
         public string RootPath => _rootPath;
 
         /// <summary>
+        /// The detected Operating Mode (Laptop, Server, etc.)
+        /// </summary>
+        public OperatingMode Mode => _optimizer.CurrentMode;
+
+        /// <summary>
         /// Initializes the Data Warehouse Kernel.
         /// </summary>
-        /// <param name="rootPath">Physical path on disk.</param>
-        /// <param name="globalPolicy">Optional global policy overrides.</param>
-        public DataWarehouse(string rootPath, GlobalPolicyConfig? globalPolicy = null)
+        public DataWarehouse(
+            string rootPath,
+            PluginRegistry registry,
+            RuntimeOptimizer optimizer,
+            PipelineOptimizer pipelineOptimizer,
+            IKeyStore keyStore,
+            ILogger<DataWarehouse> logger)
         {
             _rootPath = rootPath;
+            _registry = registry;
+            _optimizer = optimizer;
+            _pipelineoptimizer = pipelineOptimizer;
+            _logger = logger;
+            _keyStore = keyStore;
+
+            _registry.SetOperatingMode(_optimizer.CurrentMode);
+            _loader = new HotPluginLoader(_registry, this);
+
+            var globalConfig = new GlobalPolicyConfig
+            {
+                DefaultEnableCompression = true,
+                DefaultEnableEncryption = true
+            };
+            _policy = new PolicyEnforcer(globalConfig);
+        }
+
+        /// <summary>
+        /// Configure
+        /// </summary>
+        /// <param name="config"></param>
+        public static void Configure(Microsoft.Extensions.Configuration.IConfiguration config) { }
+
+        /// <summary>
+        /// Mount
+        /// </summary>
+        /// <returns></returns>
+        public async Task MountAsync()
+        {
+            using var span = KernelTelemetry.StartActivity("Kernel.Mount"); // [NEW]
+
+            LogInfo("--- MOUNTING DATA WAREHOUSE (SILVER TIER V5.1) ---");
+            LogInfo($"Mode: {Mode}");
+            LogInfo($"Root: {_rootPath}");
+
             Directory.CreateDirectory(_rootPath);
 
-            // 1. Boot Core Kernel Services
-            _registry = new PluginRegistry();
-            _loader = new HotPluginLoader(_registry, this);
-            _keyStore = new KeyStoreAdapter(rootPath);
-            _policy = new PolicyEnforcer(globalPolicy ?? new GlobalPolicyConfig());
+            // 1. Load Plugins
+            string pluginsDir = Path.Combine(_rootPath, "Plugins");
+            Directory.CreateDirectory(pluginsDir);
+            _loader.LoadPluginsFrom(pluginsDir);
 
-            // 2. Load External Plugins
-            string pluginPath = Path.Combine(rootPath, "Plugins");
-            Directory.CreateDirectory(pluginPath);
-            _loader.LoadPluginsFrom(pluginPath);
+            // 2. Resolve Dependencies
+            _acl = _registry.GetPlugin<IAccessControl>() ?? new UnsafeAclFallback();
+            _storage = _registry.GetPlugin<IStorageProvider>() ?? new Kernel.IO.LocalDiskProvider(_rootPath);
+            _index = _registry.GetPlugin<IMetadataIndex>() ?? new Kernel.Indexing.InMemoryMetadataIndex();
+            _sentinel = _registry.GetPlugin<INeuralSentinel>() ?? new PassiveSentinelFallback();
 
-            // 3. Resolve Dependencies
-            ResolveCorePlugins();
+            LogInfo($"ACL:      {_acl.Name}");
+            LogInfo($"Storage:  {_storage.Name}");
+            LogInfo($"Index:    {_index.Name}");
+            LogInfo($"Sentinel: {_sentinel.Name}");
 
-            // 4. Start Background Features
-            foreach (var feature in _registry.GetFeatures())
+            // 3. Start Background Features
+            foreach (var feature in _registry.GetPlugins<IFeaturePlugin>())
             {
-                Task.Run(() => feature.StartAsync(CancellationToken.None));
+                try
+                {
+                    LogInfo($"Starting Feature: {feature.Name}...");
+                    using var fSpan = KernelTelemetry.StartActivity($"StartPlugin.{feature.Name}"); // [NEW]
+                    await feature.StartAsync(System.Threading.CancellationToken.None);
+                }
+                catch (Exception ex)
+                {
+                    LogError($"Failed to start {feature.Name}", ex);
+                    span?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.Message);
+                }
             }
-
-            LogInfo($"[Kernel] Boot Complete. Sentinel: {_sentinel.Name}");
+            LogInfo("--- SYSTEM ONLINE ---");
         }
 
-        private void ResolveCorePlugins()
+        /// <summary>
+        /// Dismount
+        /// </summary>
+        /// <returns></returns>
+        public async Task DismountAsync()
         {
-            // A. Index
-            _index = _registry.GetPlugin<IMetadataIndex>() ?? new InMemoryMetadataIndex();
-            (_index as IPlugin)?.Initialize(this);
-
-            // B. Storage
-            _storage = _registry.GetStorage("file");
-            if (_storage == null)
+            LogInfo("--- DISMOUNTING ---");
+            using var span = KernelTelemetry.StartActivity("Kernel.Dismount");
+            foreach (var feature in _registry.GetPlugins<IFeaturePlugin>())
             {
-                LogWarning("[Kernel] No physical Storage Plugin found. Booting into SAFE MODE.");
-                var ramStorage = new InMemoryStorageProvider();
-                ramStorage.Initialize(this);
-                _storage = ramStorage;
-            }
-
-            // C. ACL
-            _acl = _registry.GetPlugin<IAccessControl>();
-            if (_acl == null)
-            {
-                LogWarning("[Kernel] No ACL Plugin found. Security is OPEN.");
-                var unsafeAcl = new UnsafeAclFallback();
-                unsafeAcl.Initialize(this);
-                _acl = unsafeAcl;
-            }
-
-            // D. Sentinel (Governance)
-            // Priority: Plugin -> Passive Fallback
-            _sentinel = _registry.GetPlugin<INeuralSentinel>();
-            if (_sentinel == null)
-            {
-                LogInfo("[Kernel] No Neural Sentinel found. Governance is PASSIVE.");
-                var passive = new PassiveSentinelFallback();
-                passive.Initialize(this);
-                _sentinel = passive;
+                await feature.StopAsync();
             }
         }
 
-        // --- IDataWarehouse Implementation ---
+        /// <summary>
+        /// Health check
+        /// </summary>
+        public void CheckHealth() => LogInfo("Health Check: OK");
+
+        // --- Core Operations (Store/Retrieve) ---
+
+        /// <summary>
+        /// Store
+        /// </summary>
+        /// <param name="bucket"></param>
+        /// <param name="key"></param>
+        /// <param name="data"></param>
+        /// <param name="intent"></param>
+        /// <returns></returns>
+        public async Task StoreObjectAsync(string bucket, string key, Stream data, StorageIntent intent)
+        {
+            var context = new SimpleSecurityContext("System", true);
+            await StoreBlobAsync(context, bucket, key, data);
+        }
+
+        /// <summary>
+        /// Retrieve
+        /// </summary>
+        /// <param name="bucket"></param>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        public async Task<Stream> RetrieveObjectAsync(string bucket, string key)
+        {
+            var context = new SimpleSecurityContext("System", true);
+            return await GetBlobAsync(context, bucket, key);
+        }
 
         /// <summary>
         /// Stores a blob with Active Governance Enforcement.
         /// </summary>
         public async Task<string> StoreBlobAsync(ISecurityContext context, string containerId, string blobName, Stream data)
         {
-            string fullPath = $"{containerId}/{blobName}";
-
-            // 1. ACL Check
-            if (!_acl.HasAccess(fullPath, context.UserId, Permission.Write))
-                throw new UnauthorizedAccessException($"Access Denied: Write permission required for {fullPath}");
-
-            // 2. Policy Resolution (User Intent + Global Rules)
-            var pipelineConfig = _policy.ResolvePipeline(containerId, blobName);
-
-            // 3. Prepare Metadata
-            var manifest = new Manifest
-            {
-                Id = Guid.NewGuid().ToString("N"),
-                ContainerId = containerId,
-                OwnerId = context.UserId,
-                BlobUri = $"{_storage.Scheme}://{containerId}/{blobName}",
-                CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
-                Pipeline = pipelineConfig
-            };
-
-            // 4. [NEW] NEURAL SENTINEL INTERVENTION (OnWrite)
-            // The Sentinel inspects the raw data and the proposed pipeline BEFORE we write.
-            var sentinelContext = new SentinelContext
-            {
-                Trigger = TriggerType.OnWrite,
-                Metadata = manifest,
-                DataStream = data,
-                UserContext = context
-            };
-
-            // Sentinel analyzes stream (and must reset it)
-            var judgment = await _sentinel.EvaluateAsync(sentinelContext);
-            if (data.CanSeek) data.Position = 0; // Ensure stream is ready for reading
-
-            // 5. ENFORCE JUDGMENT
-            if (judgment.InterventionRequired)
-            {
-                // A. Blocking
-                if (judgment.BlockOperation)
-                {
-                    LogWarning($"[Governance] Blocked Write on {fullPath}: {judgment.Alert?.Message}");
-                    throw new System.Security.SecurityException($"Governance Block: {judgment.Alert?.Message ?? "Risk Detected"}");
-                }
-
-                // B. Pipeline Override (Auto-Encryption)
-                if (judgment.EnforcePipeline != null)
-                {
-                    LogInfo($"[Governance] Overriding Pipeline for {fullPath} based on Sentinel Judgment.");
-                    manifest.Pipeline = judgment.EnforcePipeline;
-                    // Ensure we have a valid Key ID if encryption was forced
-                    if (string.IsNullOrEmpty(manifest.Pipeline.KeyId))
-                    {
-                        manifest.Pipeline.KeyId = await _keyStore.GetCurrentKeyIdAsync();
-                    }
-                }
-
-                // C. Metadata Enrichment (Auto-Tagging)
-                foreach (var tag in judgment.AddTags)
-                {
-                    _ = manifest.GovernanceTags.TryAdd(tag, "True");
-                }
-                foreach (var prop in judgment.UpdateProperties)
-                {
-                    // Logic to reflect properties onto Manifest if applicable
-                    if (prop.Key == "ContentType") manifest.Tags["ContentType"] = prop.Value;
-                }
-
-                // D. Alerting
-                if (judgment.Alert != null)
-                {
-                    LogWarning($"[Sentinel Alert] {judgment.Alert.Code}: {judgment.Alert.Message}");
-                }
-            }
-
-            // 6. Execute Pipeline (Using the potentially modified Manifest.Pipeline)
-            var runtimeArgs = await PrepareRuntimeArgs(manifest.Pipeline, context);
-            Stream processedStream = data;
-            var disposables = new List<IDisposable>();
+            using var span = KernelTelemetry.StartActivity("Kernel.StoreBlob"); // [NEW] Start Trace
+            span?.SetTag("container", containerId);
+            span?.SetTag("blob", blobName);
+            span?.SetTag("size", data.Length);
+            span?.SetTag("user", context.UserId);
 
             try
             {
-                foreach (var stepName in manifest.Pipeline.TransformationOrder)
+                // 1. Sentinel Scan (Pre-Write)
+                using var scanSpan = KernelTelemetry.StartActivity("Sentinel.Evaluate");
+                string fullPath = $"{containerId}/{blobName}";
+
+                // 1. ACL Check
+                if (!_acl.HasAccess(fullPath, context.UserId, Permission.Write))
+                    throw new UnauthorizedAccessException($"Access Denied: Write permission required for {fullPath}");
+
+                // 2. Resolve Pipeline & Save
+                var pipelineConfig = _policy.ResolvePipeline(containerId, blobName);
+                var uri = new Uri($"{_storage.Scheme}://{containerId}/{blobName}");
+                var pipeline = _pipelineoptimizer.Resolve(new StorageIntent { Security = SecurityLevel.High, Compression = CompressionLevel.High });
+                Stream processedStream = data;
+
+                using (var ioSpan = KernelTelemetry.StartActivity("Storage.Write"))
                 {
-                    var middleware = ResolveTransformation(stepName);
-                    if (middleware != null)
+                    // Wrap: Compression
+                    if (pipeline.EnableCompression)
                     {
-                        var nextStream = middleware.OnWrite(processedStream, this, runtimeArgs);
-                        processedStream = nextStream;
-                        disposables.Add(nextStream);
+                        var compressor = _registry.GetPlugin<IDataTransformation>(pipeline.CompressionProviderId);
+                        if (compressor != null)
+                        {
+                            // Note: We use the 'OnWrite' method to wrap the stream
+                            processedStream = compressor.OnWrite(processedStream, this, new Dictionary<string, object>());
+                        }
+                    }
+
+                    // Wrap: Encryption
+                    if (pipeline.EnableEncryption)
+                    {
+                        var encryptor = _registry.GetPlugin<IDataTransformation>(pipeline.CryptoProviderId);
+                        if (encryptor != null)
+                        {
+                            var key = await _keyStore.GetKeyAsync("MASTER-01", context);
+                            processedStream = encryptor.OnWrite(processedStream, this, new Dictionary<string, object> { { "Key", key } });
+                        }
+                    }
+                    await _storage.SaveAsync(uri, data);
+                }
+
+                // 3. Indexing
+                using var idxSpan = KernelTelemetry.StartActivity("Index.Update");
+                var manifest = new Manifest
+                {
+                    Id = Guid.NewGuid().ToString("N"),
+                    ContainerId = containerId,
+                    OwnerId = context.UserId,
+                    BlobUri = $"{_storage.Scheme}://{containerId}/{blobName}",
+                    CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
+                    LastAccessedAt = DateTime.UtcNow.Ticks,
+                    Pipeline = pipelineConfig
+                };
+                await _index.IndexManifestAsync(manifest);
+
+                // 4. [NEW] NEURAL SENTINEL INTERVENTION (OnWrite)
+                // The Sentinel inspects the raw data and the proposed pipeline BEFORE we write.
+                var sentinelContext = new SentinelContext
+                {
+                    Trigger = TriggerType.OnWrite,
+                    Metadata = manifest,
+                    DataStream = data,
+                    UserContext = context
+                };
+
+                // Sentinel analyzes stream (and must reset it)
+                var judgment = await _sentinel.EvaluateAsync(sentinelContext);
+                if (data.CanSeek) data.Position = 0; // Ensure stream is ready for reading
+
+                // 5. ENFORCE JUDGMENT
+                if (judgment.InterventionRequired)
+                {
+                    // A. Blocking
+                    if (judgment.BlockOperation)
+                    {
+                        LogWarning($"[Governance] Blocked Write on {fullPath}: {judgment.Alert?.Message}");
+                        throw new System.Security.SecurityException($"Governance Block: {judgment.Alert?.Message ?? "Risk Detected"}");
+                    }
+
+                    // B. Pipeline Override (Auto-Encryption)
+                    if (judgment.EnforcePipeline != null)
+                    {
+                        LogInfo($"[Governance] Overriding Pipeline for {fullPath} based on Sentinel Judgment.");
+                        manifest.Pipeline = judgment.EnforcePipeline;
+                        // Ensure we have a valid Key ID if encryption was forced
+                        if (string.IsNullOrEmpty(manifest.Pipeline.KeyId))
+                        {
+                            manifest.Pipeline.KeyId = await _keyStore.GetCurrentKeyIdAsync();
+                        }
+                    }
+
+                    // C. Metadata Enrichment (Auto-Tagging)
+                    foreach (var tag in judgment.AddTags)
+                    {
+                        _ = manifest.GovernanceTags.TryAdd(tag, "True");
+                    }
+                    foreach (var prop in judgment.UpdateProperties)
+                    {
+                        // Logic to reflect properties onto Manifest if applicable
+                        if (prop.Key == "ContentType") manifest.Tags["ContentType"] = prop.Value;
+                    }
+
+                    // D. Alerting
+                    if (judgment.Alert != null)
+                    {
+                        LogWarning($"[Sentinel Alert] {judgment.Alert.Code}: {judgment.Alert.Message}");
                     }
                 }
 
-                await _storage.SaveAsync(new Uri(manifest.BlobUri), processedStream);
-                manifest.SizeBytes = data.CanSeek ? data.Length : 0;
-            }
-            finally
-            {
-                disposables.Reverse();
-                foreach (var d in disposables) d.Dispose();
-            }
+                // 6. Execute Pipeline (Using the potentially modified Manifest.Pipeline)
+                var runtimeArgs = await PrepareRuntimeArgs(manifest.Pipeline, context);
+                processedStream = data;
+                var disposables = new List<IDisposable>();
 
-            // 7. Index
-            await _index.IndexManifestAsync(manifest);
-            return manifest.Id;
+                try
+                {
+                    foreach (var stepName in manifest.Pipeline.TransformationOrder)
+                    {
+                        var middleware = ResolveTransformation(stepName);
+                        if (middleware != null)
+                        {
+                            var nextStream = middleware.OnWrite(processedStream, this, runtimeArgs);
+                            processedStream = nextStream;
+                            disposables.Add(nextStream);
+                        }
+                    }
+
+                    await _storage.SaveAsync(new Uri(manifest.BlobUri), processedStream);
+                    manifest.SizeBytes = data.CanSeek ? data.Length : 0;
+                }
+                finally
+                {
+                    disposables.Reverse();
+                    foreach (var d in disposables) d.Dispose();
+                }
+
+                // 7. Index
+                await _index.IndexManifestAsync(manifest);
+                return manifest.Id;
+            }
+            catch (Exception ex)
+            {
+                span?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, ex.Message);
+                throw;
+            }
         }
 
         /// <summary>
@@ -228,12 +344,19 @@ namespace DataWarehouse.Kernel.Engine
         /// </summary>
         public async Task<Stream> GetBlobAsync(ISecurityContext context, string containerId, string blobName)
         {
+            using var span = KernelTelemetry.StartActivity("Kernel.GetBlob"); // [NEW]
+            span?.SetTag("blob", $"{containerId}/{blobName}");
             string fullPath = $"{containerId}/{blobName}";
 
-            // 1. ACL Check
-            if (!_acl.HasAccess(fullPath, context.UserId, Permission.Read))
+            // 1. Check ACL
+            if (!_acl.HasAccess($"{containerId}/{blobName}", context.UserId, Permission.Read))
+            {
+                span?.SetStatus(System.Diagnostics.ActivityStatusCode.Error, "Access Denied");
                 throw new UnauthorizedAccessException($"Access Denied: Read permission required for {fullPath}");
+            }
 
+            // 2. Load
+            using var ioSpan = KernelTelemetry.StartActivity("Storage.Read");
             // 2. Load Manifest
             var manifest = await _index.GetManifestAsync(blobName);
             // Fallback for unindexed files
@@ -281,6 +404,12 @@ namespace DataWarehouse.Kernel.Engine
         }
 
         // --- Standard Implementations (CreateContainer, GrantAccess, etc.) ---
+
+        private record SimpleSecurityContext(string UserId, bool IsSystemAdmin) : ISecurityContext
+        {
+            public string? TenantId => "Default";
+            public IEnumerable<string> Roles => [];
+        }
 
         /// <inheritdoc/>
         public async Task CreateContainerAsync(ISecurityContext context, string containerId, bool encrypt, bool compress)

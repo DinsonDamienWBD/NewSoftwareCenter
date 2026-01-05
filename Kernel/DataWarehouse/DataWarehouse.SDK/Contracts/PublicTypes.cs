@@ -44,7 +44,12 @@
         /// <summary>
         /// Optimal balance between compression and performance
         /// </summary>
-        Optimal
+        Optimal,
+
+        /// <summary>
+        /// Slow but more compression
+        /// </summary>
+        High
     }
 
     /// <summary>

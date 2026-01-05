@@ -3,6 +3,7 @@
     <Project Path="Kernel/Core/Core.csproj" />
   </Folder>
   <Folder Name="/Kernel/DataWarehouse/">
+    <Project Path="Kernel/DataWarehouse/DataWarehouse.CLI/DataWarehouse.CLI.csproj" Id="8a8b4799-149a-4829-8a6d-285579a23732" />
     <Project Path="Kernel/DataWarehouse/DataWarehouse.Kernel/DataWarehouse.Kernel.csproj" />
     <Project Path="Kernel/DataWarehouse/DataWarehouse.SDK/DataWarehouse.SDK.csproj" Id="0404519b-1fc1-41ee-913a-b6f752826620" />
   </Folder>
@@ -14,9 +15,12 @@
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.Consensus/DataWarehouse.Plugins.Features.Consensus.csproj" Id="1f8b8c5b-16a3-4c71-9074-83dd147ad251" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.Governance/DataWarehouse.Plugins.Features.Governance.csproj" Id="d778603c-153a-4f30-a4af-e98130944bf4" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.SQL/DataWarehouse.Plugins.Features.SQL.csproj" Id="839b962c-e774-4ad1-8ddf-f17ca3932d8d" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Indexing.Postgres/DataWarehouse.Plugins.Indexing.Postgres.csproj" Id="ec1317a1-c5ae-4764-b01c-444b50778e14" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Indexing.Sqlite/DataWarehouse.Plugins.Indexing.Sqlite.csproj" Id="27bfad8e-a96c-4a51-9296-cd2cf8cd71c9" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Security.Granular/DataWarehouse.Plugins.Security.Granular.csproj" Id="e0b27a83-784f-4ee8-934e-d070845c4363" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.Ipfs/DataWarehouse.Plugins.Storage.Ipfs.csproj" Id="29727e54-0899-4f77-99f0-15dabb74536f" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.Local/DataWarehouse.Plugins.Storage.LocalFileSystem.csproj" Id="f1252fab-fc68-4e90-b671-01bf341782c8" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.S3/DataWarehouse.Plugins.Storage.S3.csproj" Id="1ec29eec-4983-41af-98b7-8b6e883f11fc" />
   </Folder>
   <Folder Name="/Kernel/Managers/">
     <Project Path="Kernel/Managers/BackendManager/Manager.csproj" />

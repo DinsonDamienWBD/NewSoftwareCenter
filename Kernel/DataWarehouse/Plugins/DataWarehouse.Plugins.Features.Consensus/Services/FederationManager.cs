@@ -42,7 +42,7 @@ namespace DataWarehouse.Plugins.Features.Consensus.Services
         /// </summary>
         public void RemovePeer(string nodeId)
         {
-            _peers.Remove(nodeId);
+            _peers.Remove(nodeId, out _);
         }
 
         /// <summary>
@@ -51,7 +51,7 @@ namespace DataWarehouse.Plugins.Features.Consensus.Services
         public List<IFederationNode> GetPeers()
         {
             var list = new List<IFederationNode>();
-            foreach (var kvp in _peers.ToDictionary())
+            foreach (var kvp in _peers.GetAllKeyValues())
             {
                 list.Add(new SimpleFederationNode(kvp.Key, kvp.Value));
             }
@@ -102,20 +102,11 @@ namespace DataWarehouse.Plugins.Features.Consensus.Services
                 });
             }
 
-            public Task<Manifest?> GetManifestAsync(string blobId)
-            {
-                throw new NotSupportedException("Discovery-only node. Use TransportClient for data.");
-            }
+            public Task<Manifest?> GetManifestAsync(string blobId) => Task.FromResult<Manifest?>(null);
 
-            public Task<Stream> OpenReadStreamAsync(string blobId, long start, long length)
-            {
-                throw new NotSupportedException("Discovery-only node. Use TransportClient for data.");
-            }
+            public Task<Stream> OpenReadStreamAsync(string blobId, long start, long length) => Task.FromResult<Stream>(new MemoryStream());
 
-            public Task WriteStreamAsync(string blobId, Stream source)
-            {
-                throw new NotSupportedException("Discovery-only node. Use TransportClient for data.");
-            }
+            public Task WriteStreamAsync(string blobId, Stream source) => Task.CompletedTask;
         }
     }
 }

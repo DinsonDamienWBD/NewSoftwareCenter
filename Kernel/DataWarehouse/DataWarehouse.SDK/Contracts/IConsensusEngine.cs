@@ -1,12 +1,25 @@
 ﻿namespace DataWarehouse.SDK.Contracts
 {
     /// <summary>
-    /// Consensus proposal record
+    /// Proposal
     /// </summary>
-    /// <param name="Id"></param>
-    /// <param name="Command"></param>
-    /// <param name="Payload"></param>
-    public record Proposal(string Id, string Command, byte[] Payload);
+    public class Proposal
+    {
+        /// <summary>
+        /// ID
+        /// </summary>
+        public string Id { get; set; } = Guid.NewGuid().ToString();
+
+        /// <summary>
+        /// Command
+        /// </summary>
+        public string Command { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Payload
+        /// </summary>
+        public byte[] Payload { get; set; } = [];
+    }
 
     /// <summary>
     /// Consensus interface

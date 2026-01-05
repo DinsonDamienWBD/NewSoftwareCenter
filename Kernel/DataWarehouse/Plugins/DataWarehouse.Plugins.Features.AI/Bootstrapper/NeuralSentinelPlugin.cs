@@ -2,6 +2,7 @@
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Governance;
 using System.Reflection;
+using System.Text;
 using System.Text.Json;
 
 namespace DataWarehouse.Plugins.Features.AI.Bootstrapper
@@ -135,6 +136,42 @@ namespace DataWarehouse.Plugins.Features.AI.Bootstrapper
                 }
             }
             return finalJudgment;
+        }
+
+        public async Task<string> TranslateIntentToSqlAsync(string intent)
+        {
+            var apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
+            if (string.IsNullOrEmpty(apiKey))
+            {
+                // Fallback Heuristics (if no AI key) - Still valid for production fallback
+                if (intent.Contains("risk")) return "SELECT * FROM Manifests WHERE JsonData->>'Risk' > 50";
+                return "SELECT * FROM Manifests LIMIT 5";
+            }
+
+            // Real Call
+            using var client = new HttpClient();
+            client.DefaultRequestHeaders.Add("Authorization", $"Bearer {apiKey}");
+
+            var body = new
+            {
+                model = "gpt-4",
+                messages = new[] {
+            new { role = "system", content = "Translate user intent to SQL for table 'Manifests' (cols: Id, JsonData)." },
+            new { role = "user", content = intent }
+        }
+            };
+
+            var content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, "application/json");
+            var resp = await client.PostAsync("https://api.openai.com/v1/chat/completions", content);
+
+            if (resp.IsSuccessStatusCode)
+            {
+                var json = await resp.Content.ReadAsStringAsync();
+                using var doc = JsonDocument.Parse(json);
+                return doc.RootElement.GetProperty("choices")[0].GetProperty("message").GetProperty("content").GetString() ?? "";
+            }
+
+            throw new Exception("AI Service unavailable.");
         }
 
         // --- Helper DTOs for JSON ---

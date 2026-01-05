@@ -1,131 +1,104 @@
-﻿using Microsoft.Extensions.Logging;
+﻿using DataWarehouse.SDK.Contracts;
+using Microsoft.Extensions.Logging;
 
 namespace DataWarehouse.Kernel.Engine
 {
     /// <summary>
-    /// Operating mode based on hardware resources
-    /// </summary>
-    public enum OperatingMode 
-    { 
-        /// <summary>
-        /// AC or Battery power - laptop mode
-        /// </summary>
-        LowPower, 
-
-        /// <summary>
-        /// AC power - desktop mode
-        /// </summary>
-        Desktop, 
-
-        /// <summary>
-        /// Always on, almost no throttling - server mode
-        /// </summary>
-        Server, 
-
-        /// <summary>
-        /// Hyperscale cloud infrastructure or datacenters mode
-        /// </summary>
-        Hyperscale 
-    }
-
-    /// <summary>
-    /// Optimize features at runtime
+    /// Analyzes hardware resources and execution environment to determine the optimal OperatingMode.
+    /// Acts as the "Sorting Hat" for the Data Warehouse.
     /// </summary>
     public class RuntimeOptimizer
     {
         private readonly ILogger _logger;
 
         /// <summary>
-        /// Get current mode
+        /// Gets the calculated operating mode.
         /// </summary>
         public OperatingMode CurrentMode { get; private set; }
 
         /// <summary>
-        /// Constructor
+        /// Initializes the optimizer and runs detection logic.
         /// </summary>
-        /// <param name="logger"></param>
-        public RuntimeOptimizer(ILogger logger)
+        /// <param name="logger">The system logger.</param>
+        public RuntimeOptimizer(ILogger<RuntimeOptimizer> logger)
         {
             _logger = logger;
-            DetectEnvironment();
+            CurrentMode = DetectEnvironment();
+            _logger.LogInformation("[RuntimeOptimizer] Hardware Scan Complete. Mode: {CurrentMode}", CurrentMode);
         }
 
-        private void DetectEnvironment()
+        private static OperatingMode DetectEnvironment()
         {
-            // 1. Core Count Check
-            int cores = Environment.ProcessorCount;
-
-            // 2. Memory Check (Heuristic)
-            long memory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes / (1024 * 1024); // MB
-
-            // 3. Simple Heuristic Logic
-            if (cores <= 4 || memory < 8192)
-            {
-                CurrentMode = OperatingMode.LowPower; // "Laptop Mode"
-            }
-            else if (cores <= 16)
-            {
-                CurrentMode = OperatingMode.Desktop; // "Workstation Mode"
-            }
-            else
-            {
-                CurrentMode = OperatingMode.Server; // "Data Center Mode"
-            }
-
-            _logger.LogInformation($"Environment Detected: {CurrentMode} (Cores: {cores}, Mem: {memory}MB)");
-        }
-
-        /// <summary>
-        /// Enable or disable deduplication based on hardware resources
-        /// Only hash on powerful machines
-        /// </summary>
-        /// <returns></returns>
-        public bool ShouldEnableDeduplication() => CurrentMode >= OperatingMode.Server;
-
-        /// <summary>
-        /// Enable or disable background tiering based on hardware resources
-        /// Only do tiering on at least desktop level machines
-        /// </summary>
-        /// <returns></returns>
-        public bool ShouldEnableBackgroundTiering() => CurrentMode >= OperatingMode.Desktop;
-
-        /// <summary>
-        /// Get maximum concurrency
-        /// </summary>
-        /// <returns></returns>
-        public int GetMaxConcurrency() => CurrentMode switch
-        {
-            OperatingMode.LowPower => 2,
-            OperatingMode.Desktop => 8,
-            OperatingMode.Server => 64,
-            _ => 2
-        };
-
-        /// <summary>
-        /// Set index storage option
-        /// </summary>
-        /// <returns></returns>
-        public bool ShouldUsePersistentIndex()
-        {
-            // DECISION LOGIC:
-            // 1. If we are in "LowPower" (2 cores, <8GB RAM), we might prefer InMemory speed 
-            //    BUT we risk losing data. 
-            // 2. Actually, for a Data Warehouse, Persistence is usually critical.
-            //    So we default to Persistent (SQLite) unless we are in a purely ephemeral environment.
-
-            // Check for "Container Mode" (Ephemeral Filesystem)
+            // 1. Check for Containerization (Docker/K8s)
             bool isContainer = Environment.GetEnvironmentVariable("DOTNET_RUNNING_IN_CONTAINER") == "true";
+            bool isK8s = Environment.GetEnvironmentVariable("KUBERNETES_SERVICE_HOST") != null;
 
-            if (isContainer && CurrentMode == OperatingMode.LowPower)
+            if (isK8s || isContainer)
             {
-                // We are likely a throwaway worker process. 
-                // Use In-Memory for max speed; data dies with the container.
-                return false;
+                return OperatingMode.Hyperscale;
             }
 
-            // Default: Everyone (Laptop, Desktop, Server) gets SQLite.
-            // Why? Because nobody wants to re-index 1TB of files after a reboot.
+            // 2. Hardware Resource Check
+            int processorCount = Environment.ProcessorCount;
+            long memoryBytes = GetTotalMemory(); // Approximate
+
+            // Heuristics for Server vs Laptop
+            // Server: Usually > 8 Cores or explicit Server OS
+            // Laptop: Usually <= 8 Cores
+
+            if (processorCount > 16)
+            {
+                return OperatingMode.Server;
+            }
+
+            if (processorCount > 4)
+            {
+                return OperatingMode.Workstation;
+            }
+
+            // Default to Laptop for lower specs
+            return OperatingMode.Laptop;
+        }
+
+        /// <summary>
+        /// Gets the maximum recommended concurrency for the current mode.
+        /// </summary>
+        /// <returns>Number of parallel threads.</returns>
+        public int GetMaxConcurrency()
+        {
+            return CurrentMode switch
+            {
+                OperatingMode.Laptop => Math.Max(2, Environment.ProcessorCount / 2), // Conservative
+                OperatingMode.Workstation => Environment.ProcessorCount - 1,         // Leave 1 for UI
+                OperatingMode.Server => Environment.ProcessorCount * 2,              // Saturation
+                OperatingMode.Hyperscale => Environment.ProcessorCount * 4,          // High IO wait tolerance
+                _ => 2
+            };
+        }
+
+        /// <summary>
+        /// Determines if the Persistent Index (SQLite/Postgres) should be enforced.
+        /// </summary>
+        public static bool ShouldUsePersistentIndex()
+        {
+            // In Hyperscale (Containers), local storage might be ephemeral.
+            // If we don't have a Remote DB configured, we might be forced into Volatile mode.
+            // However, generally, DW implies persistence.
+
+            // For Laptop/Workstation/Server: Always Yes.
             return true;
+        }
+
+        private static long GetTotalMemory()
+        {
+            try
+            {
+                return GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+            }
+            catch
+            {
+                return 1024L * 1024L * 1024L; // Default 1GB if unknown
+            }
         }
     }
 }

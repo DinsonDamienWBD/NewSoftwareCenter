@@ -1,6 +1,7 @@
 ﻿using DataWarehouse.Plugins.Features.Governance.Engine;
 using DataWarehouse.Plugins.Features.Governance.Services;
 using DataWarehouse.SDK.Contracts;
+using System.Text;
 
 namespace DataWarehouse.Plugins.Features.Governance.Bootstrapper
 {
@@ -49,17 +50,17 @@ namespace DataWarehouse.Plugins.Features.Governance.Bootstrapper
             Directory.CreateDirectory(metadataPath);
             Directory.CreateDirectory(logsPath);
 
+            // [FIX] Generate or Load a System Secret for WORM signing
+            // In production, fetch this from IKeyStore. For now, derive from Machine/Path
+            byte[] systemSecret = Encoding.UTF8.GetBytes(context.RootPath + "_WORM_SECRET");
+
             // 1. Initialize Independent Engines (WORM & Audit)
-            _governor = new WormGovernor(metadataPath);
+            _governor = new WormGovernor(metadataPath, systemSecret);
             _recorder = new FlightRecorder(logsPath);
 
             // 2. Resolve Critical Dependencies (Metadata Index)
             // Governance requires the Index to track access and enforce policies.
-            var metadataIndex = context.GetPlugin<IMetadataIndex>();
-            if (metadataIndex == null)
-            {
-                throw new InvalidOperationException($"[{Id}] Critical Failure: IMetadataIndex not found. Governance cannot function.");
-            }
+            var metadataIndex = context.GetPlugin<IMetadataIndex>() ?? throw new InvalidOperationException($"[{Id}] Critical Failure: IMetadataIndex not found. Governance cannot function.");
 
             // 3. Initialize Access Tracker
             // We pass the resolved index and a Logger Adapter
@@ -112,15 +113,13 @@ namespace DataWarehouse.Plugins.Features.Governance.Bootstrapper
         }
 
         // --- Bridge for ILogger (Helper Class) ---
-        private class ContextLoggerAdapter<T> : Microsoft.Extensions.Logging.ILogger<T>, IDisposable
+        /// <summary>
+        /// Context logger adapter.
+        /// </summary>
+        /// <param name="ctx"></param>
+        private class ContextLoggerAdapter<T>(IKernelContext ctx) : Microsoft.Extensions.Logging.ILogger<T>, IDisposable
         {
-            private readonly IKernelContext _ctx;
-
-            /// <summary>
-            /// Context logger adapter.
-            /// </summary>
-            /// <param name="ctx"></param>
-            public ContextLoggerAdapter(IKernelContext ctx) => _ctx = ctx;
+            private readonly IKernelContext _ctx = ctx;
 
             /// <summary>
             /// Begin scope

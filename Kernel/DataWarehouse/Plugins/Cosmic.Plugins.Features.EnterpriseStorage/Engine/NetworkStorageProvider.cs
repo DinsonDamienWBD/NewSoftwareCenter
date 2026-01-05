@@ -1,112 +1,229 @@
-﻿using DataWarehouse.SDK.Contracts;
-using Microsoft.Extensions.Logging;
+﻿using DataWarehouse.Plugins.Features.EnterpriseStorage.Protos;
+using DataWarehouse.SDK.Contracts;
 using Grpc.Net.Client;
-using System.Net.Http;
 
 namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
 {
     /// <summary>
-    /// A storage provider that forwards requests to a remote node via gRPC.
-    /// Acts as a "Client" driver.
+    /// A Production-Ready Network Storage Provider.
+    /// Uses gRPC Streaming to transfer binary blobs efficiently between Data Warehouse nodes.
     /// </summary>
     public class NetworkStorageProvider : IStorageProvider, IDisposable
     {
-        /// <summary>The unique ID of the provider instance.</summary>
-        public string Id => $"net-{_targetAddress}";
-        /// <summary>The provider version.</summary>
-        public string Version => "5.0";
-        /// <summary>The display name.</summary>
-        public string Name => "Network Storage Provider";
-        /// <summary>The URI scheme (grpc).</summary>
+        public string Id { get; private set; }
+        public string Version => "5.0.0";
+        public string Name => "gRPC Network Storage";
         public string Scheme => "grpc";
 
-        private readonly string _targetAddress = "https://localhost:5000";
-        private GrpcChannel? _channel;
-        private IKernelContext? _context;
-        private readonly IFederationNode? _federationNode;
+        private  string _address;
+        private  GrpcChannel _channel;
+        private StorageTransport.StorageTransportClient _client;
+        private IKernelContext _context;
 
         /// <summary>
-        /// Default constructor for Bootstrapper initialization.
+        /// [FIX] Default Constructor.
+        /// Allows instantiation by the Bootstrapper or PluginRegistry.
         /// </summary>
-        public NetworkStorageProvider() { }
-
-        /// <summary>
-        /// Constructor for binding to a specific Federation Node.
-        /// </summary>
-        /// <param name="node">The remote node to target.</param>
-        public NetworkStorageProvider(IFederationNode node)
+        public NetworkStorageProvider()
         {
-            _federationNode = node;
-            _targetAddress = node.Address;
+            Id = "network-storage-default";
+            _address = "https://localhost:5000"; // Default, overridden in Initialize
         }
 
         /// <summary>
-        /// Initializes the gRPC channel and networking stack.
+        /// Initializes the provider for a specific target node.
         /// </summary>
-        /// <param name="context">The kernel context.</param>
-        public void Initialize(IKernelContext context)
+        public NetworkStorageProvider(string nodeId, string address, IKernelContext context)
+        {
+            Id = $"net-{nodeId}";
+            _address = address;
+            _context = context;
+            InitializeChannel();
+        }
+
+        /// <summary>
+        /// Initialize
+        /// </summary>
+        /// <param name="context"></param>
+        public void Initialize(IKernelContext context) 
         {
             _context = context;
-
-            // SocketsHttpHandler optimization for high-throughput
-            var httpHandler = new SocketsHttpHandler
+            if (_channel == null)
             {
-                EnableMultipleHttp2Connections = true,
-                KeepAlivePingDelay = TimeSpan.FromSeconds(60),
-                PooledConnectionIdleTimeout = TimeSpan.FromMinutes(20)
-            };
+                // Real Logic: Configuration or Env Var
+                _address = Environment.GetEnvironmentVariable("DW_NETWORK_TARGET") ?? "https://localhost:5000";
+                Id = $"net-{Uri.EscapeDataString(_address)}";
+                InitializeChannel();
+            }
+        }
 
-            _channel = GrpcChannel.ForAddress(_targetAddress, new GrpcChannelOptions
+        private void InitializeChannel()
+        {
+            try
             {
-                HttpHandler = httpHandler,
-                MaxReceiveMessageSize = 50 * 1024 * 1024 // 50MB
-            });
+                var httpHandler = new SocketsHttpHandler
+                {
+                    EnableMultipleHttp2Connections = true,
+                    KeepAlivePingDelay = TimeSpan.FromSeconds(60),
+                    KeepAlivePingTimeout = TimeSpan.FromSeconds(30)
+                };
 
-            context.LogInfo($"[{Id}] Network Storage initialized targeting {_targetAddress}");
+                _channel = GrpcChannel.ForAddress(_address, new GrpcChannelOptions
+                {
+                    HttpHandler = httpHandler,
+                    MaxReceiveMessageSize = null,
+                    MaxSendMessageSize = null
+                });
+
+                _client = new StorageTransport.StorageTransportClient(_channel);
+            }
+            catch (Exception ex)
+            {
+                _context?.LogError($"[{Id}] Channel Init Failed", ex);
+            }
         }
-
-        /// <summary>
-        /// Streams data to the remote node.
-        /// </summary>
-        public async Task SaveAsync(Uri uri, Stream data)
-        {
-            EnsureOnline();
-            _context?.LogInfo($"[Stub] Streaming {data.Length} bytes to {_targetAddress}");
-            // In real implementation: await _client.WriteStreamAsync(...)
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Streams data from the remote node.
-        /// </summary>
-        public async Task<Stream> LoadAsync(Uri uri)
-        {
-            EnsureOnline();
-            // Stub return
-            return await Task.FromResult(new MemoryStream());
-        }
-
-        /// <summary>
-        /// Deletes a blob on the remote node.
-        /// </summary>
-        public Task DeleteAsync(Uri uri) => Task.CompletedTask;
-
-        /// <summary>
-        /// Checks if a blob exists on the remote node.
-        /// </summary>
-        public Task<bool> ExistsAsync(Uri uri) => Task.FromResult(true);
 
         private void EnsureOnline()
         {
-            if (_channel == null) throw new InvalidOperationException("Provider not initialized.");
+            if (_client == null || _channel == null)
+                throw new InvalidOperationException($"Network Provider {Id} is not initialized or connected to {_address}.");
         }
 
         /// <summary>
-        /// Disposes the network channel.
+        /// Save
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <param name="data"></param>
+        /// <returns></returns>
+        /// <exception cref="IOException"></exception>
+        public async Task SaveAsync(Uri uri, Stream data)
+        {
+            EnsureOnline();
+
+            const int MaxRetries = 5;
+            int attempt = 0;
+
+            while (true)
+            {
+                try
+                {
+                    // Reset stream position for retry
+                    if (data.CanSeek) data.Position = 0;
+
+                    _context.LogInfo($"[Network] Uploading {data.Length} bytes to {_address}...");
+
+                    // gRPC Client Streaming
+                    using var call = _client.UploadBlob();
+
+                    // 1. Send Header
+                    await call.RequestStream.WriteAsync(new UploadRequest
+                    {
+                        Metadata = new BlobMetadata { Uri = uri.ToString(), TotalSize = data.Length }
+                    });
+
+                    // 2. Stream Data Chunks
+                    byte[] buffer = new byte[64 * 1024]; // 64KB chunks
+                    int read;
+                    while ((read = await data.ReadAsync(buffer)) > 0)
+                    {
+                        await call.RequestStream.WriteAsync(new UploadRequest
+                        {
+                            Chunk = Google.Protobuf.ByteString.CopyFrom(buffer, 0, read)
+                        });
+                    }
+
+                    // 3. Complete
+                    await call.RequestStream.CompleteAsync();
+                    var response = await call.ResponseAsync;
+
+                    if (!response.Success)
+                    {
+                        throw new IOException($"Remote write failed: {response.Message}");
+                    }
+
+                    _context.LogInfo($"[Network] Upload Complete.");
+                }
+                catch (Exception ex)
+                {
+                    attempt++;
+                    if (attempt >= MaxRetries)
+                    {
+                        _context?.LogError($"[Network] Critical Failure uploading to {_address} after {MaxRetries} attempts.", ex);
+                        throw; // Give up
+                    }
+
+                    // Exponential Backoff with Jitter: 200ms, 400ms, 800ms...
+                    int delay = (int)(Math.Pow(2, attempt) * 100) + Random.Shared.Next(0, 50);
+                    _context?.LogWarning($"[Network] Upload failed. Retrying in {delay}ms... Error: {ex.Message}");
+                    await Task.Delay(delay);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Load
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns></returns>
+        public async Task<Stream> LoadAsync(Uri uri)
+        {
+            _context.LogInfo($"[Network] Downloading {uri} from {_address}...");
+
+            EnsureOnline();
+
+            var call = _client!.DownloadBlob(new DownloadRequest { Uri = uri.ToString() });
+
+            // We return a wrapper stream that reads from the gRPC response stream
+            // This enables true end-to-end streaming without buffering the whole file in RAM
+            return new GrpcStreamAdapter(call);
+        }
+
+        /// <summary>
+        /// Delete
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns></returns>
+        public async Task DeleteAsync(Uri uri)
+        {
+            EnsureOnline();
+            await _client!.DeleteBlobAsync(new DeleteRequest { Uri = uri.ToString() });
+        }
+
+        /// <summary>
+        /// Exist
+        /// </summary>
+        /// <param name="uri"></param>
+        /// <returns></returns>
+        public async Task<bool> ExistsAsync(Uri uri)
+        {
+            EnsureOnline();
+            try
+            {
+                var resp = await _client!.ExistsBlobAsync(new ExistsRequest { Uri = uri.ToString() });
+                return resp.Exists;
+            }
+            catch { return false; }
+        }
+
+        /// <summary>
+        /// Start
+        /// </summary>
+        /// <param name="ct"></param>
+        /// <returns></returns>
+        public Task StartAsync(System.Threading.CancellationToken ct) => Task.CompletedTask;
+
+        /// <summary>
+        /// Stop
+        /// </summary>
+        /// <returns></returns>
+        public Task StopAsync() => Task.CompletedTask;
+
+        /// <summary>
+        /// Safely dispose
         /// </summary>
         public void Dispose()
         {
-            _channel?.Dispose();
+            _channel.Dispose();
             GC.SuppressFinalize(this);
         }
     }

@@ -1,6 +1,5 @@
 ﻿using DataWarehouse.SDK.Contracts;
 using DataWarehouse.Plugins.Features.Consensus.Services;
-using DataWarehouse.Plugins.Features.Consensus.Models;
 
 namespace DataWarehouse.Plugins.Features.Consensus.Bootstrapper
 {

@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using System.Text;
 using System.Text.Json;
 
 namespace DataWarehouse.SDK.Utilities
@@ -9,68 +10,76 @@ namespace DataWarehouse.SDK.Utilities
     /// <typeparam name="T"></typeparam>
     public class DurableState<T>: IDisposable
     {
-        private readonly string _path;
-        private ConcurrentDictionary<string, T> _store;
-        private readonly Timer _saveTimer;
+        private readonly string _filePath;
+        private readonly ConcurrentDictionary<string, T> _cache = new();
         private readonly Lock _lock = new();
-        private bool _isDisposed;
+        private FileStream? _journalStream;
+        private BinaryWriter? _writer;
 
-        // [Fix] Constructor takes ONLY path. No second argument.
+        // Threshold to trigger compaction (e.g., 1000 operations)
+        private int _opCount = 0;
+        private const int CompactionThreshold = 5000;
 
         /// <summary>
-        /// COnstructor
+        /// Constructor
         /// </summary>
-        /// <param name="path"></param>
-        public DurableState(string path)
+        /// <param name="filePath"></param>
+        public DurableState(string filePath)
         {
-            _path = path;
-            var dir = Path.GetDirectoryName(path);
-            if (!string.IsNullOrEmpty(dir)) Directory.CreateDirectory(dir);
-
-            _store = new ConcurrentDictionary<string, T>();
+            _filePath = filePath;
             Load();
-            _saveTimer = new Timer(_ => Save(), null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
         }
 
-        /// <summary>
-        /// Save
-        /// </summary>
-        public void Save()
-        {
-            if (_isDisposed) return;
-            lock (_lock)
-            {
-                var json = JsonSerializer.Serialize(_store);
-                File.WriteAllText(_path, json);
-            }
-        }
-
-        /// <summary>
-        /// Load
-        /// </summary>
         private void Load()
         {
-            if (File.Exists(_path))
+            if (!File.Exists(_filePath))
             {
-                try
-                {
-                    var json = File.ReadAllText(_path);
-                    var data = JsonSerializer.Deserialize<ConcurrentDictionary<string, T>>(json);
-                    if (data != null) _store = data;
-                }
-                catch { }
+                InitializeJournal();
+                return;
             }
+
+            // Replay Log
+            try
+            {
+                using var fs = new FileStream(_filePath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                using var reader = new BinaryReader(fs);
+
+                while (fs.Position < fs.Length)
+                {
+                    try
+                    {
+                        var opCode = reader.ReadByte(); // 1 = Set, 2 = Remove
+                        var key = reader.ReadString();
+
+                        if (opCode == 1) // Set
+                        {
+                            var length = reader.ReadInt32();
+                            var bytes = reader.ReadBytes(length);
+                            var json = Encoding.UTF8.GetString(bytes);
+                            var val = JsonSerializer.Deserialize<T>(json);
+                            if (val != null) _cache[key] = val;
+                        }
+                        else if (opCode == 2) // Remove
+                        {
+                            _cache.TryRemove(key, out _);
+                        }
+                    }
+                    catch (EndOfStreamException) { break; } // Safe truncation
+                }
+            }
+            catch (Exception)
+            {
+                // Log corruption logic would go here. For now, we accept partial replay.
+            }
+
+            InitializeJournal();
         }
 
-        /// <summary>
-        /// Try get
-        /// </summary>
-        /// <param name="key"></param>
-        /// <param name="value"></param>
-        /// <returns></returns>
-        public bool TryGet(string key, out T? value)
+        private void InitializeJournal()
         {
-            return _store.TryGetValue(key, out value);
+            // Open for Appending
+            _journalStream = new FileStream(_filePath, FileMode.Append, FileAccess.Write, FileShare.Read);
+            _writer = new BinaryWriter(_journalStream, Encoding.UTF8, leaveOpen: true);
         }
 
         /// <summary>
@@ -80,35 +89,134 @@ namespace DataWarehouse.SDK.Utilities
         /// <param name="value"></param>
         public void Set(string key, T value)
         {
-            _store[key] = value;
+            lock (_lock)
+            {
+                _cache[key] = value;
+                AppendLog(1, key, value);
+                CheckCompaction();
+            }
         }
 
         /// <summary>
-        /// Add Remove overload that matches Dictionary semantics (out value)
+        /// Remove
         /// </summary>
         /// <param name="key"></param>
         /// <param name="value"></param>
         /// <returns></returns>
-        public bool Remove(string key, out T? value) => _store.TryRemove(key, out value);
+        public bool Remove(string key, out T? value)
+        {
+            lock (_lock)
+            {
+                if (_cache.TryRemove(key, out value))
+                {
+                    AppendLog(2, key, default);
+                    CheckCompaction();
+                    return true;
+                }
+                return false;
+            }
+        }
 
         /// <summary>
-        /// Add simple Remove for backward compatibility
+        /// Get
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        public bool Remove(string key) => _store.TryRemove(key, out _);
+        public T? Get(string key) => _cache.TryGetValue(key, out var val) ? val : default;
 
         /// <summary>
-        /// Add GetAll/Values accessor
+        /// TryGet
+        /// </summary>
+        /// <param name="key"></param>
+        /// <param name="value"></param>
+        /// <returns></returns>
+        public bool TryGet(string key, out T? value) => _cache.TryGetValue(key, out value);
+
+        /// <summary>
+        /// GetAll
         /// </summary>
         /// <returns></returns>
-        public IEnumerable<T> GetAll() => _store.Values;
+        public IEnumerable<T> GetAll() => _cache.Values;
+
+        /// <summary>
+        /// GetAllKeyValues
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<KeyValuePair<string, T>> GetAllKeyValues() => _cache;
+
+        private void AppendLog(byte opCode, string key, T? value)
+        {
+            if (_writer == null) return;
+
+            // Format: [OpCode:1] [Key:Str] [Len:4] [Body:N]
+            // Or:     [OpCode:1] [Key:Str] (For Remove)
+
+            _writer.Write(opCode);
+            _writer.Write(key);
+
+            if (opCode == 1 && value != null)
+            {
+                var json = JsonSerializer.Serialize(value);
+                var bytes = Encoding.UTF8.GetBytes(json);
+                _writer.Write(bytes.Length);
+                _writer.Write(bytes);
+            }
+
+            _writer.Flush();
+            // _journalStream.Flush(true); // Uncomment for strict durability (slower)
+
+            _opCount++;
+        }
+
+        private void CheckCompaction()
+        {
+            if (_opCount >= CompactionThreshold)
+            {
+                Compact();
+                _opCount = 0;
+            }
+        }
+
+        /// <summary>
+        /// Rewrites the log to contain only the current state (Snapshot).
+        /// Reduces file size and replay time.
+        /// </summary>
+        public void Compact()
+        {
+            string tempPath = _filePath + ".compact";
+            using (var fs = new FileStream(tempPath, FileMode.Create))
+            using (var writer = new BinaryWriter(fs))
+            {
+                foreach (var kvp in _cache)
+                {
+                    writer.Write((byte)1); // Set
+                    writer.Write(kvp.Key);
+                    var json = JsonSerializer.Serialize(kvp.Value);
+                    var bytes = Encoding.UTF8.GetBytes(json);
+                    writer.Write(bytes.Length);
+                    writer.Write(bytes);
+                }
+                fs.Flush();
+            }
+
+            // Atomic Swap
+            if (_writer != null)
+            {
+                _writer.Close();
+                _journalStream?.Close();
+            }
+
+            File.Move(tempPath, _filePath, overwrite: true);
+
+            // Re-open
+            InitializeJournal();
+        }
 
         /// <summary>
         /// Expose as Dictionary for complex LINQ if needed
         /// </summary>
         /// <returns></returns>
-        public IDictionary<string, T> ToDictionary() => _store;
+        public IDictionary<string, T> ToDictionary() => _cache;
 
         /// <summary>
         /// Safely dispose
@@ -120,20 +228,13 @@ namespace DataWarehouse.SDK.Utilities
         }
 
         /// <summary>
-        /// Safely DIspose
+        /// Safely Dispose
         /// </summary>
         /// <param name="disposing"></param>
         protected virtual void Dispose(bool disposing)
         {
-            if (!_isDisposed)
-            {
-                if (disposing)
-                {
-                    _saveTimer?.Dispose();
-                    Save();
-                }
-                _isDisposed = true;
-            }
+            _writer?.Dispose();
+            _journalStream?.Dispose();
         }
     }
 }

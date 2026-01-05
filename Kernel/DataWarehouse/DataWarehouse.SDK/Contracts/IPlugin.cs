@@ -6,18 +6,17 @@
     public interface IPlugin
     {
         /// <summary>
-        /// Plugin ID
-        /// e.g. DataWarehouse.Crypto
+        /// Unique Plugin ID (e.g., "DataWarehouse.Storage.Local").
         /// </summary>
         string Id { get; }
 
         /// <summary>
-        /// Name
+        /// Human-readable Name.
         /// </summary>
         string Name { get; }
 
         /// <summary>
-        /// Plugin version
+        /// Semantic Version.
         /// </summary>
         string Version { get; }
 
@@ -25,6 +24,7 @@
         /// Called by the Kernel immediately after loading the DLL.
         /// Use this to register services or read initial config.
         /// </summary>
+        /// <param name="context">The kernel context providing logging and environment info.</param>
         void Initialize(IKernelContext context);
     }
 
@@ -34,47 +34,52 @@
     public interface IKernelContext
     {
         /// <summary>
-        /// Log information
+        /// Gets the detected operating environment (Laptop, Server, etc.).
         /// </summary>
-        /// <param name="message"></param>
-        void LogInfo(string message);
+        OperatingMode Mode { get; }
 
         /// <summary>
-        /// Log message
-        /// </summary>
-        /// <param name="message"></param>
-        /// <param name="ex"></param>
-        void LogError(string message, Exception? ex = null);
-
-        /// <summary>
-        /// Log warning
-        /// </summary>
-        /// <param name="message"></param>
-        void LogWarning(string message);
-
-        /// <summary>
-        /// Log Debug
-        /// </summary>
-        /// <param name="message"></param>
-        void LogDebug(string message);
-
-        /// <summary>
-        /// Root path
+        /// The root directory of the Data Warehouse instance.
         /// </summary>
         string RootPath { get; }
 
         /// <summary>
-        /// Get plugin
+        /// Log information.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
+        /// <param name="message">The message to log.</param>
+        void LogInfo(string message);
+
+        /// <summary>
+        /// Log error.
+        /// </summary>
+        /// <param name="message">The error message.</param>
+        /// <param name="ex">The optional exception.</param>
+        void LogError(string message, Exception? ex = null);
+
+        /// <summary>
+        /// Log warning.
+        /// </summary>
+        /// <param name="message">The warning message.</param>
+        void LogWarning(string message);
+
+        /// <summary>
+        /// Log debug info.
+        /// </summary>
+        /// <param name="message">The debug message.</param>
+        void LogDebug(string message);
+
+        /// <summary>
+        /// Retrieves a specific type of plugin.
+        /// </summary>
+        /// <typeparam name="T">The plugin interface type.</typeparam>
+        /// <returns>The best matching plugin or null.</returns>
         T? GetPlugin<T>() where T : class, IPlugin;
 
         /// <summary>
-        /// Get plugins
+        /// Retrieves all plugins of a specific type.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <returns></returns>
-        IEnumerable<T> GetPlugins<T>() where T : class, IPlugin;
+        /// <typeparam name="T">The plugin interface type.</typeparam>
+        /// <returns>A collection of matching plugins.</returns>
+        System.Collections.Generic.IEnumerable<T> GetPlugins<T>() where T : class, IPlugin;
     }
 }

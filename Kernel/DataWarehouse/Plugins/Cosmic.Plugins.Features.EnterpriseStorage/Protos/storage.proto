@@ -1,0 +1,96 @@
+﻿syntax = "proto3";
+
+option csharp_namespace = "DataWarehouse.Plugins.Features.EnterpriseStorage.Protos";
+
+package storage;
+
+service StorageTransport {
+  // Streams data to the server
+  rpc UploadBlob (stream UploadRequest) returns (UploadResponse);
+  
+  // Streams data from the server
+  rpc DownloadBlob (DownloadRequest) returns (stream DownloadResponse);
+  
+  // Check existence
+  rpc ExistsBlob (ExistsRequest) returns (ExistsResponse);
+  
+  // Delete blob
+  rpc DeleteBlob (DeleteRequest) returns (DeleteResponse);
+
+  // [NEW] Raft Consensus RPCs
+  rpc RequestVote (VoteRequest) returns (VoteResponse);
+  rpc AppendEntries (AppendRequest) returns (AppendResponse);
+}
+
+message BlobMetadata {
+  string uri = 1;
+  int64 total_size = 2;
+}
+
+message UploadRequest {
+  oneof payload {
+    BlobMetadata metadata = 1;
+    bytes chunk = 2;
+  }
+}
+
+message UploadResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message DownloadRequest {
+  string uri = 1;
+}
+
+message DownloadResponse {
+  bytes chunk = 1;
+}
+
+message ExistsRequest {
+  string uri = 1;
+}
+
+message ExistsResponse {
+  bool exists = 1;
+}
+
+message DeleteRequest {
+  string uri = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+}
+
+message VoteRequest {
+  int64 term = 1;
+  string candidate_id = 2;
+  int64 last_log_index = 3;
+  int64 last_log_term = 4;
+}
+
+message VoteResponse {
+  int64 term = 1;
+  bool vote_granted = 2;
+}
+
+message AppendRequest {
+  int64 term = 1;
+  string leader_id = 2;
+  int64 prev_log_index = 3;
+  int64 prev_log_term = 4;
+  repeated LogEntryProto entries = 5;
+  int64 leader_commit = 6;
+}
+
+message LogEntryProto {
+  int64 index = 1;
+  int64 term = 2;
+  string command_json = 3;
+}
+
+message AppendResponse {
+  int64 term = 1;
+  bool success = 2;
+}

@@ -1,5 +1,5 @@
-﻿using DataWarehouse.Kernel.Engine;
-using DataWarehouse.SDK.Contracts;
+﻿using DataWarehouse.SDK.Contracts;
+using DataWarehouse.SDK.Services;
 using System.Reflection;
 using System.Runtime.Loader;
 

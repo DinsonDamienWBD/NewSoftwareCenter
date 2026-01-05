@@ -4,6 +4,7 @@ using DataWarehouse.Kernel.Indexing;
 using DataWarehouse.Kernel.Security;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Security;
+using DataWarehouse.SDK.Services;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -53,7 +54,14 @@ namespace DataWarehouse.Kernel.Extensions
             // 5. The Engine Kernel
             // Fix: Explicitly qualify DataWarehouse to avoid namespace collision
             services.AddSingleton<DataWarehouse.Kernel.Engine.DataWarehouse>(sp =>
-                new DataWarehouse.Kernel.Engine.DataWarehouse(options.RootPath));
+                new DataWarehouse.Kernel.Engine.DataWarehouse(
+                    options.RootPath,
+                    sp.GetRequiredService<PluginRegistry>(),
+                    sp.GetRequiredService<RuntimeOptimizer>(),
+                    sp.GetRequiredService<PipelineOptimizer>(),
+                    sp.GetRequiredService<IKeyStore>(),
+                    sp.GetRequiredService<ILogger<DataWarehouse.Kernel.Engine.DataWarehouse>>()
+                ));
 
             // 6. Public Interface Alias
             services.AddSingleton<IDataWarehouse>(sp => sp.GetRequiredService<DataWarehouse.Kernel.Engine.DataWarehouse>());

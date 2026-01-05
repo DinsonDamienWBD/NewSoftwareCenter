@@ -8,21 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.33.2" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.76.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
-    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
+    <PackageReference Include="AWSSDK.S3" Version="4.0.16.2" />
+    <PackageReference Include="AWSSDK.Transfer" Version="4.0.5.3" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\DataWarehouse.SDK\DataWarehouse.SDK.csproj" />
   </ItemGroup>
-
-	<ItemGroup>
-		<Protobuf Include="Protos\storage.proto" GrpcServices="Client" />
-	</ItemGroup>
 
 </Project>

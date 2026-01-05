@@ -1,6 +1,9 @@
-﻿using DataWarehouse.SDK.Contracts;
+﻿using DataWarehouse.Plugins.Features.SQL.Engine;
+using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Primitives;
 using Microsoft.Extensions.Logging;
+using System.Text;
+using System.Text.Json;
 
 namespace DataWarehouse.Plugins.Features.SQL.Services
 {
@@ -26,32 +29,90 @@ namespace DataWarehouse.Plugins.Features.SQL.Services
         {
             _logger.LogInformation("SQL Exec: {Sql}", sql);
 
-            if (string.IsNullOrWhiteSpace(sql))
-                return [];
+            if (string.IsNullOrWhiteSpace(sql)) return [];
 
-            var normalizedSql = sql.Trim();
-
-            // Simple Parser Logic (God Tier V5)
-            // supports: SELECT * FROM Manifests WHERE [Condition]
-            if (normalizedSql.StartsWith("SELECT", StringComparison.OrdinalIgnoreCase))
+            try
             {
-                var allItems = _index.EnumerateAllAsync(ct);
-                var result = new List<Manifest>();
+                // 1. Parse SQL
+                var parser = new SimpleSqlParser(sql);
+                var query = parser.Parse();
 
-                await foreach (var item in allItems)
+                // 2. Validate Table
+                if (!query.TableName.Equals("Manifests", StringComparison.OrdinalIgnoreCase))
                 {
-                    if (EvaluateWhereClause(item, normalizedSql))
+                    throw new InvalidOperationException($"Table '{query.TableName}' does not exist. Only 'Manifests' is supported.");
+                }
+
+                // 3. Build SQL for Underlying Engine
+                // We reconstruct the SQL compatible with the Postgres JSONB schema.
+                var sb = new StringBuilder();
+                sb.Append("SELECT JsonData FROM Manifests");
+
+                if (query.Conditions.Count > 0)
+                {
+                    sb.Append(" WHERE ");
+                    for (int i = 0; i < query.Conditions.Count; i++)
                     {
-                        result.Add(item);
+                        var c = query.Conditions[i];
+                        if (i > 0) sb.Append($" {c.Logic} ");
+
+                        // JSONB Property Access Mapping
+                        // e.g. "Size" -> "JsonData->>'SizeBytes'"
+                        string field = MapFieldToColumn(c.Field);
+
+                        // Handle numeric comparison vs string comparison
+                        if (long.TryParse(c.Value, out _))
+                        {
+                            // Numeric Cast
+                            sb.Append($"({field})::numeric {c.Operator} {c.Value}");
+                        }
+                        else
+                        {
+                            // String
+                            sb.Append($"{field} {c.Operator} '{c.Value}'");
+                        }
                     }
                 }
 
-                _logger.LogDebug("SQL Result: {Count} rows", result.Count);
-                return result;
-            }
+                sb.Append($" LIMIT {query.Limit}");
+                string translatedSql = sb.ToString();
 
-            _logger.LogWarning("Unsupported SQL command ignored.");
-            return [];
+                // 4. Execute via Index Plugin
+                // The index plugin expects a Raw SQL that it can execute against its DB.
+                string[] jsonResults = await _index.ExecuteQueryAsync(translatedSql, query.Limit);
+
+                // 5. Hydrate Objects
+                var manifests = new List<Manifest>();
+                foreach (var json in jsonResults)
+                {
+                    var m = JsonSerializer.Deserialize<Manifest>(json);
+                    if (m != null) manifests.Add(m);
+                }
+
+                return manifests;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to execute SQL");
+                return [];
+            }
+        }
+
+        private static string MapFieldToColumn(string field)
+        {
+            // Maps virtual SQL columns to JSONB paths or Real Columns
+            return field.ToLower() switch
+            {
+                "id" => "Id",
+                "containerid" => "ContainerId",
+                "bloburi" => "BlobUri",
+                "ownerid" => "OwnerId",
+                "size" => "SizeBytes",
+                "sizebytes" => "SizeBytes",
+                "tier" => "JsonData->>'CurrentTier'",
+                "summary" => "JsonData->>'ContentSummary'",
+                _ => $"JsonData->>'{field}'" // Generic JSON property access
+            };
         }
 
         /// <summary>
