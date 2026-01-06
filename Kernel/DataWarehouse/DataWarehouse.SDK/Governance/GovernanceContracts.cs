@@ -204,41 +204,4 @@ namespace DataWarehouse.SDK.Governance
         public string Example { get; } = example;
         public bool IsRequired { get; } = isRequired;
     }
-
-    /// <summary>
-    /// Defines when the Sentinel was invoked.
-    /// </summary>
-    public enum TriggerType
-    {
-        /// <summary>
-        /// Invoked just before data is written to disk.
-        /// </summary>
-        OnWrite,
-
-        /// <summary>
-        /// Invoked just before data is returned to the user.
-        /// </summary>
-        OnRead,
-
-        /// <summary>
-        /// Invoked during a background scan (Idle time).
-        /// </summary>
-        OnSchedule,
-
-        /// <summary>
-        /// Invoked just before data is deleted.
-        /// </summary>
-        OnDelete
-    }
-
-    /// <summary>
-    /// Severity levels for governance alerts.
-    /// </summary>
-    public enum AlertSeverity
-    {
-        Info,
-        Warning,
-        Error,
-        Critical
-    }
 }

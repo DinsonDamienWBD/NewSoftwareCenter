@@ -3,43 +3,6 @@
 namespace DataWarehouse.SDK.Security
 {
     /// <summary>
-    /// Granular ACL
-    /// </summary>
-    [Flags]
-    public enum Permission
-    {
-        /// <summary>
-        /// No permission
-        /// </summary>
-        None = 0,
-
-        /// <summary>
-        /// Read
-        /// </summary>
-        Read = 1,      // 0001
-
-        /// <summary>
-        /// Write
-        /// </summary>
-        Write = 2,     // 0010
-
-        /// <summary>
-        /// Execute
-        /// </summary>
-        Execute = 4,   // 0100
-
-        /// <summary>
-        /// Delete
-        /// </summary>
-        Delete = 8,    // 1000
-
-        /// <summary>
-        /// Full control
-        /// </summary>
-        FullControl = Read | Write | Execute | Delete
-    }
-
-    /// <summary>
     /// Defines the contract for an Authorization Engine.
     /// </summary>
     public interface IAccessControl : IPlugin

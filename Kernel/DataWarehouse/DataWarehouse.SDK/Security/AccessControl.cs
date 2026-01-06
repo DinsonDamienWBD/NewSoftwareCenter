@@ -1,52 +1,7 @@
-﻿namespace DataWarehouse.SDK.Security
+﻿using DataWarehouse.SDK.Primitives;
+
+namespace DataWarehouse.SDK.Security
 {
-    /// <summary>
-    /// Access level
-    /// </summary>
-    public enum AccessLevel
-    {
-        /// <summary>
-        /// None
-        /// </summary>
-        None = 0,
-
-        /// <summary>
-        /// Read
-        /// </summary>
-        Read = 1,
-
-        /// <summary>
-        /// Write
-        /// </summary>
-        Write = 2,
-
-        /// <summary>
-        /// Full control
-        /// </summary>
-        FullControl = 3
-    }
-
-    /// <summary>
-    /// Defines whether a policy (Encryption/Compression) is forced globally or set per-container.
-    /// </summary>
-    public enum PolicyScope
-    {
-        /// <summary>
-        /// Applied to everything, overrides granular settings
-        /// </summary>
-        GlobalEnforced,
-
-        /// <summary>
-        /// Applied only if the container config requests it
-        /// </summary>
-        ContainerSpecific,
-
-        /// <summary>
-        /// Feature is globally disabled
-        /// </summary>
-        Disabled
-    }
-
     /// <summary>
     /// Container configuration
     /// </summary>

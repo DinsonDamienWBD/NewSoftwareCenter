@@ -1,4 +1,6 @@
-﻿namespace DataWarehouse.SDK.Contracts
+﻿using DataWarehouse.SDK.Primitives;
+
+namespace DataWarehouse.SDK.Contracts
 {
     /// <summary>
     /// The base contract for ALL plugins (Crypto, Compression, Features).
@@ -6,9 +8,14 @@
     public interface IPlugin
     {
         /// <summary>
-        /// Unique Plugin ID (e.g., "DataWarehouse.Storage.Local").
+        /// Unique Plugin ID
         /// </summary>
-        string Id { get; }
+        Guid Id { get; }
+
+        /// <summary>
+        /// Gets the category of the plugin.
+        /// </summary>
+        PluginCategory Category { get; }
 
         /// <summary>
         /// Human-readable Name.
@@ -20,12 +27,11 @@
         /// </summary>
         string Version { get; }
 
-        /// <summary>
-        /// Called by the Kernel immediately after loading the DLL.
-        /// Use this to register services or read initial config.
-        /// </summary>
-        /// <param name="context">The kernel context providing logging and environment info.</param>
-        void Initialize(IKernelContext context);
+        // New message handler
+        Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request);
+
+        // Optional: For plugins that need external signals
+        Task OnMessageAsync(PluginMessage message);
     }
 
     /// <summary>
