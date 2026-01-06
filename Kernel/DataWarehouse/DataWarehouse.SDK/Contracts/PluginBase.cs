@@ -101,6 +101,195 @@ namespace DataWarehouse.SDK.Contracts
         /// </summary>
         protected virtual PluginDependency[] Dependencies => Array.Empty<PluginDependency>();
 
+        // =========================================================================
+        // AI-NATIVE VIRTUAL MEMBERS - For AI understanding and optimization
+        // =========================================================================
+
+        /// <summary>
+        /// Natural language description of what this plugin does.
+        /// Used by AI for semantic understanding and natural language queries.
+        ///
+        /// Example: "Compresses data using GZip algorithm. Fast compression with good ratio for text and binary data."
+        ///
+        /// Should be:
+        /// - Clear and concise (1-2 sentences)
+        /// - Describe WHAT the plugin does, not HOW
+        /// - Include key characteristics (speed, quality, use cases)
+        /// - Written for human understanding
+        /// </summary>
+        protected virtual string SemanticDescription => $"{PluginName} - No semantic description provided";
+
+        /// <summary>
+        /// Semantic tags for AI categorization and search.
+        /// Used by AI for capability discovery via natural language.
+        ///
+        /// Examples:
+        /// - Compression: ["compression", "fast", "lossless", "standard"]
+        /// - Encryption: ["encryption", "aes", "secure", "symmetric"]
+        /// - Storage: ["storage", "local", "filesystem", "persistent"]
+        ///
+        /// Should include:
+        /// - Category tags (what domain?)
+        /// - Characteristic tags (fast/slow, lossy/lossless, etc.)
+        /// - Technology tags (algorithm names, protocols)
+        /// - Use case tags (when to use this?)
+        /// </summary>
+        protected virtual string[] SemanticTags => Array.Empty<string>();
+
+        /// <summary>
+        /// Performance characteristics of this plugin.
+        /// Used by AI for optimization decisions and cost estimation.
+        ///
+        /// Override to provide accurate performance metrics based on:
+        /// - Benchmarking results
+        /// - Historical data
+        /// - Theoretical analysis
+        ///
+        /// AI uses this to:
+        /// - Choose between alternative plugins
+        /// - Estimate execution time
+        /// - Predict resource usage
+        /// - Optimize execution plans
+        /// </summary>
+        protected virtual PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 0,
+            ThroughputBytesPerSecond = 0,
+            MemoryUsageBytes = 0,
+            CpuUsagePercent = 0,
+            CostPerOperationUsd = 0
+        };
+
+        /// <summary>
+        /// Relationships between this plugin's capabilities and other capabilities.
+        /// Used by AI for execution planning and capability chaining.
+        ///
+        /// Examples:
+        /// - Compression flows into encryption
+        /// - Encryption flows into storage
+        /// - SQL interface depends on metadata index
+        ///
+        /// Relationship types:
+        /// - "flows_into": Output of this capability can feed into target capability
+        /// - "depends_on": This capability requires target capability to function
+        /// - "alternative_to": This capability can substitute for target capability
+        /// - "compatible_with": This capability can work alongside target capability
+        /// - "incompatible_with": This capability conflicts with target capability
+        /// </summary>
+        protected virtual CapabilityRelationship[] CapabilityRelationships => Array.Empty<CapabilityRelationship>();
+
+        /// <summary>
+        /// Example usage scenarios for AI to learn from.
+        /// Used by AI to understand common use cases and patterns.
+        ///
+        /// Each example should show:
+        /// - User intent (natural language)
+        /// - Capability invocation
+        /// - Parameters used
+        /// - Expected outcome
+        ///
+        /// AI uses examples to:
+        /// - Match user intent to capabilities
+        /// - Learn typical parameter values
+        /// - Understand success patterns
+        /// </summary>
+        protected virtual PluginUsageExample[] UsageExamples => Array.Empty<PluginUsageExample>();
+
+        // =========================================================================
+        // EVENT EMISSION HOOKS - For AI observability and proactive agents
+        // =========================================================================
+
+        /// <summary>
+        /// Called before a capability is invoked.
+        /// Override to emit custom events, perform validation, or log execution.
+        ///
+        /// Use cases:
+        /// - Emit BlobAccessedEvent for storage operations
+        /// - Log capability usage for audit
+        /// - Validate preconditions
+        /// - Collect performance metrics
+        /// </summary>
+        /// <param name="capabilityId">The capability about to be invoked.</param>
+        /// <param name="parameters">Parameters passed to capability.</param>
+        protected virtual void OnBeforeCapabilityInvoked(string capabilityId, Dictionary<string, object> parameters)
+        {
+            // Default: no-op
+            // Plugins can override to emit events or perform pre-processing
+        }
+
+        /// <summary>
+        /// Called after a capability completes successfully.
+        /// Override to emit custom events, collect metrics, or trigger follow-up actions.
+        ///
+        /// Use cases:
+        /// - Emit BlobStoredEvent after successful write
+        /// - Collect performance metrics (duration, throughput)
+        /// - Trigger proactive optimization agents
+        /// - Update health status
+        /// </summary>
+        /// <param name="capabilityId">The capability that was invoked.</param>
+        /// <param name="parameters">Parameters passed to capability.</param>
+        /// <param name="result">Result returned by capability.</param>
+        /// <param name="durationMs">Execution duration in milliseconds.</param>
+        protected virtual void OnAfterCapabilityInvoked(
+            string capabilityId,
+            Dictionary<string, object> parameters,
+            object? result,
+            double durationMs)
+        {
+            // Default: no-op
+            // Plugins can override to emit events or collect metrics
+        }
+
+        /// <summary>
+        /// Called when a capability invocation fails with an exception.
+        /// Override to emit error events, log failures, or trigger recovery.
+        ///
+        /// Use cases:
+        /// - Emit CapabilityFailedEvent for monitoring
+        /// - Log errors with context
+        /// - Trigger retry or recovery mechanisms
+        /// - Update health status
+        /// </summary>
+        /// <param name="capabilityId">The capability that failed.</param>
+        /// <param name="parameters">Parameters passed to capability.</param>
+        /// <param name="exception">Exception that was thrown.</param>
+        protected virtual void OnCapabilityFailed(
+            string capabilityId,
+            Dictionary<string, object> parameters,
+            Exception exception)
+        {
+            // Default: log error
+            Context?.LogError($"Capability '{capabilityId}' failed: {exception.Message}", exception);
+        }
+
+        /// <summary>
+        /// Emits a custom event for AI observability and proactive agents.
+        /// Events can be observed by:
+        /// - Proactive optimization agents
+        /// - AI Runtime for learning and adaptation
+        /// - Monitoring and telemetry systems
+        /// - External integrations
+        ///
+        /// Common event types:
+        /// - "BlobStored": After writing data
+        /// - "BlobAccessed": After reading data
+        /// - "BlobDeleted": After deleting data
+        /// - "PluginStateChanged": When plugin state changes
+        /// - "PerformanceMetric": Performance data points
+        ///
+        /// Note: Actual event bus wiring implemented by Kernel.
+        /// This method provides a hook for plugins to emit events.
+        /// </summary>
+        /// <param name="eventType">Type of event (e.g., "BlobStored").</param>
+        /// <param name="eventData">Event payload (will be serialized).</param>
+        protected void EmitEvent(string eventType, object eventData)
+        {
+            // TODO: Wire up to event bus when implemented
+            // For now, just log at debug level
+            Context?.LogDebug($"Event emitted: {eventType}");
+        }
+
         /// <summary>
         /// Health check handler (optional override).
         /// Default implementation returns "healthy".
@@ -265,14 +454,33 @@ namespace DataWarehouse.SDK.Contracts
                         var capabilityId = (string)message.Payload["capabilityId"];
                         var parameters = (Dictionary<string, object>)message.Payload["parameters"];
 
-                        // Find and invoke the handler
-                        if (_capabilityHandlers.TryGetValue(capabilityId, out var handler))
+                        // Find handler
+                        if (!_capabilityHandlers.TryGetValue(capabilityId, out var handler))
                         {
-                            var result = await handler(parameters);
-                            return MessageResponse.SuccessResponse(result);
+                            return MessageResponse.ErrorResponse($"Unknown capability: {capabilityId}");
                         }
 
-                        return MessageResponse.ErrorResponse($"Unknown capability: {capabilityId}");
+                        // Call pre-invocation hook
+                        OnBeforeCapabilityInvoked(capabilityId, parameters);
+
+                        // Invoke capability with timing
+                        var startTime = DateTime.UtcNow;
+                        try
+                        {
+                            var result = await handler(parameters);
+                            var durationMs = (DateTime.UtcNow - startTime).TotalMilliseconds;
+
+                            // Call post-invocation hook
+                            OnAfterCapabilityInvoked(capabilityId, parameters, result, durationMs);
+
+                            return MessageResponse.SuccessResponse(result);
+                        }
+                        catch (Exception handlerEx)
+                        {
+                            // Call failure hook
+                            OnCapabilityFailed(capabilityId, parameters, handlerEx);
+                            throw; // Re-throw to be caught by outer catch block
+                        }
 
                     case "HealthCheck":
                         // Health check request
