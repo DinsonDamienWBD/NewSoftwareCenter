@@ -28,11 +28,13 @@ namespace DataWarehouse.Kernel.Engine
         private readonly string _rootPath;
         private readonly PluginRegistry _registry;
         private readonly HotPluginLoader _loader;
+        private readonly HandshakePluginLoader _handshakeLoader;
         private readonly IKeyStore _keyStore;
         private readonly PolicyEnforcer _policy;
         private readonly RuntimeOptimizer _optimizer;
         private readonly PipelineOptimizer _pipelineoptimizer;
         private readonly ILogger<DataWarehouse> _logger;
+        private readonly string _kernelId;
 
         // --- Core Plugin Interfaces ---
         private IAccessControl _acl = new UnsafeAclFallback();
@@ -67,9 +69,13 @@ namespace DataWarehouse.Kernel.Engine
             _pipelineoptimizer = pipelineOptimizer;
             _logger = logger;
             _keyStore = keyStore;
+            _kernelId = Guid.NewGuid().ToString();
 
             _registry.SetOperatingMode(_optimizer.CurrentMode);
+
+            // Initialize both loaders (old and new)
             _loader = new HotPluginLoader(_registry, this);
+            _handshakeLoader = new HandshakePluginLoader(_registry, this, _kernelId);
 
             var globalConfig = new GlobalPolicyConfig
             {
@@ -104,7 +110,31 @@ namespace DataWarehouse.Kernel.Engine
             // 1. Load Plugins
             string pluginsDir = Path.Combine(_rootPath, "Plugins");
             Directory.CreateDirectory(pluginsDir);
-            _loader.LoadPluginsFrom(pluginsDir);
+
+            // Feature flag: Use new handshake protocol (set to true to enable)
+            bool useHandshakeProtocol = true;
+
+            if (useHandshakeProtocol)
+            {
+                LogInfo("Using handshake-based plugin loader (message protocol)");
+                var results = await _handshakeLoader.LoadPluginsFromAsync(pluginsDir);
+
+                // Log summary
+                var failed = results.Where(r => !r.Success).ToList();
+                if (failed.Any())
+                {
+                    LogWarning("Failed plugins:");
+                    foreach (var failure in failed)
+                    {
+                        LogWarning($"  - {failure.FileName}: {failure.ErrorMessage}");
+                    }
+                }
+            }
+            else
+            {
+                LogInfo("Using legacy plugin loader (direct calls)");
+                _loader.LoadPluginsFrom(pluginsDir);
+            }
 
             // 2. Resolve Dependencies
             _acl = _registry.GetPlugin<IAccessControl>() ?? new UnsafeAclFallback();

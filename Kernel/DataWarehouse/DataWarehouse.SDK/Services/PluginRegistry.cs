@@ -147,5 +147,55 @@ namespace DataWarehouse.SDK.Services
         /// Returns all registered IDs.
         /// </summary>
         public IEnumerable<string> GetAllPluginIds() => _plugins.Keys;
+
+        /// <summary>
+        /// Gets descriptors of all registered plugins for dependency checking.
+        /// Used by HandshakePluginLoader to build HandshakeRequest.
+        /// </summary>
+        public List<PluginDescriptor> GetAllDescriptors()
+        {
+            var descriptors = new List<PluginDescriptor>();
+
+            foreach (var plugin in _plugins.Values)
+            {
+                var type = plugin.GetType();
+                var interfaces = type.GetInterfaces()
+                    .Where(i => typeof(IPlugin).IsAssignableFrom(i) && i != typeof(IPlugin))
+                    .Select(i => i.Name)
+                    .ToList();
+
+                descriptors.Add(new PluginDescriptor
+                {
+                    PluginId = plugin.Id,
+                    Name = plugin.Name,
+                    Version = plugin.Version,
+                    // Category will be determined from HandshakeResponse in new system
+                    Category = PluginCategory.Feature, // Default
+                    Interfaces = interfaces
+                });
+            }
+
+            return descriptors;
+        }
+
+        /// <summary>
+        /// Checks if any registered plugin implements a specific interface.
+        /// Used for dependency checking during plugin loading.
+        /// </summary>
+        /// <param name="interfaceName">Name of the interface (e.g., "IMetadataIndex")</param>
+        /// <returns>True if at least one plugin implements the interface.</returns>
+        public bool HasInterface(string interfaceName)
+        {
+            // Check type index for exact match
+            var match = _typeIndex.Keys.FirstOrDefault(t => t.Name == interfaceName);
+            if (match != null)
+            {
+                return _typeIndex.TryGetValue(match, out var ids) && ids.Count > 0;
+            }
+
+            // Fallback: scan all plugins
+            return _plugins.Values.Any(p =>
+                p.GetType().GetInterfaces().Any(i => i.Name == interfaceName));
+        }
     }
 }
