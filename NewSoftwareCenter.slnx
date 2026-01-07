@@ -10,6 +10,7 @@
   <Folder Name="/Kernel/DataWarehouse/Plugins/">
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Compression.Standard/DataWarehouse.Plugins.Compression.Standard.csproj" Id="a3dd9e98-90e7-414f-bbcf-6aa6813c709f" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Crypto.Standard/DataWarehouse.Plugins.Crypto.Standard.csproj" Id="6d523e57-5705-4946-9019-5759da00d623" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Feature.Tiering/DataWarehouse.Plugins.Feature.Tiering.csproj" Id="79fc0e59-9fd9-4a7d-bd71-6b54344a62e9" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.AI/DataWarehouse.Plugins.Features.AI.csproj" Id="f30a415d-6c53-4778-a14e-ce96565d89ee" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.Consensus/DataWarehouse.Plugins.Features.Consensus.csproj" Id="1f8b8c5b-16a3-4c71-9074-83dd147ad251" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.EnterpriseStorage/DataWarehouse.Plugins.Features.EnterpriseStorage.csproj" />
@@ -17,10 +18,20 @@
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.SQL/DataWarehouse.Plugins.Features.SQL.csproj" Id="839b962c-e774-4ad1-8ddf-f17ca3932d8d" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Indexing.Postgres/DataWarehouse.Plugins.Indexing.Postgres.csproj" Id="ec1317a1-c5ae-4764-b01c-444b50778e14" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Indexing.Sqlite/DataWarehouse.Plugins.Indexing.Sqlite.csproj" Id="27bfad8e-a96c-4a51-9296-cd2cf8cd71c9" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Intelligence.Governance/DataWarehouse.Plugins.Intelligence.Governance.csproj" Id="34a70e36-2244-4e24-b443-a7b977dbaf09" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Interface.REST/DataWarehouse.Plugins.Interface.REST.csproj" Id="4937cd50-8f82-45a3-a040-0cd7b7e782ef" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Interface.SQL/DataWarehouse.Plugins.Interface.SQL.csproj" Id="1e1d3c88-77c6-4a1e-9a41-80fa351b3044" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Metadata.Postgres/DataWarehouse.Plugins.Metadata.Postgres.csproj" Id="bc83248c-9ec8-4944-b6ad-aea99dbd948e" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Metadata.SQLite/DataWarehouse.Plugins.Metadata.SQLite.csproj" Id="5908134a-fafa-4710-9240-b4b474252796" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Orchestration.Raft/DataWarehouse.Plugins.Orchestration.Raft.csproj" Id="a245fd2c-b36b-45f5-88ed-fcbf7fefc81b" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Security.ACL/DataWarehouse.Plugins.Security.ACL.csproj" Id="b92bde6c-2869-4fff-8854-cb20ff6cde5b" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Security.Granular/DataWarehouse.Plugins.Security.Granular.csproj" Id="e0b27a83-784f-4ee8-934e-d070845c4363" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.Ipfs/DataWarehouse.Plugins.Storage.Ipfs.csproj" Id="29727e54-0899-4f77-99f0-15dabb74536f" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.IpfsNew/DataWarehouse.Plugins.Storage.IpfsNew.csproj" Id="24d3b7fc-b50f-4580-8af6-abb4259903e4" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.Local/DataWarehouse.Plugins.Storage.LocalFileSystem.csproj" Id="f1252fab-fc68-4e90-b671-01bf341782c8" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.LocalNew/DataWarehouse.Plugins.Storage.LocalNew.csproj" Id="3a6b6317-9f11-4a6b-b03d-ef03309efa9a" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.S3/DataWarehouse.Plugins.Storage.S3.csproj" Id="1ec29eec-4983-41af-98b7-8b6e883f11fc" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Storage.S3New/DataWarehouse.Plugins.Storage.S3New.csproj" Id="6aea4434-fdfa-4f1b-b5d3-89501a4f9963" />
   </Folder>
   <Folder Name="/Kernel/Managers/">
     <Project Path="Kernel/Managers/BackendManager/Manager.csproj" />
