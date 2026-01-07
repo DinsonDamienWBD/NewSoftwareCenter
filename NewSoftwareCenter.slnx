@@ -13,12 +13,13 @@
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Feature.Tiering/DataWarehouse.Plugins.Feature.Tiering.csproj" Id="79fc0e59-9fd9-4a7d-bd71-6b54344a62e9" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.AI/DataWarehouse.Plugins.Features.AI.csproj" Id="f30a415d-6c53-4778-a14e-ce96565d89ee" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.Consensus/OLD - DataWarehouse.Plugins.Features.Consensus.csproj" Id="1f8b8c5b-16a3-4c71-9074-83dd147ad251" />
-    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.EnterpriseStorage/DataWarehouse.Plugins.Features.EnterpriseStorage.csproj" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.EnterpriseStorage/OLD - DataWarehouse.Plugins.Features.EnterpriseStorage.csproj" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.Governance/OLD - DataWarehouse.Plugins.Features.Governance.csproj" Id="d778603c-153a-4f30-a4af-e98130944bf4" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Features.SQL/OLD - DataWarehouse.Plugins.Features.SQL.csproj" Id="839b962c-e774-4ad1-8ddf-f17ca3932d8d" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Indexing.Postgres/OLD - DataWarehouse.Plugins.Indexing.Postgres.csproj" Id="ec1317a1-c5ae-4764-b01c-444b50778e14" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Indexing.Sqlite/OLD - DataWarehouse.Plugins.Indexing.Sqlite.csproj" Id="27bfad8e-a96c-4a51-9296-cd2cf8cd71c9" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Intelligence.Governance/DataWarehouse.Plugins.Intelligence.Governance.csproj" Id="34a70e36-2244-4e24-b443-a7b977dbaf09" />
+    <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Interface.gRPC/DataWarehouse.Plugins.Interface.gRPC.csproj" Id="1359342e-2349-473d-8d20-b951a8c0db5c" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Interface.REST/DataWarehouse.Plugins.Interface.REST.csproj" Id="4937cd50-8f82-45a3-a040-0cd7b7e782ef" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Interface.SQL/DataWarehouse.Plugins.Interface.SQL.csproj" Id="1e1d3c88-77c6-4a1e-9a41-80fa351b3044" />
     <Project Path="Kernel/DataWarehouse/Plugins/DataWarehouse.Plugins.Metadata.Postgres/DataWarehouse.Plugins.Metadata.Postgres.csproj" Id="bc83248c-9ec8-4944-b6ad-aea99dbd948e" />
