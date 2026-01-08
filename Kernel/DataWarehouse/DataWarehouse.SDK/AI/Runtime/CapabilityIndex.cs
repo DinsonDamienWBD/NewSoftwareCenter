@@ -56,7 +56,7 @@ namespace DataWarehouse.SDK.AI.Runtime
             // Prepare metadata
             var metadata = new Dictionary<string, object>
             {
-                ["capabilityId"] = capability.Id,
+                ["capabilityId"] = capability.CapabilityId,
                 ["pluginId"] = pluginId,
                 ["description"] = capability.Description,
                 ["semanticDescription"] = semanticDescription,
@@ -65,14 +65,14 @@ namespace DataWarehouse.SDK.AI.Runtime
             };
 
             // Add to vector store
-            await _vectorStore.AddAsync(capability.Id, embedding, metadata);
+            await _vectorStore.AddAsync(capability.CapabilityId, embedding, metadata);
 
             // Track locally
             lock (_lock)
             {
-                _entries[capability.Id] = new CapabilityIndexEntry
+                _entries[capability.CapabilityId] = new CapabilityIndexEntry
                 {
-                    CapabilityId = capability.Id,
+                    CapabilityId = capability.CapabilityId,
                     PluginId = pluginId,
                     Embedding = embedding,
                     SemanticDescription = semanticDescription,
@@ -110,7 +110,7 @@ namespace DataWarehouse.SDK.AI.Runtime
                 var cap = capabilities[i];
                 var metadata = new Dictionary<string, object>
                 {
-                    ["capabilityId"] = cap.Capability.Id,
+                    ["capabilityId"] = cap.Capability.CapabilityId,
                     ["pluginId"] = cap.PluginId,
                     ["description"] = cap.Capability.Description,
                     ["semanticDescription"] = cap.SemanticDescription,
@@ -118,14 +118,14 @@ namespace DataWarehouse.SDK.AI.Runtime
                     ["indexed"] = DateTime.UtcNow.ToString("O")
                 };
 
-                vectorEntries.Add(new VectorEntry(cap.Capability.Id, embeddings[i], metadata));
+                vectorEntries.Add(new VectorEntry(cap.Capability.CapabilityId, embeddings[i], metadata));
 
                 // Track locally
                 lock (_lock)
                 {
-                    _entries[cap.Capability.Id] = new CapabilityIndexEntry
+                    _entries[cap.Capability.CapabilityId] = new CapabilityIndexEntry
                     {
-                        CapabilityId = cap.Capability.Id,
+                        CapabilityId = cap.Capability.CapabilityId,
                         PluginId = cap.PluginId,
                         Embedding = embeddings[i],
                         SemanticDescription = cap.SemanticDescription,
@@ -243,7 +243,7 @@ namespace DataWarehouse.SDK.AI.Runtime
             string semanticDescription,
             string[] tags)
         {
-            var text = $"{capability.Id}\n\n";
+            var text = $"{capability.CapabilityId}\n\n";
             text += $"{semanticDescription}\n\n";
             text += $"Description: {capability.Description}\n\n";
             text += $"Tags: {string.Join(", ", tags)}\n";

@@ -198,7 +198,7 @@ namespace DataWarehouse.SDK.AI.Runtime
             var metadata = searchResult.Entry.Metadata;
             return new PluginCapabilityDescriptor
             {
-                Id = searchResult.Entry.Id,
+                CapabilityId = searchResult.Entry.Id,
                 Description = metadata.TryGetValue("description", out var desc) ? desc.ToString() ?? "" : "",
                 SupportedParameters = new List<string>()
             };

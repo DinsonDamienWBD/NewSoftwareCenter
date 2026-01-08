@@ -35,7 +35,7 @@ namespace DataWarehouse.SDK.AI.LLM
             {
                 var tool = new LLMTool
                 {
-                    Name = capability.Id,
+                    Name = capability.CapabilityId,
                     Description = capability.Description,
                     Parameters = GenerateParameterSchema(capability)
                 };
@@ -73,7 +73,7 @@ namespace DataWarehouse.SDK.AI.LLM
             var required = (List<string>)schema["required"];
 
             // Add common parameters based on capability type
-            if (capability.Id.Contains("transform"))
+            if (capability.CapabilityId.Contains("transform"))
             {
                 // Transformation capabilities
                 properties["data"] = new Dictionary<string, object>
@@ -84,7 +84,7 @@ namespace DataWarehouse.SDK.AI.LLM
                 required.Add("data");
 
                 // Optional parameters
-                if (capability.Id.Contains("gzip"))
+                if (capability.CapabilityId.Contains("gzip"))
                 {
                     properties["level"] = new Dictionary<string, object>
                     {
@@ -93,7 +93,7 @@ namespace DataWarehouse.SDK.AI.LLM
                         ["description"] = "Compression level (default: fastest)"
                     };
                 }
-                else if (capability.Id.Contains("aes"))
+                else if (capability.CapabilityId.Contains("aes"))
                 {
                     properties["key"] = new Dictionary<string, object>
                     {
@@ -103,10 +103,10 @@ namespace DataWarehouse.SDK.AI.LLM
                     required.Add("key");
                 }
             }
-            else if (capability.Id.Contains("storage"))
+            else if (capability.CapabilityId.Contains("storage"))
             {
                 // Storage capabilities
-                if (capability.Id.Contains("write") || capability.Id.Contains("save"))
+                if (capability.CapabilityId.Contains("write") || capability.CapabilityId.Contains("save"))
                 {
                     properties["key"] = new Dictionary<string, object>
                     {
@@ -121,7 +121,7 @@ namespace DataWarehouse.SDK.AI.LLM
                     required.Add("key");
                     required.Add("data");
                 }
-                else if (capability.Id.Contains("read") || capability.Id.Contains("load"))
+                else if (capability.CapabilityId.Contains("read") || capability.CapabilityId.Contains("load"))
                 {
                     properties["key"] = new Dictionary<string, object>
                     {
@@ -131,7 +131,7 @@ namespace DataWarehouse.SDK.AI.LLM
                     required.Add("key");
                 }
             }
-            else if (capability.Id.Contains("metadata"))
+            else if (capability.CapabilityId.Contains("metadata"))
             {
                 // Metadata/search capabilities
                 properties["query"] = new Dictionary<string, object>
