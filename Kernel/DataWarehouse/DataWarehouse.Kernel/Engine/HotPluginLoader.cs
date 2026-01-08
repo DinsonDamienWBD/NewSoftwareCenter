@@ -49,9 +49,22 @@ namespace DataWarehouse.Kernel.Engine
                 if (typeof(IPlugin).IsAssignableFrom(type) && !type.IsInterface && !type.IsAbstract)
                 {
                     var plugin = (IPlugin)Activator.CreateInstance(type)!;
-                    plugin.Initialize(_context);
+
+                    // Use handshake protocol
+                    var request = new HandshakeRequest
+                    {
+                        KernelId = Guid.NewGuid().ToString(),
+                        ProtocolVersion = "1.0",
+                        Timestamp = DateTime.UtcNow,
+                        Mode = _context.Mode,
+                        RootPath = _context.RootPath,
+                        AlreadyLoadedPlugins = _registry.GetAllDescriptors()
+                    };
+
+                    var response = plugin.OnHandshakeAsync(request).GetAwaiter().GetResult();
+
                     _registry.Register(plugin);
-                    _context.LogInfo($"Loaded Plugin: {plugin.Id} v{plugin.Version}");
+                    _context.LogInfo($"Loaded Plugin: {response.PluginId} v{response.Version} ({response.State})");
                 }
             }
         }

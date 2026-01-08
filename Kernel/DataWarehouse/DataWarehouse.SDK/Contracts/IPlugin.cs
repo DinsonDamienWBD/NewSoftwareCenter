@@ -3,45 +3,16 @@ using System.Threading.Tasks;
 namespace DataWarehouse.SDK.Contracts
 {
     /// <summary>
-    /// The base contract for ALL plugins (Crypto, Compression, Features).
-    /// Uses message-based handshake protocol for decoupled, async initialization.
+    /// The base contract for ALL plugins (Storage, Metadata, Security, Transformation, Features, Interfaces).
+    /// Uses pure message-based handshake protocol for decoupled, async initialization.
+    /// NO direct property access - all plugin metadata returned via HandshakeResponse.
     /// </summary>
     public interface IPlugin
     {
         /// <summary>
-        /// Unique Plugin ID (e.g., "DataWarehouse.Storage.Local").
-        /// DEPRECATED: Use HandshakeResponse.PluginId instead.
-        /// </summary>
-        [System.Obsolete("Use HandshakeResponse.PluginId instead. This property is kept for backward compatibility.")]
-        string Id { get; }
-
-        /// <summary>
-        /// Human-readable Name.
-        /// DEPRECATED: Use HandshakeResponse.Name instead.
-        /// </summary>
-        [System.Obsolete("Use HandshakeResponse.Name instead. This property is kept for backward compatibility.")]
-        string Name { get; }
-
-        /// <summary>
-        /// Semantic Version.
-        /// DEPRECATED: Use HandshakeResponse.Version instead.
-        /// </summary>
-        [System.Obsolete("Use HandshakeResponse.Version instead. This property is kept for backward compatibility.")]
-        string Version { get; }
-
-        /// <summary>
-        /// Called by the Kernel immediately after loading the DLL.
-        /// DEPRECATED: Use OnHandshakeAsync instead.
-        /// This method is kept for backward compatibility during migration.
-        /// </summary>
-        /// <param name="context">The kernel context providing logging and environment info.</param>
-        [System.Obsolete("Use OnHandshakeAsync instead. This method will be removed in a future version.")]
-        void Initialize(IKernelContext context);
-
-        /// <summary>
         /// Handshake protocol handler - called by Kernel during plugin initialization.
         /// Plugin should self-initialize and respond with capabilities and readiness state.
-        /// This is the PRIMARY initialization method for message-based architecture.
+        /// This is the PRIMARY and ONLY initialization method for message-based architecture.
         /// </summary>
         /// <param name="request">Handshake request from Kernel containing environment info.</param>
         /// <returns>Handshake response with plugin identity, capabilities, and state.</returns>
