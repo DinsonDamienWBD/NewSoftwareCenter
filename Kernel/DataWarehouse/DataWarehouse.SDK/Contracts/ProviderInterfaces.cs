@@ -1,6 +1,4 @@
-﻿using System.Security.Cryptography;
-
-namespace DataWarehouse.SDK.Contracts
+﻿    namespace DataWarehouse.SDK.Contracts
 {
     /// <summary>
     /// For active features (SQL Listener, Raft Consensus, Governance).

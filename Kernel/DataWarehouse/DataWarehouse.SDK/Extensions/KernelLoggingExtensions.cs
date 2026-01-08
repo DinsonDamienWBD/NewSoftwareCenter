@@ -1,5 +1,4 @@
 ﻿using DataWarehouse.SDK.Contracts;
-using System;
 
 namespace DataWarehouse.SDK.Extensions
 {

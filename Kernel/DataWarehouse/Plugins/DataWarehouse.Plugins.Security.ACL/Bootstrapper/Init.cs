@@ -1,10 +1,6 @@
 using DataWarehouse.Plugins.Security.ACL.Engine;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Security;
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.Plugins.Security.ACL.Bootstrapper
 {
@@ -67,10 +63,9 @@ namespace DataWarehouse.Plugins.Security.ACL.Bootstrapper
                 {
                     ["DW_ACL_STORAGE_PATH"] = "Path to ACL database file (default: {RootPath}/Security/acl.db)"
                 },
-                UsageExamples = new List<UsageExample>
+                UsageExamples = new List<PluginUsageExample>
                 {
-                    new UsageExample
-                    {
+                    new() {
                         Title = "Hierarchical Path Permissions",
                         Description = "Grant permissions on parent path, automatically applies to children",
                         Code = @"
@@ -81,8 +76,7 @@ _acl.SetPermissions(""users/damien"", ""damien"", Permission.Read, Permission.No
 bool canRead = _acl.HasAccess(""users/damien/docs/resume.pdf"", ""damien"", Permission.Read);
 // Returns: true (inherited from parent path)"
                     },
-                    new UsageExample
-                    {
+                    new() {
                         Title = "Wildcard User Permissions",
                         Description = "Use '*' to grant permissions to all users",
                         Code = @"
@@ -93,8 +87,7 @@ _acl.SetPermissions(""public/announcements"", ""*"", Permission.Read, Permission
 bool canRead = _acl.HasAccess(""public/announcements/notice.txt"", ""alice"", Permission.Read);
 // Returns: true (matches wildcard)"
                     },
-                    new UsageExample
-                    {
+                    new() {
                         Title = "Deny Rules (Deny Trumps Allow)",
                         Description = "Explicit deny overrides any allow permissions",
                         Code = @"
@@ -109,8 +102,7 @@ bool canWrite = _acl.HasAccess(""users/damien/docs/file.txt"", ""damien"", Permi
 bool canDelete = _acl.HasAccess(""users/damien/docs/file.txt"", ""damien"", Permission.Delete);
 // Returns: false (explicit deny)"
                     },
-                    new UsageExample
-                    {
+                    new() {
                         Title = "Multi-Tenant Isolation",
                         Description = "Create isolated scopes for different tenants/projects",
                         Code = @"

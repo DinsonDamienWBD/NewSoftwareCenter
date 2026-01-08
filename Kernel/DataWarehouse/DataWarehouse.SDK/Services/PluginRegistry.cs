@@ -15,6 +15,9 @@ namespace DataWarehouse.SDK.Services
         // Primary Store: Map PluginID -> Plugin Instance
         private readonly ConcurrentDictionary<string, IPlugin> _plugins = new(StringComparer.OrdinalIgnoreCase);
 
+        // Store plugin descriptors received during handshake
+        private readonly ConcurrentDictionary<string, PluginDescriptor> _descriptors = new(StringComparer.OrdinalIgnoreCase);
+
         // Type Index: Map InterfaceType -> List of PluginIDs
         private readonly ConcurrentDictionary<Type, List<string>> _typeIndex = new();
 
@@ -31,14 +34,33 @@ namespace DataWarehouse.SDK.Services
 
         /// <summary>
         /// Registers a plugin and indexes it by all its implemented interfaces.
+        /// Handshake response must be provided since plugin metadata is not exposed directly on the plugin instance.
         /// </summary>
         /// <param name="plugin">The initialized plugin instance.</param>
-        public void Register(IPlugin plugin)
+        /// <param name="handshake">The plugin's handshake response containing identity and metadata.</param>
+        public void Register(IPlugin plugin, HandshakeResponse handshake)
         {
             ArgumentNullException.ThrowIfNull(plugin);
+            ArgumentNullException.ThrowIfNull(handshake);
+
+            var pluginId = handshake.PluginId;
 
             // 1. Store by ID
-            _plugins[plugin.Id] = plugin;
+            _plugins[pluginId] = plugin;
+
+            // 1.b Store descriptor for later queries
+            var descriptor = new PluginDescriptor
+            {
+                PluginId = pluginId,
+                Name = handshake.Name,
+                Version = handshake.Version.ToString(),
+                Category = handshake.Category,
+                Interfaces = [.. plugin.GetType().GetInterfaces()
+                    .Where(i => typeof(IPlugin).IsAssignableFrom(i) && i != typeof(IPlugin))
+                    .Select(i => i.Name)]
+            };
+
+            _descriptors[pluginId] = descriptor;
 
             // 2. Index by Interfaces
             var interfaces = plugin.GetType().GetInterfaces();
@@ -48,10 +70,10 @@ namespace DataWarehouse.SDK.Services
                 if (typeof(IPlugin).IsAssignableFrom(iface) && iface != typeof(IPlugin))
                 {
                     _typeIndex.AddOrUpdate(iface,
-                        addValueFactory: _ => [plugin.Id],
+                        addValueFactory: _ => [pluginId],
                         updateValueFactory: (_, list) =>
                         {
-                            lock (list) { if (!list.Contains(plugin.Id)) list.Add(plugin.Id); }
+                            lock (list) { if (!list.Contains(pluginId)) list.Add(pluginId); }
                             return list;
                         });
                 }
@@ -154,28 +176,7 @@ namespace DataWarehouse.SDK.Services
         /// </summary>
         public List<PluginDescriptor> GetAllDescriptors()
         {
-            var descriptors = new List<PluginDescriptor>();
-
-            foreach (var plugin in _plugins.Values)
-            {
-                var type = plugin.GetType();
-                var interfaces = type.GetInterfaces()
-                    .Where(i => typeof(IPlugin).IsAssignableFrom(i) && i != typeof(IPlugin))
-                    .Select(i => i.Name)
-                    .ToList();
-
-                descriptors.Add(new PluginDescriptor
-                {
-                    PluginId = plugin.Id,
-                    Name = plugin.Name,
-                    Version = plugin.Version,
-                    // Category will be determined from HandshakeResponse in new system
-                    Category = PluginCategory.Feature, // Default
-                    Interfaces = interfaces
-                });
-            }
-
-            return descriptors;
+            return [.. _descriptors.Values];
         }
 
         /// <summary>

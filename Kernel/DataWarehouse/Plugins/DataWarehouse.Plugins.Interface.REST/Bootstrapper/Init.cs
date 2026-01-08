@@ -1,8 +1,7 @@
-using System;
-using Interface.REST.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Interface.REST.Engine;
 
-namespace Interface.REST.Bootstrapper
+namespace DataWarehouse.Plugins.Interface.REST.Bootstrapper
 {
     public class RESTInterfacePlugin
     {

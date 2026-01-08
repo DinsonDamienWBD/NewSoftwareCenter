@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
-using System.Threading;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
 
-namespace Interface.SQL.Engine
+namespace DataWarehouse.Plugins.Interface.SQL.Engine
 {
     /// <summary>
     /// SQL interface for DataWarehouse.

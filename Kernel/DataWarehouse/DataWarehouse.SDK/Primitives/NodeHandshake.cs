@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace DataWarehouse.SDK.Primitives
+﻿namespace DataWarehouse.SDK.Primitives
 {
     /// <summary>
     /// Node handshake rich object

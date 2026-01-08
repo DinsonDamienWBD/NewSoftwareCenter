@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.AI.Vector
 {
     /// <summary>
@@ -28,8 +23,8 @@ namespace DataWarehouse.SDK.AI.Vector
     /// </summary>
     public class InMemoryVectorStore : IVectorStore
     {
-        private readonly Dictionary<string, VectorEntry> _vectors = new();
-        private readonly object _lock = new();
+        private readonly Dictionary<string, VectorEntry> _vectors = [];
+        private readonly Lock _lock = new();
         private readonly int _dimensions;
 
         /// <summary>
@@ -55,14 +50,13 @@ namespace DataWarehouse.SDK.AI.Vector
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("ID cannot be empty", nameof(id));
-            if (embedding == null)
-                throw new ArgumentNullException(nameof(embedding));
+            ArgumentNullException.ThrowIfNull(embedding);
             if (embedding.Length != _dimensions)
                 throw new ArgumentException($"Embedding dimension mismatch: expected {_dimensions}, got {embedding.Length}");
 
             lock (_lock)
             {
-                _vectors[id] = new VectorEntry(id, embedding, metadata ?? new Dictionary<string, object>());
+                _vectors[id] = new VectorEntry(id, embedding, metadata ?? []);
             }
 
             return Task.CompletedTask;
@@ -71,8 +65,7 @@ namespace DataWarehouse.SDK.AI.Vector
         /// <summary>Adds multiple vectors in a batch.</summary>
         public Task AddBatchAsync(List<VectorEntry> entries)
         {
-            if (entries == null)
-                throw new ArgumentNullException(nameof(entries));
+            ArgumentNullException.ThrowIfNull(entries);
 
             lock (_lock)
             {
@@ -94,8 +87,7 @@ namespace DataWarehouse.SDK.AI.Vector
             int topK = 10,
             Dictionary<string, object>? filters = null)
         {
-            if (queryEmbedding == null)
-                throw new ArgumentNullException(nameof(queryEmbedding));
+            ArgumentNullException.ThrowIfNull(queryEmbedding);
             if (queryEmbedding.Length != _dimensions)
                 throw new ArgumentException($"Query embedding dimension mismatch: expected {_dimensions}, got {queryEmbedding.Length}");
             if (topK <= 0)
@@ -115,14 +107,13 @@ namespace DataWarehouse.SDK.AI.Vector
                 }
 
                 // Compute similarities and sort
-                results = candidates
+                results = [.. candidates
                     .Select(entry => new VectorSearchResult(
                         entry,
                         VectorMath.CosineSimilarity(queryEmbedding, entry.Embedding)
                     ))
                     .OrderByDescending(r => r.SimilarityScore)
-                    .Take(topK)
-                    .ToList();
+                    .Take(topK)];
             }
 
             return Task.FromResult(results);
@@ -133,8 +124,7 @@ namespace DataWarehouse.SDK.AI.Vector
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("ID cannot be empty", nameof(id));
-            if (embedding == null)
-                throw new ArgumentNullException(nameof(embedding));
+            ArgumentNullException.ThrowIfNull(embedding);
             if (embedding.Length != _dimensions)
                 throw new ArgumentException($"Embedding dimension mismatch: expected {_dimensions}, got {embedding.Length}");
 
@@ -143,7 +133,7 @@ namespace DataWarehouse.SDK.AI.Vector
                 if (!_vectors.ContainsKey(id))
                     throw new KeyNotFoundException($"Vector with ID '{id}' not found");
 
-                _vectors[id] = new VectorEntry(id, embedding, metadata ?? new Dictionary<string, object>());
+                _vectors[id] = new VectorEntry(id, embedding, metadata ?? []);
             }
 
             return Task.CompletedTask;

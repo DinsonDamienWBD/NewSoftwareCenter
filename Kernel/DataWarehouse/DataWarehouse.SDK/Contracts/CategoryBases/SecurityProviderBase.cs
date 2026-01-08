@@ -1,6 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.Security;
 
 namespace DataWarehouse.SDK.Contracts.CategoryBases
@@ -10,13 +7,9 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
     /// Handles access control, permissions, authentication, key management.
     /// Plugins implement backend-specific security logic.
     /// </summary>
-    public abstract class SecurityProviderBase : PluginBase
+    /// <remarks>Constructs security provider</remarks>
+    public abstract class SecurityProviderBase(string id, string name, Version version) : PluginBase(id, name, version, PluginCategory.Security)
     {
-        /// <summary>Constructs security provider</summary>
-        protected SecurityProviderBase(string id, string name, Version version)
-            : base(id, name, version, PluginCategory.Security)
-        {
-        }
 
         // Abstract members - plugin implements
         /// <summary>Security type (e.g., "acl", "rbac", "oauth")</summary>
@@ -38,8 +31,8 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
 
         // Capabilities
         /// <summary>Declares security capabilities</summary>
-        protected override PluginCapabilityDescriptor[] Capabilities => new[]
-        {
+        protected override PluginCapabilityDescriptor[] Capabilities =>
+        [
             new PluginCapabilityDescriptor
             {
                 CapabilityId = $"security.{SecurityType}.check",
@@ -47,7 +40,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 Description = $"Check user permissions using {SecurityType}",
                 Category = CapabilityCategory.Security,
                 RequiredPermission = Permission.Read,
-                Tags = new List<string> { "security", "check", SecurityType }
+                Tags = ["security", "check", SecurityType]
             },
             new PluginCapabilityDescriptor
             {
@@ -57,7 +50,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 Category = CapabilityCategory.Security,
                 RequiredPermission = Permission.FullControl,
                 RequiresApproval = true,
-                Tags = new List<string> { "security", "grant", SecurityType }
+                Tags = ["security", "grant", SecurityType]
             },
             new PluginCapabilityDescriptor
             {
@@ -67,9 +60,9 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 Category = CapabilityCategory.Security,
                 RequiredPermission = Permission.FullControl,
                 RequiresApproval = true,
-                Tags = new List<string> { "security", "revoke", SecurityType }
+                Tags = ["security", "revoke", SecurityType]
             }
-        };
+        ];
 
         // Initialization
         /// <summary>Initializes and registers handlers</summary>

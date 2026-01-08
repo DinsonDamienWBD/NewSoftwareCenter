@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.Contracts.CategoryBases
 {
     /// <summary>
@@ -12,13 +8,9 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
     /// Plugins only implement backend-specific index/search logic.
     /// Common operations (index/get/search/update/delete) handled by base.
     /// </summary>
-    public abstract class MetadataProviderBase : PluginBase
+    /// <remarks>Constructs metadata provider</remarks>
+    public abstract class MetadataProviderBase(string id, string name, Version version) : PluginBase(id, name, version, PluginCategory.Metadata)
     {
-        /// <summary>Constructs metadata provider</summary>
-        protected MetadataProviderBase(string id, string name, Version version)
-            : base(id, name, version, PluginCategory.Metadata)
-        {
-        }
 
         // =========================================================================
         // ABSTRACT MEMBERS
@@ -73,7 +65,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                         Description = $"Index metadata in {IndexType}",
                         Category = CapabilityCategory.Metadata,
                         RequiredPermission = Security.Permission.Write,
-                        Tags = new List<string> { "metadata", "index", IndexType }
+                        Tags = ["metadata", "index", IndexType]
                     },
                     new()
                     {
@@ -82,7 +74,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                         Description = $"Retrieve metadata from {IndexType}",
                         Category = CapabilityCategory.Metadata,
                         RequiredPermission = Security.Permission.Read,
-                        Tags = new List<string> { "metadata", "get", IndexType }
+                        Tags = ["metadata", "get", IndexType]
                     },
                     new()
                     {
@@ -91,7 +83,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                         Description = $"Search metadata in {IndexType}",
                         Category = CapabilityCategory.Metadata,
                         RequiredPermission = Security.Permission.Read,
-                        Tags = new List<string> { "metadata", "search", IndexType }
+                        Tags = ["metadata", "search", IndexType]
                     }
                 };
 
@@ -104,11 +96,11 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                         Description = $"Execute SQL/advanced queries on {IndexType}",
                         Category = CapabilityCategory.Metadata,
                         RequiredPermission = Security.Permission.Read,
-                        Tags = new List<string> { "metadata", "query", "sql", IndexType }
+                        Tags = ["metadata", "query", "sql", IndexType]
                     });
                 }
 
-                return caps.ToArray();
+                return [.. caps];
             }
         }
 

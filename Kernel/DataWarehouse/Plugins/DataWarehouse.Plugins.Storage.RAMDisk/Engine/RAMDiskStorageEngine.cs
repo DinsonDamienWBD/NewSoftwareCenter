@@ -11,13 +11,13 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Engine
     public class RAMDiskStorageEngine : IStorageProvider, IDisposable
     {
         public string Id { get; private set; }
-        public string Version => "1.0.0";
-        public string Name => "RAMDisk Storage";
+        public static string Version => "1.0.0";
+        public static string Name => "RAMDisk Storage";
         public string Scheme => "ramdisk";
 
         private readonly ConcurrentDictionary<string, byte[]> _storage;
         private readonly ConcurrentDictionary<string, AccessInfo> _accessTracking;
-        private readonly object _evictionLock = new();
+        private readonly Lock _evictionLock = new();
         private IKernelContext? _context;
 
         // Configuration
@@ -97,10 +97,8 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Engine
         /// </summary>
         public async Task SaveAsync(Uri uri, Stream data)
         {
-            if (uri == null)
-                throw new ArgumentNullException(nameof(uri));
-            if (data == null)
-                throw new ArgumentNullException(nameof(data));
+            ArgumentNullException.ThrowIfNull(uri);
+            ArgumentNullException.ThrowIfNull(data);
 
             try
             {
@@ -162,8 +160,7 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Engine
         /// </summary>
         public async Task<Stream> LoadAsync(Uri uri)
         {
-            if (uri == null)
-                throw new ArgumentNullException(nameof(uri));
+            ArgumentNullException.ThrowIfNull(uri);
 
             try
             {
@@ -210,8 +207,7 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Engine
         /// </summary>
         public async Task DeleteAsync(Uri uri)
         {
-            if (uri == null)
-                throw new ArgumentNullException(nameof(uri));
+            ArgumentNullException.ThrowIfNull(uri);
 
             try
             {
@@ -245,8 +241,7 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Engine
         /// </summary>
         public Task<bool> ExistsAsync(Uri uri)
         {
-            if (uri == null)
-                throw new ArgumentNullException(nameof(uri));
+            ArgumentNullException.ThrowIfNull(uri);
 
             var key = uri.ToString();
             return Task.FromResult(_storage.ContainsKey(key));

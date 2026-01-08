@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace DataWarehouse.SDK.AI.Safety
 {
     /// <summary>
@@ -24,8 +20,8 @@ namespace DataWarehouse.SDK.AI.Safety
     /// </summary>
     public class SafetyValidator
     {
-        private readonly List<SafetyRule> _rules = new();
-        private readonly Dictionary<string, int> _failureCount = new();
+        private readonly List<SafetyRule> _rules = [];
+        private readonly Dictionary<string, int> _failureCount = [];
 
         public SafetyValidator()
         {
@@ -41,8 +37,7 @@ namespace DataWarehouse.SDK.AI.Safety
         /// <returns>Validation result.</returns>
         public SafetyValidationResult Validate(OperationRequest operation)
         {
-            if (operation == null)
-                throw new ArgumentNullException(nameof(operation));
+            ArgumentNullException.ThrowIfNull(operation);
 
             var result = new SafetyValidationResult { IsSafe = true };
 
@@ -75,8 +70,7 @@ namespace DataWarehouse.SDK.AI.Safety
         /// <param name="rule">Rule to register.</param>
         public void RegisterRule(SafetyRule rule)
         {
-            if (rule == null)
-                throw new ArgumentNullException(nameof(rule));
+            ArgumentNullException.ThrowIfNull(rule);
 
             _rules.Add(rule);
         }
@@ -197,7 +191,7 @@ namespace DataWarehouse.SDK.AI.Safety
         /// <summary>
         /// Checks for SQL injection patterns.
         /// </summary>
-        private bool ContainsSQLInjection(string input)
+        private static bool ContainsSQLInjection(string input)
         {
             var patterns = new[]
             {
@@ -215,7 +209,7 @@ namespace DataWarehouse.SDK.AI.Safety
         /// <summary>
         /// Checks for path traversal patterns.
         /// </summary>
-        private bool ContainsPathTraversal(string input)
+        private static bool ContainsPathTraversal(string input)
         {
             return input.Contains("../") || input.Contains("..\\");
         }
@@ -225,12 +219,13 @@ namespace DataWarehouse.SDK.AI.Safety
         /// </summary>
         private void TrackFailure(string capabilityId)
         {
-            if (!_failureCount.ContainsKey(capabilityId))
+            if (!_failureCount.TryGetValue(capabilityId, out int value))
             {
-                _failureCount[capabilityId] = 0;
+                value = 0;
+                _failureCount[capabilityId] = value;
             }
 
-            _failureCount[capabilityId]++;
+            _failureCount[capabilityId] = ++value;
         }
 
         /// <summary>
@@ -248,11 +243,11 @@ namespace DataWarehouse.SDK.AI.Safety
     public class OperationRequest
     {
         public string? CapabilityId { get; set; }
-        public Dictionary<string, object> Parameters { get; init; } = new();
+        public Dictionary<string, object> Parameters { get; init; } = [];
         public decimal? EstimatedCostUsd { get; set; }
         public long? DataSizeBytes { get; set; }
         public string? UserId { get; set; }
-        public Dictionary<string, object> Metadata { get; init; } = new();
+        public Dictionary<string, object> Metadata { get; init; } = [];
     }
 
     /// <summary>
@@ -261,7 +256,7 @@ namespace DataWarehouse.SDK.AI.Safety
     public class SafetyValidationResult
     {
         public bool IsSafe { get; set; }
-        public List<SafetyViolation> Violations { get; init; } = new();
+        public List<SafetyViolation> Violations { get; init; } = [];
 
         public string GetErrorMessage()
         {

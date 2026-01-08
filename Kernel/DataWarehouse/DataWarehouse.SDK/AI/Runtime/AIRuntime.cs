@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.AI.Graph;
 using DataWarehouse.SDK.AI.LLM;
 using DataWarehouse.SDK.AI.Vector;
@@ -193,14 +189,15 @@ namespace DataWarehouse.SDK.AI.Runtime
         /// <summary>
         /// Maps vector search result to capability descriptor.
         /// </summary>
-        private PluginCapabilityDescriptor MapToCapabilityDescriptor(VectorSearchResult searchResult)
+        private static PluginCapabilityDescriptor MapToCapabilityDescriptor(VectorSearchResult searchResult)
         {
             var metadata = searchResult.Entry.Metadata;
             return new PluginCapabilityDescriptor
             {
                 CapabilityId = searchResult.Entry.Id,
                 Description = metadata.TryGetValue("description", out var desc) ? desc.ToString() ?? "" : "",
-                SupportedParameters = new List<string>()
+                // Parameter schema (if plugin provided one) or empty object
+                ParameterSchemaJson = metadata.TryGetValue("schema", out var schema) ? schema?.ToString() ?? "{}" : "{}"
             };
         }
     }

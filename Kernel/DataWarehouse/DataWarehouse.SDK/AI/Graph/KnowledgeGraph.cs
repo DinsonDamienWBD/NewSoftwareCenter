@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using DataWarehouse.SDK.Contracts;
 
 namespace DataWarehouse.SDK.AI.Graph
 {
@@ -23,9 +19,9 @@ namespace DataWarehouse.SDK.AI.Graph
     /// </summary>
     public class KnowledgeGraph
     {
-        private readonly Dictionary<string, GraphNode> _nodes = new();
-        private readonly List<GraphEdge> _edges = new();
-        private readonly object _lock = new();
+        private readonly Dictionary<string, GraphNode> _nodes = [];
+        private readonly List<GraphEdge> _edges = [];
+        private readonly Lock _lock = new();
 
         /// <summary>Gets the total number of nodes in the graph.</summary>
         public int NodeCount
@@ -50,8 +46,7 @@ namespace DataWarehouse.SDK.AI.Graph
         /// <param name="node">The node to add.</param>
         public void AddNode(GraphNode node)
         {
-            if (node == null)
-                throw new ArgumentNullException(nameof(node));
+            ArgumentNullException.ThrowIfNull(node);
             if (string.IsNullOrWhiteSpace(node.Id))
                 throw new ArgumentException("Node ID cannot be empty");
 
@@ -104,7 +99,7 @@ namespace DataWarehouse.SDK.AI.Graph
         {
             lock (_lock)
             {
-                return _nodes.Values.ToList();
+                return [.. _nodes.Values];
             }
         }
 
@@ -116,11 +111,11 @@ namespace DataWarehouse.SDK.AI.Graph
         public List<GraphNode> GetNodesByType(string nodeType)
         {
             if (string.IsNullOrWhiteSpace(nodeType))
-                return new List<GraphNode>();
+                return [];
 
             lock (_lock)
             {
-                return _nodes.Values.Where(n => n.Type == nodeType).ToList();
+                return [.. _nodes.Values.Where(n => n.Type == nodeType)];
             }
         }
 
@@ -135,8 +130,7 @@ namespace DataWarehouse.SDK.AI.Graph
         /// <param name="edge">The edge to add.</param>
         public void AddEdge(GraphEdge edge)
         {
-            if (edge == null)
-                throw new ArgumentNullException(nameof(edge));
+            ArgumentNullException.ThrowIfNull(edge);
             if (string.IsNullOrWhiteSpace(edge.SourceId))
                 throw new ArgumentException("Source ID cannot be empty");
             if (string.IsNullOrWhiteSpace(edge.TargetId))
@@ -183,7 +177,7 @@ namespace DataWarehouse.SDK.AI.Graph
         {
             lock (_lock)
             {
-                return _edges.ToList();
+                return [.. _edges];
             }
         }
 
@@ -197,9 +191,7 @@ namespace DataWarehouse.SDK.AI.Graph
         {
             lock (_lock)
             {
-                return _edges
-                    .Where(e => e.SourceId == nodeId && (edgeType == null || e.Type == edgeType))
-                    .ToList();
+                return [.. _edges.Where(e => e.SourceId == nodeId && (edgeType == null || e.Type == edgeType))];
             }
         }
 
@@ -213,9 +205,7 @@ namespace DataWarehouse.SDK.AI.Graph
         {
             lock (_lock)
             {
-                return _edges
-                    .Where(e => e.TargetId == nodeId && (edgeType == null || e.Type == edgeType))
-                    .ToList();
+                return [.. _edges.Where(e => e.TargetId == nodeId && (edgeType == null || e.Type == edgeType))];
             }
         }
 
@@ -263,7 +253,7 @@ namespace DataWarehouse.SDK.AI.Graph
 
             if (currentId == targetId)
             {
-                paths.Add(new List<string>(currentPath));
+                paths.Add([.. currentPath]);
             }
             else
             {
@@ -400,9 +390,7 @@ namespace DataWarehouse.SDK.AI.Graph
         /// <returns>List of dependency node IDs.</returns>
         public List<string> GetDependencies(string nodeId)
         {
-            return GetOutgoingEdges(nodeId, "depends_on")
-                .Select(e => e.TargetId)
-                .ToList();
+            return [.. GetOutgoingEdges(nodeId, "depends_on").Select(e => e.TargetId)];
         }
 
         /// <summary>
@@ -412,9 +400,7 @@ namespace DataWarehouse.SDK.AI.Graph
         /// <returns>List of dependent node IDs.</returns>
         public List<string> GetDependents(string nodeId)
         {
-            return GetIncomingEdges(nodeId, "depends_on")
-                .Select(e => e.SourceId)
-                .ToList();
+            return [.. GetIncomingEdges(nodeId, "depends_on").Select(e => e.SourceId)];
         }
 
         /// <summary>
@@ -449,7 +435,7 @@ namespace DataWarehouse.SDK.AI.Graph
         public string Label { get; init; } = string.Empty;
 
         /// <summary>Additional metadata for this node.</summary>
-        public Dictionary<string, object> Metadata { get; init; } = new();
+        public Dictionary<string, object> Metadata { get; init; } = [];
 
         /// <summary>Constructs an empty graph node.</summary>
         public GraphNode() { }
@@ -488,7 +474,7 @@ namespace DataWarehouse.SDK.AI.Graph
         public double Weight { get; init; } = 1.0;
 
         /// <summary>Additional metadata for this edge.</summary>
-        public Dictionary<string, object> Metadata { get; init; } = new();
+        public Dictionary<string, object> Metadata { get; init; } = [];
 
         /// <summary>Constructs an empty graph edge.</summary>
         public GraphEdge() { }

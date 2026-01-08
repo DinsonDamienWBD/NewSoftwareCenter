@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Threading.Tasks;
 using Npgsql;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
 
-namespace Metadata.Postgres.Engine
+namespace DataWarehouse.Plugins.Metadata.Postgres.Engine
 {
     /// <summary>
     /// PostgreSQL metadata indexing provider.
@@ -56,6 +52,9 @@ namespace Metadata.Postgres.Engine
 
         /// <summary>Max entries for efficient performance</summary>
         protected override long MaxEntries => long.MaxValue; // Billions with proper indexing
+
+        private static readonly string[] item = ["metadata.postgres.query"];
+        private static readonly string[] itemArray = ["metadata.postgres.index"];
 
         /// <summary>
         /// Constructs PostgreSQL metadata engine.
@@ -112,7 +111,7 @@ namespace Metadata.Postgres.Engine
                 {
                     Scenario = "Index production data",
                     NaturalLanguageRequest = "Index this data's metadata in PostgreSQL",
-                    ExpectedCapabilityChain = new[] { "metadata.postgres.index" },
+                    ExpectedCapabilityChain = itemArray,
                     EstimatedDurationMs = 15.0,
                     EstimatedCost = 0.00001m
                 },
@@ -120,7 +119,7 @@ namespace Metadata.Postgres.Engine
                 {
                     Scenario = "Complex metadata search",
                     NaturalLanguageRequest = "Find all files larger than 1GB created in the last week",
-                    ExpectedCapabilityChain = new[] { "metadata.postgres.query" },
+                    ExpectedCapabilityChain = item,
                     EstimatedDurationMs = 50.0,
                     EstimatedCost = 0.00001m
                 }
@@ -271,7 +270,7 @@ namespace Metadata.Postgres.Engine
         /// <summary>
         /// Builds PostgreSQL JSONB search query.
         /// </summary>
-        private string BuildJsonbSearchQuery(string searchTerm)
+        private static string BuildJsonbSearchQuery(string searchTerm)
         {
             // Use PostgreSQL's JSONB containment operator for search
             return $@"

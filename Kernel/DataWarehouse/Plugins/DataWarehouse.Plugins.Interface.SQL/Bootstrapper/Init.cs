@@ -1,8 +1,7 @@
-using System;
-using Interface.SQL.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Interface.SQL.Engine;
 
-namespace Interface.SQL.Bootstrapper
+namespace DataWarehouse.Plugins.Interface.SQL.Bootstrapper
 {
     public class SQLInterfacePlugin
     {
@@ -17,6 +16,6 @@ namespace Interface.SQL.Bootstrapper
             Tags = new[] { "interface", "sql", "query", "postgresql", "database" }
         };
 
-        public static SQLInterfaceEngine CreateInstance() => new SQLInterfaceEngine();
+        public static SQLInterfaceEngine CreateInstance() => new();
     }
 }

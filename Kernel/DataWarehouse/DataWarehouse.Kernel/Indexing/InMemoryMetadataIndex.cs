@@ -13,24 +13,24 @@ namespace DataWarehouse.Kernel.Indexing
         /// <summary>
         /// ID
         /// </summary>
-        public string Id => "builtin-memory-index";
+        public static string Id => "builtin-memory-index";
 
         /// <summary>
         /// Name
         /// </summary>
-        public string Name => "InMemory Metadata Index";
+        public static string Name => "InMemory Metadata Index";
 
         /// <summary>
         /// Version
         /// </summary>
-        public string Version => "1.0";
+        public static string Version => "1.0";
         private readonly ConcurrentDictionary<string, Manifest> _store = new();
 
         /// <summary>
         /// Initialize
         /// </summary>
         /// <param name="context"></param>
-        public void Initialize(IKernelContext context) { }
+        public static void Initialize(IKernelContext context) { }
 
         /// <summary>
         /// Index manifest
@@ -123,7 +123,7 @@ namespace DataWarehouse.Kernel.Indexing
             return Task.FromResult(results);
         }
 
-        private bool Match(Manifest manifest, CompositeQuery query)
+        private static bool Match(Manifest manifest, CompositeQuery query)
         {
             // AND Logic: All filters must pass
             foreach (var filter in query.Filters)
@@ -133,7 +133,7 @@ namespace DataWarehouse.Kernel.Indexing
             return true;
         }
 
-        private bool CheckCondition(Manifest manifest, QueryFilter filter)
+        private static bool CheckCondition(Manifest manifest, QueryFilter filter)
         {
             // 1. Resolve Value from Manifest
             // Check Top-Level Properties first

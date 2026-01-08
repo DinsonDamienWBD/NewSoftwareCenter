@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace DataWarehouse.Kernel.Primitives
+﻿namespace DataWarehouse.SDK.Primitives
 {
     /// <summary>
     /// Configuration object for initializing the DataWarehouse Kernel.

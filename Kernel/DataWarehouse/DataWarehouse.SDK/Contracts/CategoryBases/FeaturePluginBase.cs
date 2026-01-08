@@ -1,7 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.Contracts.CategoryBases
 {
     /// <summary>
@@ -9,13 +5,9 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
     /// Provides advanced capabilities: deduplication, caching, encryption, governance, etc.
     /// Plugins implement feature-specific logic.
     /// </summary>
-    public abstract class FeaturePluginBase : PluginBase
+    /// <remarks>Constructs feature plugin</remarks>
+    public abstract class FeaturePluginBase(string id, string name, Version version) : PluginBase(id, name, version, PluginCategory.Feature)
     {
-        /// <summary>Constructs feature plugin</summary>
-        protected FeaturePluginBase(string id, string name, Version version)
-            : base(id, name, version, PluginCategory.Feature)
-        {
-        }
 
         // Abstract members
         /// <summary>Feature type (e.g., "deduplication", "caching", "worm")</summary>
@@ -33,7 +25,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
 
         // Capabilities - Feature plugins define custom capabilities
         /// <summary>Feature capabilities (override to define specific capabilities)</summary>
-        protected override PluginCapabilityDescriptor[] Capabilities => Array.Empty<PluginCapabilityDescriptor>();
+        protected override PluginCapabilityDescriptor[] Capabilities => [];
 
         // Initialization
         /// <summary>Initializes feature</summary>

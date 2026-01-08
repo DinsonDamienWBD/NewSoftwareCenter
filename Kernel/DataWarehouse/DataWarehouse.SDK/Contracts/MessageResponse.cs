@@ -1,5 +1,3 @@
-using System;
-
 namespace DataWarehouse.SDK.Contracts
 {
     /// <summary>

@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.AI.LLM
 {
     /// <summary>
@@ -199,7 +196,7 @@ namespace DataWarehouse.SDK.AI.LLM
         public string Content { get; init; } = string.Empty;
 
         /// <summary>Tool calls requested by the LLM (if any).</summary>
-        public List<LLMToolCall> ToolCalls { get; init; } = new();
+        public List<LLMToolCall> ToolCalls { get; init; } = [];
 
         /// <summary>Model used for generation.</summary>
         public string Model { get; init; } = string.Empty;
@@ -235,7 +232,7 @@ namespace DataWarehouse.SDK.AI.LLM
         /// JSON Schema describing tool parameters.
         /// Example: { "type": "object", "properties": { "data": { "type": "string" } } }
         /// </summary>
-        public Dictionary<string, object> Parameters { get; init; } = new();
+        public Dictionary<string, object> Parameters { get; init; } = [];
     }
 
     /// <summary>
@@ -250,6 +247,6 @@ namespace DataWarehouse.SDK.AI.LLM
         public string ToolName { get; init; } = string.Empty;
 
         /// <summary>Arguments to pass to the tool (JSON object).</summary>
-        public Dictionary<string, object> Arguments { get; init; } = new();
+        public Dictionary<string, object> Arguments { get; init; } = [];
     }
 }

@@ -1,8 +1,5 @@
 using DataWarehouse.SDK.Security;
 using DataWarehouse.SDK.Utilities;
-using System;
-using System.Collections.Generic;
-using System.IO;
 
 namespace DataWarehouse.Plugins.Security.ACL.Engine
 {
@@ -75,7 +72,7 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
             // Get existing entries for this resource, or create new
             if (!_store.TryGet(resource, out Dictionary<string, AclEntry>? entries))
             {
-                entries = new Dictionary<string, AclEntry>();
+                entries = [];
             }
 
             // Set or update the ACL entry for this subject
@@ -227,7 +224,7 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
                 return new Dictionary<string, AclEntry>(entries);
             }
 
-            return new Dictionary<string, AclEntry>();
+            return [];
         }
 
         /// <summary>
@@ -248,7 +245,7 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         /// <summary>
         /// Normalizes a resource path by removing leading/trailing slashes and collapsing consecutive slashes.
         /// </summary>
-        private string NormalizeResourcePath(string resource)
+        private static string NormalizeResourcePath(string resource)
         {
             if (string.IsNullOrWhiteSpace(resource))
             {

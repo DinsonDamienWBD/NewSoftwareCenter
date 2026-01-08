@@ -1,11 +1,7 @@
-﻿using DataWarehouse.Kernel.Primitives;
-using DataWarehouse.SDK.Contracts;
+﻿using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Primitives;
 using DataWarehouse.SDK.Services;
 using Microsoft.Extensions.Configuration;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace DataWarehouse.Kernel.Engine
 {

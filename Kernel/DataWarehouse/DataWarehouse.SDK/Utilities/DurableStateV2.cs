@@ -1,13 +1,7 @@
 using DataWarehouse.SDK.Contracts;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.SDK.Utilities
 {
@@ -130,7 +124,7 @@ namespace DataWarehouse.SDK.Utilities
         /// </summary>
         public async Task SetAsync(string key, T value)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(DurableStateV2<T>));
+            ObjectDisposedException.ThrowIf(_disposed, new ObjectDisposedException(nameof(DurableStateV2<>)));
 
             await _lock.WaitAsync();
             try
@@ -158,7 +152,7 @@ namespace DataWarehouse.SDK.Utilities
         /// </summary>
         public async Task<bool> RemoveAsync(string key)
         {
-            if (_disposed) throw new ObjectDisposedException(nameof(DurableStateV2<T>));
+            ObjectDisposedException.ThrowIf(_disposed, new ObjectDisposedException(nameof(DurableStateV2<>)));
 
             await _lock.WaitAsync();
             try
@@ -413,6 +407,7 @@ namespace DataWarehouse.SDK.Utilities
         public void Dispose()
         {
             DisposeAsync().AsTask().GetAwaiter().GetResult();
+            GC.SuppressFinalize(this);
         }
     }
 }

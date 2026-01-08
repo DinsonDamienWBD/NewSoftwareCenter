@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace DataWarehouse.SDK.AI.LLM
 {
     /// <summary>
@@ -22,10 +18,10 @@ namespace DataWarehouse.SDK.AI.LLM
     /// </summary>
     public class LLMProviderRegistry
     {
-        private readonly Dictionary<string, ILLMProvider> _providers = new();
-        private readonly Dictionary<string, ProviderUsageStats> _usageStats = new();
+        private readonly Dictionary<string, ILLMProvider> _providers = [];
+        private readonly Dictionary<string, ProviderUsageStats> _usageStats = [];
         private string? _defaultProviderName;
-        private readonly object _lock = new();
+        private readonly Lock _lock = new();
 
         /// <summary>
         /// Registers an LLM provider.
@@ -34,8 +30,7 @@ namespace DataWarehouse.SDK.AI.LLM
         /// <param name="setAsDefault">Whether to set as default provider.</param>
         public void RegisterProvider(ILLMProvider provider, bool setAsDefault = false)
         {
-            if (provider == null)
-                throw new ArgumentNullException(nameof(provider));
+            ArgumentNullException.ThrowIfNull(provider);
 
             lock (_lock)
             {
@@ -109,7 +104,7 @@ namespace DataWarehouse.SDK.AI.LLM
         {
             lock (_lock)
             {
-                return _providers.Values.ToList();
+                return [.. _providers.Values];
             }
         }
 
@@ -121,7 +116,7 @@ namespace DataWarehouse.SDK.AI.LLM
         {
             lock (_lock)
             {
-                return _providers.Values.Where(p => p.SupportsToolCalling).ToList();
+                return [.. _providers.Values.Where(p => p.SupportsToolCalling)];
             }
         }
 
@@ -169,7 +164,7 @@ namespace DataWarehouse.SDK.AI.LLM
         {
             lock (_lock)
             {
-                return _usageStats.Values.ToList();
+                return [.. _usageStats.Values];
             }
         }
 

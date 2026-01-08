@@ -1,10 +1,6 @@
+using DataWarehouse.SDK.AI.Math;
 using DataWarehouse.SDK.Contracts;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.Kernel.Engine
 {
@@ -44,7 +40,7 @@ namespace DataWarehouse.Kernel.Engine
             public string? ErrorMessage { get; set; }
             public Exception? Exception { get; set; }
             public TimeSpan ExecutionTime { get; set; }
-            public Dictionary<string, object> Metadata { get; set; } = new();
+            public Dictionary<string, object> Metadata { get; set; } = [];
         }
 
         /// <summary>
@@ -55,7 +51,7 @@ namespace DataWarehouse.Kernel.Engine
         /// <summary>
         /// Command execution metrics.
         /// </summary>
-        private class CommandMetrics
+        public class CommandMetrics
         {
             public string CommandType { get; set; } = string.Empty;
             public int TotalExecutions { get; set; }
@@ -245,7 +241,7 @@ namespace DataWarehouse.Kernel.Engine
         {
             var tasks = commands.Select(cmd => ExecuteAsync(cmd, cancellationToken));
             var results = await Task.WhenAll(tasks);
-            return results.ToList();
+            return [.. results];
         }
 
         /// <summary>
@@ -261,7 +257,7 @@ namespace DataWarehouse.Kernel.Engine
         /// </summary>
         public List<string> GetRegisteredCommands()
         {
-            return _handlers.Keys.ToList();
+            return [.. _handlers.Keys];
         }
 
         /// <summary>
@@ -377,6 +373,7 @@ namespace DataWarehouse.Kernel.Engine
             _executionSemaphore?.Dispose();
 
             _disposed = true;
+            GC.SuppressFinalize(this );
         }
     }
 
@@ -389,7 +386,7 @@ namespace DataWarehouse.Kernel.Engine
     {
         public string CommandId { get; set; } = Guid.NewGuid().ToString();
         public string CommandType { get; set; } = string.Empty;
-        public Dictionary<string, object> Parameters { get; set; } = new();
+        public Dictionary<string, object> Parameters { get; set; } = [];
         public string? InitiatedBy { get; set; }
     }
 

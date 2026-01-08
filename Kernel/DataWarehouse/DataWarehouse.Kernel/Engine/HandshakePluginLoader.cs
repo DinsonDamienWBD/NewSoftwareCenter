@@ -10,19 +10,12 @@ namespace DataWarehouse.Kernel.Engine
     /// Modern plugin loader using message-based handshake protocol.
     /// Supports async initialization, parallel loading, and dependency resolution.
     /// </summary>
-    public class HandshakePluginLoader
+    public class HandshakePluginLoader(PluginRegistry registry, IKernelContext context, string kernelId)
     {
-        private readonly PluginRegistry _registry;
-        private readonly IKernelContext _context;
-        private readonly string _kernelId;
+        private readonly PluginRegistry _registry = registry;
+        private readonly IKernelContext _context = context;
+        private readonly string _kernelId = kernelId;
         private readonly ConcurrentDictionary<string, TaskCompletionSource<HandshakeResponse>> _pendingHandshakes = new();
-
-        public HandshakePluginLoader(PluginRegistry registry, IKernelContext context, string kernelId)
-        {
-            _registry = registry;
-            _context = context;
-            _kernelId = kernelId;
-        }
 
         /// <summary>
         /// Load all plugins from a directory in parallel.
@@ -36,8 +29,8 @@ namespace DataWarehouse.Kernel.Engine
         {
             if (!Directory.Exists(directory))
             {
-                _context.LogWarning($"Plugin directory not found: {directory}");
-                return new List<LoadPluginResult>();
+                _context.LogWarning("Plugin directory not found: {directory}", directory);
+                return [];
             }
 
             var dlls = Directory.GetFiles(directory, "*.dll", SearchOption.AllDirectories)
@@ -55,7 +48,7 @@ namespace DataWarehouse.Kernel.Engine
             var results = await Task.WhenAll(loadTasks);
 
             // Summary
-            var succeeded = results.Count(r => r.Success);
+            var succeeded = results.Count(r => r.IsSuccess);
             var failed = results.Length - succeeded;
 
             if (succeeded > 0)
@@ -63,7 +56,7 @@ namespace DataWarehouse.Kernel.Engine
             if (failed > 0)
                 _context.LogWarning($"✗ Failed to load {failed} plugins");
 
-            return results.ToList();
+            return [.. results];
         }
 
         /// <summary>
@@ -155,7 +148,7 @@ namespace DataWarehouse.Kernel.Engine
                 }
 
                 // 7. Validate response
-                if (!response.Success)
+                if (!response.IsSuccess)
                 {
                     return LoadPluginResult.Failed(
                         fileName,
@@ -169,7 +162,7 @@ namespace DataWarehouse.Kernel.Engine
 
                 // 8. Check dependencies
                 var missingDeps = CheckDependencies(response.Dependencies);
-                if (missingDeps.Any())
+                if (missingDeps.Count != 0)
                 {
                     return LoadPluginResult.Failed(
                         fileName,
@@ -288,14 +281,9 @@ namespace DataWarehouse.Kernel.Engine
         /// <summary>
         /// Nested class for plugin assembly loading with isolation.
         /// </summary>
-        private class PluginLoadContext : AssemblyLoadContext
+        private class PluginLoadContext(string pluginPath) : AssemblyLoadContext(pluginPath, isCollectible: true)
         {
-            private readonly string _pluginPath;
-
-            public PluginLoadContext(string pluginPath) : base(pluginPath, isCollectible: true)
-            {
-                _pluginPath = pluginPath;
-            }
+            private readonly string _pluginPath = pluginPath;
 
             protected override Assembly? Load(AssemblyName assemblyName)
             {
@@ -326,7 +314,7 @@ namespace DataWarehouse.Kernel.Engine
     /// </summary>
     public class LoadPluginResult
     {
-        public bool Success { get; init; }
+        public bool IsSuccess { get; init; }
         public string FileName { get; init; } = string.Empty;
         public string? ErrorMessage { get; init; }
         public HandshakeResponse? Response { get; init; }
@@ -335,7 +323,7 @@ namespace DataWarehouse.Kernel.Engine
         public static LoadPluginResult Success(string fileName, HandshakeResponse response, TimeSpan duration) =>
             new()
             {
-                Success = true,
+                IsSuccess = true,
                 FileName = fileName,
                 Response = response,
                 LoadDuration = duration
@@ -344,7 +332,7 @@ namespace DataWarehouse.Kernel.Engine
         public static LoadPluginResult Failed(string fileName, string error) =>
             new()
             {
-                Success = false,
+                IsSuccess = false,
                 FileName = fileName,
                 ErrorMessage = error
             };

@@ -1,12 +1,6 @@
+using DataWarehouse.SDK.AI.Math;
 using DataWarehouse.SDK.Contracts;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.Kernel.Storage
 {
@@ -1133,7 +1127,7 @@ namespace DataWarehouse.Kernel.Storage
         public int StripeSize { get; set; } = 64 * 1024; // 64KB default
         public int MirrorCount { get; set; } = 2;
         public ParityAlgorithm ParityAlgorithm { get; set; } = ParityAlgorithm.XOR;
-        public RebuildPriority RebuildPriority { get; set} = RebuildPriority.Medium;
+        public RebuildPriority RebuildPriority { get; set; } = RebuildPriority.Medium;
         public TimeSpan HealthCheckInterval { get; set; } = TimeSpan.FromMinutes(5);
         public bool AutoRebuild { get; set; } = true;
     }

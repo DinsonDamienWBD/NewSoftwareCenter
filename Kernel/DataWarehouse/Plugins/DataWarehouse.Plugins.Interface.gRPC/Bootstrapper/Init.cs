@@ -10,21 +10,21 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Bootstrapper
     /// </summary>
     public class GrpcNetworkInterfacePlugin : IInterfacePlugin
     {
-        public string Id => "DataWarehouse.Interface.gRPC";
-        public string Version => "3.0.0";
-        public string Name => "gRPC Network Interface";
+        public static string Id => "DataWarehouse.Interface.gRPC";
+        public static string Version => "3.0.0";
+        public static string Name => "gRPC Network Interface";
 
         // AI Metadata
-        public string SemanticDescription =>
+        public static string SemanticDescription =>
             "High-performance gRPC-based network interface for distributed DataWarehouse clusters. " +
             "Enables efficient node-to-node binary data streaming with HTTP/2, automatic retries, " +
             "exponential backoff, and connection pooling. Supports upload, download, exists, and delete operations.";
 
-        public string[] SemanticTags => new[]
-        {
+        public static string[] SemanticTags =>
+        [
             "network", "grpc", "distributed", "streaming", "http2", "node-to-node",
             "cluster", "binary-transfer", "storage-provider", "interface"
-        };
+        ];
 
         public PerformanceProfile PerformanceProfile => new()
         {

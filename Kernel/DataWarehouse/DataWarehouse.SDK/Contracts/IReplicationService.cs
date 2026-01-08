@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace DataWarehouse.SDK.Contracts
+﻿namespace DataWarehouse.SDK.Contracts
 {
     /// <summary>
     /// Manages data redundancy, backups, and restoration.

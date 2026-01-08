@@ -1,16 +1,10 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
 
-namespace Storage.S3.Engine
+namespace DataWarehouse.Plugins.Storage.S3New.Engine
 {
     /// <summary>
     /// AWS S3 and S3-compatible storage provider.

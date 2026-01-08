@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
 
-namespace Orchestration.Raft.Engine
+namespace DataWarehouse.Plugins.Orchestration.Raft.Engine
 {
     /// <summary>
     /// Raft consensus orchestration provider.

@@ -1,6 +1,4 @@
 using DataWarehouse.SDK.Security;
-using System;
-using System.Collections.Generic;
 
 namespace DataWarehouse.SDK.Contracts
 {

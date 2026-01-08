@@ -40,7 +40,7 @@ namespace DataWarehouse.SDK.IO
         }
 
         public override int Read(byte[] buffer, int offset, int count) => _pipeReaderStream.Read(buffer, offset, count);
-        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct) => await _pipeReaderStream.ReadAsync(buffer, offset, count, ct);
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken ct) => await _pipeReaderStream.ReadAsync(buffer.AsMemory(offset, count), ct);
 
         public override bool CanRead => true;
         public override bool CanSeek => false;

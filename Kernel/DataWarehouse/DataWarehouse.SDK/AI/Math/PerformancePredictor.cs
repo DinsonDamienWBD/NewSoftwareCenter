@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using DataWarehouse.SDK.AI.Graph;
-using DataWarehouse.SDK.Contracts;
 
 namespace DataWarehouse.SDK.AI.Math
 {

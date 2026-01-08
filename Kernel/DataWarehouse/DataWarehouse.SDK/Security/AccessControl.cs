@@ -70,6 +70,6 @@
         /// <summary>
         /// Granular ACLs: UserId -> Level
         /// </summary>
-        public Dictionary<string, AccessLevel> AccessControlList { get; set; } = new();
+        public Dictionary<string, AccessLevel> AccessControlList { get; set; } = [];
     }
 }

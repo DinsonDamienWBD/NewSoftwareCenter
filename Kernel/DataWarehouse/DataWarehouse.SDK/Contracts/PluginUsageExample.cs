@@ -63,7 +63,7 @@ namespace DataWarehouse.SDK.Contracts
         /// - { "key": "base64_encoded_key", "mode": "CBC" }
         /// - { "bucket": "backups", "region": "us-west-2" }
         /// </summary>
-        public Dictionary<string, object> ExampleParameters { get; init; } = new();
+        public Dictionary<string, object> ExampleParameters { get; init; } = [];
 
         /// <summary>
         /// Expected output description.
@@ -85,7 +85,7 @@ namespace DataWarehouse.SDK.Contracts
         /// - ["security", "encryption", "pii"]
         /// - ["backup", "cloud", "lifecycle"]
         /// </summary>
-        public string[] Tags { get; init; } = Array.Empty<string>();
+        public string[] Tags { get; init; } = [];
 
         /// <summary>
         /// Constructs an empty usage example.

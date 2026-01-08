@@ -1,8 +1,7 @@
-using System;
-using Storage.IPFS.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Storage.IpfsNew.Engine;
 
-namespace Storage.IPFS.Bootstrapper
+namespace DataWarehouse.Plugins.Storage.IpfsNew.Bootstrapper
 {
     /// <summary>
     /// Plugin entry point for IPFS Distributed Storage.

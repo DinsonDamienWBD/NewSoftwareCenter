@@ -1,16 +1,9 @@
-using System;
-using System.Collections.Generic;
-using System.Data;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.Json;
-using System.Threading.Tasks;
-using Microsoft.Data.Sqlite;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
+using Microsoft.Data.Sqlite;
+using System.Text.Json;
 
-namespace Metadata.SQLite.Engine
+namespace DataWarehouse.Plugins.Metadata.SQLite.Engine
 {
     /// <summary>
     /// SQLite metadata indexing provider.

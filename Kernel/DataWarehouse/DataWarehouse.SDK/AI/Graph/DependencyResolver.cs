@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace DataWarehouse.SDK.AI.Graph
 {
     /// <summary>
@@ -20,18 +16,13 @@ namespace DataWarehouse.SDK.AI.Graph
     /// - Soft dependencies: Recommended but optional (compatible_with)
     /// - Conflicts: Cannot coexist (incompatible_with)
     /// </summary>
-    public class DependencyResolver
+    /// <remarks>
+    /// Constructs a dependency resolver with the given knowledge graph.
+    /// </remarks>
+    /// <param name="graph">Knowledge graph containing capabilities and dependencies.</param>
+    public class DependencyResolver(KnowledgeGraph graph)
     {
-        private readonly KnowledgeGraph _graph;
-
-        /// <summary>
-        /// Constructs a dependency resolver with the given knowledge graph.
-        /// </summary>
-        /// <param name="graph">Knowledge graph containing capabilities and dependencies.</param>
-        public DependencyResolver(KnowledgeGraph graph)
-        {
-            _graph = graph ?? throw new ArgumentNullException(nameof(graph));
-        }
+        private readonly KnowledgeGraph _graph = graph ?? throw new ArgumentNullException(nameof(graph));
 
         /// <summary>
         /// Checks if a capability can execute given the current system state.
@@ -65,10 +56,7 @@ namespace DataWarehouse.SDK.AI.Graph
             if (string.IsNullOrWhiteSpace(capabilityId))
                 throw new ArgumentException("Capability ID cannot be empty");
 
-            var node = _graph.GetNode(capabilityId);
-            if (node == null)
-                throw new ArgumentException($"Capability '{capabilityId}' not found");
-
+            var node = _graph.GetNode(capabilityId) ?? throw new ArgumentException($"Capability '{capabilityId}' not found");
             var result = new DependencyCheckResult { CapabilityId = capabilityId };
 
             // Get all "depends_on" edges
@@ -147,7 +135,7 @@ namespace DataWarehouse.SDK.AI.Graph
                 Resolve(capId);
             }
 
-            return resolved.ToList();
+            return [.. resolved];
         }
 
         /// <summary>
@@ -175,7 +163,7 @@ namespace DataWarehouse.SDK.AI.Graph
                 }
             }
 
-            return suggestions.Distinct().ToList();
+            return [.. suggestions.Distinct()];
         }
 
         /// <summary>
@@ -244,7 +232,7 @@ namespace DataWarehouse.SDK.AI.Graph
         public List<string> DetermineLoadingOrder(List<string> pluginIds)
         {
             if (pluginIds == null || pluginIds.Count == 0)
-                return new List<string>();
+                return [];
 
             // Build subgraph with plugin dependencies
             var pluginGraph = new KnowledgeGraph();
@@ -316,13 +304,13 @@ namespace DataWarehouse.SDK.AI.Graph
         public string CapabilityId { get; set; } = string.Empty;
 
         /// <summary>All required dependencies.</summary>
-        public List<string> RequiredDependencies { get; init; } = new();
+        public List<string> RequiredDependencies { get; init; } = [];
 
         /// <summary>Dependencies that are satisfied.</summary>
-        public List<string> SatisfiedDependencies { get; init; } = new();
+        public List<string> SatisfiedDependencies { get; init; } = [];
 
         /// <summary>Dependencies that are missing.</summary>
-        public List<string> MissingDependencies { get; init; } = new();
+        public List<string> MissingDependencies { get; init; } = [];
 
         /// <summary>Whether all dependencies are met.</summary>
         public bool AllDependenciesMet { get; set; }

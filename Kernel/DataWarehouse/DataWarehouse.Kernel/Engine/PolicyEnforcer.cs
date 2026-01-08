@@ -1,7 +1,5 @@
-﻿using DataWarehouse.Kernel.Primitives;
-using DataWarehouse.SDK.Primitives;
+﻿using DataWarehouse.SDK.Primitives;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 
 namespace DataWarehouse.Kernel.Engine
 {

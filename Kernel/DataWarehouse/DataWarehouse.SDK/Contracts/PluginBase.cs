@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.Contracts
 {
     /// <summary>
@@ -22,7 +17,19 @@ namespace DataWarehouse.SDK.Contracts
     /// 2. Declare capabilities
     /// 3. Implement their specific business logic
     /// </summary>
-    public abstract class PluginBase : IPlugin
+    /// <remarks>
+    /// Constructs a new plugin with the specified metadata.
+    /// Called by derived class constructors.
+    /// </remarks>
+    /// <param name="id">Unique plugin identifier.</param>
+    /// <param name="name">Human-readable plugin name.</param>
+    /// <param name="version">Plugin version.</param>
+    /// <param name="category">Plugin category.</param>
+    public abstract class PluginBase(
+        string id,
+        string name,
+        Version version,
+        PluginCategory category) : IPlugin
     {
         // =========================================================================
         // PRIVATE FIELDS - Managed internally by base class
@@ -32,7 +39,7 @@ namespace DataWarehouse.SDK.Contracts
         /// Dictionary mapping capability IDs to their handler functions.
         /// Populated by derived classes calling RegisterCapability().
         /// </summary>
-        private readonly Dictionary<string, Func<Dictionary<string, object>, Task<object?>>> _capabilityHandlers = new();
+        private readonly Dictionary<string, Func<Dictionary<string, object>, Task<object?>>> _capabilityHandlers = [];
 
         // =========================================================================
         // PROTECTED PROPERTIES - Accessible to derived classes
@@ -49,25 +56,25 @@ namespace DataWarehouse.SDK.Contracts
         /// Unique identifier for this plugin (e.g., "DataWarehouse.Storage.Local").
         /// Set once in constructor by derived class.
         /// </summary>
-        protected string PluginId { get; }
+        protected string PluginId { get; } = id ?? throw new ArgumentNullException(nameof(id));
 
         /// <summary>
         /// Human-readable name of this plugin (e.g., "Local File System Storage").
         /// Set once in constructor by derived class.
         /// </summary>
-        protected string PluginName { get; }
+        protected string PluginName { get; } = name ?? throw new ArgumentNullException(nameof(name));
 
         /// <summary>
         /// Semantic version of this plugin.
         /// Set once in constructor by derived class.
         /// </summary>
-        protected Version PluginVersion { get; }
+        protected Version PluginVersion { get; } = version ?? throw new ArgumentNullException(nameof(version));
 
         /// <summary>
         /// Category this plugin belongs to (Pipeline, Storage, Metadata, etc.).
         /// Set once in constructor by derived class or category-specific base.
         /// </summary>
-        protected PluginCategory PluginCategory { get; }
+        protected PluginCategory PluginCategory { get; } = category;
 
         // =========================================================================
         // ABSTRACT MEMBERS - Must be implemented by derived classes
@@ -99,7 +106,7 @@ namespace DataWarehouse.SDK.Contracts
         /// Plugin declares its dependencies here (optional).
         /// Return empty array if no dependencies.
         /// </summary>
-        protected virtual PluginDependency[] Dependencies => Array.Empty<PluginDependency>();
+        protected virtual PluginDependency[] Dependencies => [];
 
         // =========================================================================
         // AI-NATIVE VIRTUAL MEMBERS - For AI understanding and optimization
@@ -134,7 +141,7 @@ namespace DataWarehouse.SDK.Contracts
         /// - Technology tags (algorithm names, protocols)
         /// - Use case tags (when to use this?)
         /// </summary>
-        protected virtual string[] SemanticTags => Array.Empty<string>();
+        protected virtual string[] SemanticTags => [];
 
         /// <summary>
         /// Performance characteristics of this plugin.
@@ -176,7 +183,7 @@ namespace DataWarehouse.SDK.Contracts
         /// - "compatible_with": This capability can work alongside target capability
         /// - "incompatible_with": This capability conflicts with target capability
         /// </summary>
-        protected virtual CapabilityRelationship[] CapabilityRelationships => Array.Empty<CapabilityRelationship>();
+        protected virtual CapabilityRelationship[] CapabilityRelationships => [];
 
         /// <summary>
         /// Example usage scenarios for AI to learn from.
@@ -193,7 +200,7 @@ namespace DataWarehouse.SDK.Contracts
         /// - Learn typical parameter values
         /// - Understand success patterns
         /// </summary>
-        protected virtual PluginUsageExample[] UsageExamples => Array.Empty<PluginUsageExample>();
+        protected virtual PluginUsageExample[] UsageExamples => [];
 
         // =========================================================================
         // EVENT EMISSION HOOKS - For AI observability and proactive agents
@@ -313,30 +320,6 @@ namespace DataWarehouse.SDK.Contracts
         }
 
         // =========================================================================
-        // CONSTRUCTOR
-        // =========================================================================
-
-        /// <summary>
-        /// Constructs a new plugin with the specified metadata.
-        /// Called by derived class constructors.
-        /// </summary>
-        /// <param name="id">Unique plugin identifier.</param>
-        /// <param name="name">Human-readable plugin name.</param>
-        /// <param name="version">Plugin version.</param>
-        /// <param name="category">Plugin category.</param>
-        protected PluginBase(
-            string id,
-            string name,
-            Version version,
-            PluginCategory category)
-        {
-            PluginId = id ?? throw new ArgumentNullException(nameof(id));
-            PluginName = name ?? throw new ArgumentNullException(nameof(name));
-            PluginVersion = version ?? throw new ArgumentNullException(nameof(version));
-            PluginCategory = category;
-        }
-
-        // =========================================================================
         // IPLUGIN IMPLEMENTATION - Backward compatibility properties (deprecated)
         // =========================================================================
 
@@ -410,7 +393,7 @@ namespace DataWarehouse.SDK.Contracts
                     name: PluginName,
                     version: PluginVersion,
                     category: PluginCategory,
-                    capabilities: Capabilities.ToList(),
+                    capabilities: [.. Capabilities],
                     initDuration: DateTime.UtcNow - startTime
                 );
             }
@@ -527,8 +510,7 @@ namespace DataWarehouse.SDK.Contracts
             if (string.IsNullOrWhiteSpace(capabilityId))
                 throw new ArgumentException("Capability ID cannot be empty", nameof(capabilityId));
 
-            if (handler == null)
-                throw new ArgumentNullException(nameof(handler));
+            ArgumentNullException.ThrowIfNull(handler);
 
             _capabilityHandlers[capabilityId] = handler;
             Context?.LogDebug($"Registered capability: {capabilityId}");
@@ -545,18 +527,13 @@ namespace DataWarehouse.SDK.Contracts
         /// Note: Real logging and plugin access should be implemented by Kernel.
         /// This is just for initial handshake and plugin bootstrapping.
         /// </summary>
-        private class KernelContextWrapper : IKernelContext
+        /// <remarks>
+        /// Constructs a kernel context wrapper from handshake request.
+        /// </remarks>
+        /// <param name="request">The handshake request.</param>
+        private class KernelContextWrapper(HandshakeRequest request) : IKernelContext
         {
-            private readonly HandshakeRequest _request;
-
-            /// <summary>
-            /// Constructs a kernel context wrapper from handshake request.
-            /// </summary>
-            /// <param name="request">The handshake request.</param>
-            public KernelContextWrapper(HandshakeRequest request)
-            {
-                _request = request ?? throw new ArgumentNullException(nameof(request));
-            }
+            private readonly HandshakeRequest _request = request ?? throw new ArgumentNullException(nameof(request));
 
             /// <summary>
             /// Operating mode from handshake request.
@@ -588,7 +565,7 @@ namespace DataWarehouse.SDK.Contracts
 
             /// <summary>Deprecated - use message-based communication instead.</summary>
             [Obsolete("Use message-based communication")]
-            public IEnumerable<T> GetPlugins<T>() where T : class, IPlugin => Enumerable.Empty<T>();
+            public IEnumerable<T> GetPlugins<T>() where T : class, IPlugin => [];
         }
     }
 }
