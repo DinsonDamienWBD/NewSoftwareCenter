@@ -1,0 +1,301 @@
+name: DataWarehouse CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, 'claude/**' ]
+  pull_request:
+    branches: [ main, develop ]
+  release:
+    types: [ published ]
+
+env:
+  DOTNET_VERSION: '10.0.x'
+  DOCKER_REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/datawarehouse
+
+jobs:
+  # ==================== BUILD JOB ====================
+  build:
+    name: Build Solution
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for versioning
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Build solution
+      run: dotnet build --no-restore --configuration Release --verbosity normal
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-artifacts
+        path: |
+          **/bin/Release/**
+          !**/bin/Release/**/ref/**
+        retention-days: 7
+
+  # ==================== TEST JOB ====================
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Restore dependencies
+      run: dotnet restore
+
+    - name: Run unit tests
+      run: dotnet test --no-restore --configuration Release --verbosity normal --collect:"XPlat Code Coverage" --logger trx
+
+    - name: Generate coverage report
+      if: always()
+      run: |
+        dotnet tool install -g dotnet-reportgenerator-globaltool || true
+        reportgenerator -reports:**/coverage.cobertura.xml -targetdir:coverage -reporttypes:Html || true
+
+    - name: Upload test results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          **/TestResults/**/*.trx
+          coverage/**
+        retention-days: 30
+
+    - name: Publish test summary
+      if: always()
+      uses: dorny/test-reporter@v1
+      with:
+        name: Test Results
+        path: '**/TestResults/*.trx'
+        reporter: dotnet-trx
+        fail-on-error: false
+
+  # ==================== CODE QUALITY JOB ====================
+  code-quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Build with warnings as errors
+      run: dotnet build --configuration Release /p:TreatWarningsAsErrors=true /p:WarningLevel=4
+
+    - name: Check code formatting
+      run: dotnet format --verify-no-changes --verbosity diagnostic || true
+
+  # ==================== PUBLISH JOB ====================
+  publish:
+    name: Publish Artifacts
+    runs-on: ubuntu-latest
+    needs: [build, test, code-quality]
+    if: github.event_name == 'push' || github.event_name == 'release'
+    strategy:
+      matrix:
+        runtime: [linux-x64, win-x64]
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Publish ${{ matrix.runtime }}
+      run: |
+        dotnet publish Host/Host.csproj \
+          --configuration Release \
+          --runtime ${{ matrix.runtime }} \
+          --self-contained true \
+          --output ./publish/${{ matrix.runtime }} \
+          /p:PublishSingleFile=false \
+          /p:PublishTrimmed=false
+
+    - name: Upload publish artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: publish-${{ matrix.runtime }}
+        path: ./publish/${{ matrix.runtime }}/**
+        retention-days: 90
+
+  # ==================== DOCKER BUILD JOB ====================
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [build, test]
+    if: github.event_name == 'push' || github.event_name == 'release'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.DOCKER_REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=semver,pattern={{version}}
+          type=semver,pattern={{major}}.{{minor}}
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+  # ==================== DEPLOY TO KUBERNETES ====================
+  deploy-k8s:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: [docker-build]
+    if: github.event_name == 'release' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
+    environment:
+      name: production
+      url: https://datawarehouse.example.com
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'latest'
+
+    - name: Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
+
+    - name: Deploy to Kubernetes
+      run: |
+        # Update image tag in deployment
+        export IMAGE_TAG="${{ github.sha }}"
+        envsubst < kubernetes/deployment.yaml | kubectl apply -f -
+        kubectl apply -f kubernetes/service.yaml
+        kubectl apply -f kubernetes/configmap.yaml
+
+    - name: Wait for rollout
+      run: |
+        kubectl rollout status deployment/datawarehouse-deployment --timeout=5m
+
+    - name: Verify deployment
+      run: |
+        kubectl get pods -l app=datawarehouse
+        kubectl get services datawarehouse-service
+
+  # ==================== SECURITY SCAN ====================
+  security-scan:
+    name: Security Vulnerability Scan
+    runs-on: ubuntu-latest
+    needs: docker-build
+    if: github.event_name == 'push' || github.event_name == 'pull_request'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.DOCKER_REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+  # ==================== PERFORMANCE BENCHMARKS ====================
+  benchmarks:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'pull_request' || github.event_name == 'push'
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Run benchmarks
+      run: |
+        # Run BenchmarkDotNet if benchmarks exist
+        if [ -d "Benchmarks" ]; then
+          dotnet run --project Benchmarks --configuration Release -- --exporters json
+        fi
+
+    - name: Upload benchmark results
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: benchmark-results
+        path: BenchmarkDotNet.Artifacts/results/**
+        retention-days: 30
+
+  # ==================== NOTIFICATION ====================
+  notify:
+    name: Send Notifications
+    runs-on: ubuntu-latest
+    needs: [deploy-k8s]
+    if: always() && (github.event_name == 'release' || github.ref == 'refs/heads/main')
+
+    steps:
+    - name: Send deployment notification
+      run: |
+        echo "Deployment completed: ${{ needs.deploy-k8s.result }}"
+        # Add Slack/Discord/Email notification here

@@ -1,0 +1,145 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: datawarehouse-service
+  namespace: datawarehouse
+  labels:
+    app: datawarehouse
+    component: kernel
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
+    service.beta.kubernetes.io/aws-load-balancer-cross-zone-load-balancing-enabled: "true"
+spec:
+  type: LoadBalancer
+  selector:
+    app: datawarehouse
+  ports:
+  - name: http
+    port: 80
+    targetPort: http
+    protocol: TCP
+  - name: https
+    port: 443
+    targetPort: https
+    protocol: TCP
+  - name: grpc
+    port: 50051
+    targetPort: grpc
+    protocol: TCP
+  - name: sql
+    port: 5432
+    targetPort: sql
+    protocol: TCP
+  sessionAffinity: ClientIP
+  sessionAffinityConfig:
+    clientIP:
+      timeoutSeconds: 10800
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datawarehouse-headless
+  namespace: datawarehouse
+  labels:
+    app: datawarehouse
+    component: kernel
+spec:
+  type: ClusterIP
+  clusterIP: None
+  selector:
+    app: datawarehouse
+  ports:
+  - name: http
+    port: 5000
+    targetPort: http
+    protocol: TCP
+  - name: grpc
+    port: 50051
+    targetPort: grpc
+    protocol: TCP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: datawarehouse-ingress
+  namespace: datawarehouse
+  labels:
+    app: datawarehouse
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/backend-protocol: "HTTP"
+    nginx.ingress.kubernetes.io/proxy-body-size: "100m"
+    nginx.ingress.kubernetes.io/proxy-connect-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "600"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "600"
+spec:
+  tls:
+  - hosts:
+    - datawarehouse.example.com
+    - api.datawarehouse.example.com
+    secretName: datawarehouse-tls
+  rules:
+  - host: datawarehouse.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: datawarehouse-service
+            port:
+              number: 80
+  - host: api.datawarehouse.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: datawarehouse-service
+            port:
+              number: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datawarehouse-grpc
+  namespace: datawarehouse
+  labels:
+    app: datawarehouse
+    protocol: grpc
+spec:
+  type: LoadBalancer
+  selector:
+    app: datawarehouse
+  ports:
+  - name: grpc
+    port: 50051
+    targetPort: grpc
+    protocol: TCP
+  sessionAffinity: ClientIP
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: datawarehouse-sql
+  namespace: datawarehouse
+  labels:
+    app: datawarehouse
+    protocol: sql
+spec:
+  type: LoadBalancer
+  selector:
+    app: datawarehouse
+  ports:
+  - name: sql
+    port: 5432
+    targetPort: sql
+    protocol: TCP
+  sessionAffinity: ClientIP

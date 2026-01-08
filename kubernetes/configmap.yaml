@@ -1,0 +1,149 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: datawarehouse-config
+  namespace: datawarehouse
+  labels:
+    app: datawarehouse
+data:
+  # ==================== General Configuration ====================
+  ASPNETCORE_ENVIRONMENT: "Production"
+  DOTNET_RUNNING_IN_CONTAINER: "true"
+
+  # ==================== DataWarehouse Configuration ====================
+  DW_ROOT_PATH: "/app/data"
+  DW_LOG_PATH: "/app/logs"
+  DW_PLUGIN_PATH: "/app/plugins"
+  DW_MODE: "cluster"
+  DW_CLUSTER_SIZE: "3"
+
+  # ==================== Storage Configuration ====================
+  DW_STORAGE_POOL_MODE: "tiered"
+  DW_STORAGE_HOT_TIER_PATH: "/app/data/hot"
+  DW_STORAGE_WARM_TIER_PATH: "/app/data/warm"
+  DW_STORAGE_COLD_TIER_PATH: "/app/data/cold"
+  DW_STORAGE_CACHE_SIZE_MB: "1024"
+  DW_STORAGE_TIERING_THRESHOLD_DAYS: "7,30"
+
+  # ==================== RAID Configuration ====================
+  DW_RAID_ENABLED: "true"
+  DW_RAID_LEVEL: "5"
+  DW_RAID_STRIPE_SIZE_KB: "64"
+  DW_RAID_REBUILD_PRIORITY: "medium"
+
+  # ==================== Security Configuration ====================
+  DW_ACL_STORAGE_PATH: "/app/data/security/acl.db"
+  DW_SECURITY_ENABLED: "true"
+  DW_SECURITY_DEFAULT_ADMIN: "admin"
+
+  # ==================== Metadata Configuration ====================
+  DW_METADATA_PROVIDER: "sqlite"
+  DW_METADATA_CONNECTION_STRING: "Data Source=/app/data/metadata/index.db"
+
+  # ==================== AI/Intelligence Configuration ====================
+  DW_AI_ENABLED: "true"
+  DW_AI_MODEL_PROVIDER: "openai"
+  DW_AI_EMBEDDING_MODEL: "text-embedding-3-small"
+  DW_AI_COMPLETION_MODEL: "gpt-4o-mini"
+  DW_AI_MAX_TOKENS: "4096"
+
+  # ==================== Orchestration Configuration ====================
+  DW_RAFT_ENABLED: "true"
+  DW_RAFT_NODE_ID: ""  # Set dynamically via downward API
+  DW_RAFT_CLUSTER_PEERS: "datawarehouse-0.datawarehouse-headless:5000,datawarehouse-1.datawarehouse-headless:5000,datawarehouse-2.datawarehouse-headless:5000"
+  DW_RAFT_ELECTION_TIMEOUT_MS: "1000"
+  DW_RAFT_HEARTBEAT_INTERVAL_MS: "100"
+
+  # ==================== Interface Configuration ====================
+  DW_REST_ENABLED: "true"
+  DW_REST_PORT: "5000"
+  DW_GRPC_ENABLED: "true"
+  DW_GRPC_PORT: "50051"
+  DW_SQL_ENABLED: "true"
+  DW_SQL_PORT: "5432"
+
+  # ==================== Monitoring & Observability ====================
+  DW_METRICS_ENABLED: "true"
+  DW_METRICS_INTERVAL_SEC: "30"
+  DW_TRACING_ENABLED: "true"
+  DW_TRACING_ENDPOINT: "http://jaeger-collector:14268/api/traces"
+  DW_LOGGING_LEVEL: "Information"
+  DW_LOGGING_JSON_FORMAT: "true"
+
+  # ==================== Performance Tuning ====================
+  DW_MAX_CONCURRENT_REQUESTS: "1000"
+  DW_REQUEST_TIMEOUT_SEC: "300"
+  DW_CONNECTION_POOL_SIZE: "100"
+  DW_BATCH_SIZE: "1000"
+
+  # ==================== Feature Flags ====================
+  DW_FEATURE_COMPRESSION: "true"
+  DW_FEATURE_ENCRYPTION: "true"
+  DW_FEATURE_DEDUPLICATION: "true"
+  DW_FEATURE_VERSIONING: "true"
+  DW_FEATURE_TIERING: "true"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: datawarehouse-plugins-config
+  namespace: datawarehouse
+  labels:
+    app: datawarehouse
+    component: plugins
+data:
+  plugins.json: |
+    {
+      "autoLoadPlugins": true,
+      "pluginLoadOrder": [
+        "DataWarehouse.Plugins.Security.ACL",
+        "DataWarehouse.Plugins.Storage.LocalNew",
+        "DataWarehouse.Plugins.Storage.RAMDisk",
+        "DataWarehouse.Plugins.Compression.Standard",
+        "DataWarehouse.Plugins.Crypto.Standard",
+        "DataWarehouse.Plugins.Metadata.SQLite",
+        "DataWarehouse.Plugins.Orchestration.Raft",
+        "DataWarehouse.Plugins.Feature.Tiering",
+        "DataWarehouse.Plugins.Interface.REST",
+        "DataWarehouse.Plugins.Interface.gRPC",
+        "DataWarehouse.Plugins.Interface.SQL"
+      ],
+      "pluginSettings": {
+        "DataWarehouse.Plugins.Storage.LocalNew": {
+          "basePath": "/app/data/storage/local",
+          "maxFileSize": "10737418240"
+        },
+        "DataWarehouse.Plugins.Storage.RAMDisk": {
+          "maxSize": "1073741824",
+          "persistToDisk": "true",
+          "persistPath": "/app/data/ramdisk-backup"
+        },
+        "DataWarehouse.Plugins.Compression.Standard": {
+          "algorithm": "gzip",
+          "compressionLevel": "optimal"
+        },
+        "DataWarehouse.Plugins.Crypto.Standard": {
+          "algorithm": "AES256",
+          "keyRotationDays": "90"
+        },
+        "DataWarehouse.Plugins.Metadata.SQLite": {
+          "databasePath": "/app/data/metadata/index.db",
+          "walMode": "true"
+        },
+        "DataWarehouse.Plugins.Orchestration.Raft": {
+          "electionTimeout": "1000",
+          "heartbeatInterval": "100",
+          "snapshotInterval": "3600"
+        }
+      }
+    }
+
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: datawarehouse
+  labels:
+    name: datawarehouse
+    environment: production

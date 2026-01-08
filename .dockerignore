@@ -1,0 +1,84 @@
+# Git files
+.git
+.gitignore
+.gitattributes
+
+# Build output
+**/bin/
+**/obj/
+**/out/
+
+# User-specific files
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# IDE files
+.vs/
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Test coverage
+**/TestResults/
+**/coverage/
+*.trx
+
+# NuGet packages
+*.nupkg
+*.snupkg
+.nuget/
+packages/
+
+# Docker files (avoid recursion)
+Dockerfile*
+.dockerignore
+
+# CI/CD files
+.github/
+.gitlab-ci.yml
+azure-pipelines.yml
+
+# Documentation
+*.md
+docs/
+Metadata/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+**/logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Data directories
+data/
+**/data/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Kubernetes configs
+kubernetes/
+k8s/
+*.yaml
+*.yml
+!appsettings*.json
+
+# Old/backup files
+OLD*
+*.bak
+*.old
