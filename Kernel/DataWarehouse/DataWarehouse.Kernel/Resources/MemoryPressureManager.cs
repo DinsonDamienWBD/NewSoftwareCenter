@@ -1,7 +1,7 @@
 using DataWarehouse.SDK.Contracts;
 using System.Diagnostics;
 
-namespace DataWarehouse.DataWarehouse.Kernel.Resources
+namespace DataWarehouse.Kernel.Resources
 {
     /// <summary>
     /// Monitors memory pressure and automatically responds to prevent OutOfMemory exceptions.

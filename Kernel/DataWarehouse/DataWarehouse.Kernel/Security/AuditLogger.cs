@@ -3,7 +3,7 @@ using DataWarehouse.SDK.Security;
 using System.Collections.Concurrent;
 using System.Text.Json;
 
-namespace DataWarehouse.DataWarehouse.Kernel.Security
+namespace DataWarehouse.Kernel.Security
 {
     /// <summary>
     /// Comprehensive audit logging system for security, compliance, and forensics.

@@ -2,7 +2,7 @@ using DataWarehouse.SDK.Contracts;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 
-namespace DataWarehouse.DataWarehouse.Kernel.Monitoring
+namespace DataWarehouse.Kernel.Monitoring
 {
     /// <summary>
     /// Real-time performance monitoring and metrics collection.

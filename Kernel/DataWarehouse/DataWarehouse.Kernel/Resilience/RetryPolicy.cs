@@ -1,6 +1,6 @@
 using DataWarehouse.SDK.Contracts;
 
-namespace DataWarehouse.DataWarehouse.Kernel.Resilience
+namespace DataWarehouse.Kernel.Resilience
 {
     /// <summary>
     /// Implements retry logic with exponential backoff for transient failures.

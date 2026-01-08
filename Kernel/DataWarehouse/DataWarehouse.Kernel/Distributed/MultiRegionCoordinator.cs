@@ -1,7 +1,7 @@
 using DataWarehouse.SDK.Contracts;
 using System.Collections.Concurrent;
 
-namespace DataWarehouse.DataWarehouse.Kernel.Distributed
+namespace DataWarehouse.Kernel.Distributed
 {
     /// <summary>
     /// Coordinates data replication and synchronization across multiple geographic regions.

@@ -4,7 +4,7 @@ using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace DataWarehouse.DataWarehouse.Kernel.Security
+namespace DataWarehouse.Kernel.Security
 {
     /// <summary>
     /// Manages authentication and authorization for DataWarehouse operations.

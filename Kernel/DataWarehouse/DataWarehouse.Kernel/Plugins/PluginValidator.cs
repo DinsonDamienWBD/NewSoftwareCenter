@@ -1,7 +1,7 @@
 using DataWarehouse.SDK.Contracts;
 using System.Reflection;
 
-namespace DataWarehouse.DataWarehouse.Kernel.Plugins
+namespace DataWarehouse.Kernel.Plugins
 {
     /// <summary>
     /// Validates plugin assemblies and implementations before loading.

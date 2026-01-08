@@ -1,7 +1,7 @@
 using DataWarehouse.SDK.Contracts;
 using System.Text.Json;
 
-namespace DataWarehouse.DataWarehouse.Kernel.Configuration
+namespace DataWarehouse.Kernel.Configuration
 {
     /// <summary>
     /// Validates DataWarehouse configuration before startup to prevent runtime errors.
