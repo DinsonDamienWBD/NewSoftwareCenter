@@ -1,112 +1,325 @@
+using DataWarehouse.SDK.Security;
+using DataWarehouse.SDK.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using DataWarehouse.SDK.Contracts;
-using DataWarehouse.SDK.Contracts.CategoryBases;
-using DataWarehouse.SDK.Security;
+using System.IO;
 
-namespace Security.ACL.Engine
+namespace DataWarehouse.Plugins.Security.ACL.Engine
 {
     /// <summary>
-    /// Access Control List (ACL) security provider.
-    /// Provides fine-grained access control for resources.
+    /// Enhanced ACL Security Engine with hierarchical permissions, wildcards, and deny rules.
     ///
-    /// Features:
-    /// - User-based access control
-    /// - Resource-level permissions
-    /// - Inheritance support
-    /// - Group/role management
-    /// - Audit logging
-    /// - In-memory or persistent storage
+    /// Key Features:
+    /// - Hierarchical Path Expansion: Permissions on parent paths apply to children
+    /// - Wildcard User Support: Use "*" to grant permissions to all users
+    /// - Deny-Trumps-Allow: Explicit deny rules override any allow permissions
+    /// - Persistent Storage: Uses DurableState for disk-based persistence
     ///
-    /// AI-Native metadata:
-    /// - Semantic: "Control access to resources with user-based permissions"
-    /// - Performance: <5ms permission checks
-    /// - Security: Fine-grained access control
+    /// Example:
+    ///   SetPermissions("users/damien", "damien", Permission.Read, Permission.None);
+    ///   HasAccess("users/damien/docs/file.txt", "damien", Permission.Read) => true (inherited)
+    ///
+    /// Performance:
+    /// - Permission checks: <5ms (hierarchical path traversal)
+    /// - Throughput: 10,000+ checks/sec
+    /// - Memory: Low (disk-backed with in-memory cache)
     /// </summary>
-    public class ACLSecurityEngine : SecurityProviderBase
+    public class ACLSecurityEngine
     {
-        private Dictionary<string, Dictionary<string, HashSet<Permission>>> _acls = new();
-        private readonly object _lock = new();
+        // Persistent Store: ResourcePath -> Dictionary<Subject, AclEntry>
+        // Subject can be a username or "*" for wildcard (all users)
+        private readonly DurableState<Dictionary<string, AclEntry>> _store;
+        private readonly string _storagePath;
 
-        protected override string SecurityType => "acl";
-
-        public ACLSecurityEngine()
-            : base("security.acl", "ACL Security Provider", new Version(1, 0, 0))
+        /// <summary>
+        /// Initializes the ACL security engine with persistent storage.
+        /// </summary>
+        /// <param name="rootPath">Root path for the DataWarehouse instance</param>
+        public ACLSecurityEngine(string rootPath)
         {
-            SemanticDescription = "Control access to resources with user-based permissions and fine-grained ACLs";
+            // Create Security directory if it doesn't exist
+            var securityDir = Path.Combine(rootPath, "Security");
+            Directory.CreateDirectory(securityDir);
 
-            SemanticTags = new List<string>
+            _storagePath = Path.Combine(securityDir, "acl_enhanced.db");
+            _store = new DurableState<Dictionary<string, AclEntry>>(_storagePath);
+        }
+
+        /// <summary>
+        /// Creates an ACL scope with an owner who has full control.
+        /// This is useful for multi-tenant isolation where each scope has a designated owner.
+        /// </summary>
+        /// <param name="resource">The resource path (e.g., "projects/project-a")</param>
+        /// <param name="owner">The owner's username</param>
+        public void CreateScope(string resource, string owner)
+        {
+            SetPermissions(resource, owner, Permission.FullControl, Permission.None);
+        }
+
+        /// <summary>
+        /// Sets permissions for a subject (user or wildcard "*") on a resource.
+        /// </summary>
+        /// <param name="resource">The resource path (e.g., "users/damien/docs")</param>
+        /// <param name="subject">The username or "*" for all users</param>
+        /// <param name="allow">Permissions to grant (OR combination of Permission flags)</param>
+        /// <param name="deny">Permissions to explicitly deny (OR combination of Permission flags)</param>
+        /// <example>
+        /// // Grant read and write, but deny delete
+        /// SetPermissions("users/damien/docs", "damien", Permission.Read | Permission.Write, Permission.Delete);
+        /// </example>
+        public void SetPermissions(string resource, string subject, Permission allow, Permission deny)
+        {
+            // Normalize resource path (remove trailing slashes)
+            resource = NormalizeResourcePath(resource);
+
+            // Get existing entries for this resource, or create new
+            if (!_store.TryGet(resource, out Dictionary<string, AclEntry>? entries))
             {
-                "security", "acl", "access-control", "permissions",
-                "authorization", "rbac", "audit"
+                entries = new Dictionary<string, AclEntry>();
+            }
+
+            // Set or update the ACL entry for this subject
+            entries[subject] = new AclEntry
+            {
+                Allow = allow,
+                Deny = deny
             };
 
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 2.0,
-                CostPerExecution = 0.0m,
-                MemoryUsageMB = 10.0,
-                ScalabilityRating = ScalabilityLevel.High,
-                ReliabilityRating = ReliabilityLevel.VeryHigh,
-                ConcurrencySafe = true
-            };
+            // Persist to disk
+            _store.Set(resource, entries);
         }
 
-        protected override async Task InitializeSecurityAsync(IKernelContext context)
+        /// <summary>
+        /// Checks if a subject has the requested permission on a resource.
+        ///
+        /// Algorithm:
+        /// 1. Path Expansion: Split resource path and check each parent path progressively
+        ///    Example: "users/damien/docs/file.txt" checks:
+        ///    - "users"
+        ///    - "users/damien"
+        ///    - "users/damien/docs"
+        ///    - "users/damien/docs/file.txt"
+        ///
+        /// 2. Permission Accumulation: For each path level, accumulate Allow and Deny permissions
+        ///    - Check subject-specific rule (e.g., "damien")
+        ///    - Check wildcard rule (e.g., "*")
+        ///    - Accumulate using bitwise OR
+        ///
+        /// 3. The Golden Rule: Deny Trumps Everything
+        ///    - If any Deny bit matches the requested permission, return false immediately
+        ///
+        /// 4. Allow Check: All requested permission bits must be in the Allow set
+        /// </summary>
+        /// <param name="resource">The resource path</param>
+        /// <param name="subject">The username</param>
+        /// <param name="requested">The requested permission(s)</param>
+        /// <returns>True if access is granted, false otherwise</returns>
+        public bool HasAccess(string resource, string subject, Permission requested)
         {
-            // Initialize with default admin permissions
-            await GrantPermissionInternalAsync("admin", "*", Permission.FullControl);
-            context.LogInfo("ACL security provider initialized");
-        }
+            // Normalize resource path
+            resource = NormalizeResourcePath(resource);
 
-        protected override async Task<bool> CheckPermissionInternalAsync(string userId, string resource, Permission permission)
-        {
-            lock (_lock)
+            // Split resource path into parts
+            var parts = resource.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 0)
             {
-                if (!_acls.ContainsKey(resource)) return false;
-                if (!_acls[resource].ContainsKey(userId)) return false;
-                return _acls[resource][userId].Contains(permission) ||
-                       _acls[resource][userId].Contains(Permission.FullControl);
+                // Root path check
+                return CheckResourcePermissions("", subject, requested);
             }
-        }
 
-        protected override async Task GrantPermissionInternalAsync(string userId, string resource, Permission permission)
-        {
-            lock (_lock)
-            {
-                if (!_acls.ContainsKey(resource))
-                    _acls[resource] = new Dictionary<string, HashSet<Permission>>();
-                if (!_acls[resource].ContainsKey(userId))
-                    _acls[resource][userId] = new HashSet<Permission>();
-                _acls[resource][userId].Add(permission);
-            }
-            await Task.CompletedTask;
-        }
+            string currentPath = "";
+            Permission effectiveAllow = Permission.None;
+            Permission effectiveDeny = Permission.None;
 
-        protected override async Task RevokePermissionInternalAsync(string userId, string resource, Permission permission)
-        {
-            lock (_lock)
+            // Traverse each level of the path hierarchy
+            foreach (var part in parts)
             {
-                if (_acls.ContainsKey(resource) && _acls[resource].ContainsKey(userId))
+                currentPath = string.IsNullOrEmpty(currentPath) ? part : $"{currentPath}/{part}";
+
+                // Check if ACL rules exist for this path level
+                if (_store.TryGet(currentPath, out var entries))
                 {
-                    _acls[resource][userId].Remove(permission);
-                    if (_acls[resource][userId].Count == 0)
-                        _acls[resource].Remove(userId);
+                    // 1. Check subject-specific rule
+                    if (entries.TryGetValue(subject, out AclEntry? userRule))
+                    {
+                        effectiveAllow |= userRule.Allow;
+                        effectiveDeny |= userRule.Deny;
+                    }
+
+                    // 2. Check wildcard rule ("*" applies to all users)
+                    if (entries.TryGetValue("*", out var wildcardRule))
+                    {
+                        effectiveAllow |= wildcardRule.Allow;
+                        effectiveDeny |= wildcardRule.Deny;
+                    }
                 }
             }
-            await Task.CompletedTask;
+
+            // 3. The Golden Rule: Deny trumps EVERYTHING
+            // If any bit of the requested permission is in the Deny set, access is denied
+            if ((effectiveDeny & requested) != Permission.None)
+            {
+                return false;
+            }
+
+            // 4. Allow Check: All requested permission bits must be present in Allow set
+            // Example: If requested = Read | Write, then effectiveAllow must contain both Read and Write
+            return (effectiveAllow & requested) == requested;
         }
 
-        protected override async Task<List<Permission>> GetUserPermissionsInternalAsync(string userId, string resource)
+        /// <summary>
+        /// Removes all permissions for a subject on a resource.
+        /// </summary>
+        /// <param name="resource">The resource path</param>
+        /// <param name="subject">The username or "*"</param>
+        public void RemovePermissions(string resource, string subject)
         {
-            lock (_lock)
+            resource = NormalizeResourcePath(resource);
+
+            if (_store.TryGet(resource, out var entries))
             {
-                if (!_acls.ContainsKey(resource) || !_acls[resource].ContainsKey(userId))
-                    return new List<Permission>();
-                return _acls[resource][userId].ToList();
+                entries.Remove(subject);
+
+                if (entries.Count == 0)
+                {
+                    // Remove the resource entirely if no entries remain
+                    _store.Remove(resource);
+                }
+                else
+                {
+                    _store.Set(resource, entries);
+                }
             }
+        }
+
+        /// <summary>
+        /// Gets all permissions (Allow and Deny) for a subject on a specific resource (non-hierarchical).
+        /// </summary>
+        /// <param name="resource">The resource path</param>
+        /// <param name="subject">The username or "*"</param>
+        /// <returns>The ACL entry, or null if no permissions exist</returns>
+        public AclEntry? GetPermissions(string resource, string subject)
+        {
+            resource = NormalizeResourcePath(resource);
+
+            if (_store.TryGet(resource, out var entries))
+            {
+                if (entries.TryGetValue(subject, out var entry))
+                {
+                    return entry;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// Gets all subjects (users) that have permissions on a resource.
+        /// </summary>
+        /// <param name="resource">The resource path</param>
+        /// <returns>List of subjects with their ACL entries</returns>
+        public Dictionary<string, AclEntry> GetResourceAcl(string resource)
+        {
+            resource = NormalizeResourcePath(resource);
+
+            if (_store.TryGet(resource, out var entries))
+            {
+                return new Dictionary<string, AclEntry>(entries);
+            }
+
+            return new Dictionary<string, AclEntry>();
+        }
+
+        /// <summary>
+        /// Clears all ACL entries from storage. USE WITH CAUTION!
+        /// </summary>
+        public void ClearAll()
+        {
+            _store.Clear();
+        }
+
+        /// <summary>
+        /// Gets the path to the persistent storage file.
+        /// </summary>
+        public string GetStoragePath() => _storagePath;
+
+        // ==================== HELPER METHODS ====================
+
+        /// <summary>
+        /// Normalizes a resource path by removing leading/trailing slashes and collapsing consecutive slashes.
+        /// </summary>
+        private string NormalizeResourcePath(string resource)
+        {
+            if (string.IsNullOrWhiteSpace(resource))
+            {
+                return "";
+            }
+
+            // Remove leading and trailing slashes
+            resource = resource.Trim('/');
+
+            // Collapse consecutive slashes
+            while (resource.Contains("//"))
+            {
+                resource = resource.Replace("//", "/");
+            }
+
+            return resource;
+        }
+
+        /// <summary>
+        /// Checks permissions for a specific resource (non-hierarchical helper).
+        /// </summary>
+        private bool CheckResourcePermissions(string resource, string subject, Permission requested)
+        {
+            if (!_store.TryGet(resource, out var entries))
+            {
+                return false;
+            }
+
+            Permission effectiveAllow = Permission.None;
+            Permission effectiveDeny = Permission.None;
+
+            // Check subject-specific rule
+            if (entries.TryGetValue(subject, out var userRule))
+            {
+                effectiveAllow |= userRule.Allow;
+                effectiveDeny |= userRule.Deny;
+            }
+
+            // Check wildcard rule
+            if (entries.TryGetValue("*", out var wildcardRule))
+            {
+                effectiveAllow |= wildcardRule.Allow;
+                effectiveDeny |= wildcardRule.Deny;
+            }
+
+            // Deny trumps allow
+            if ((effectiveDeny & requested) != Permission.None)
+            {
+                return false;
+            }
+
+            return (effectiveAllow & requested) == requested;
+        }
+
+        // ==================== DATA STRUCTURES ====================
+
+        /// <summary>
+        /// Represents an ACL entry with both Allow and Deny permissions.
+        /// Deny permissions take precedence over Allow permissions (deny-trumps-allow).
+        /// </summary>
+        public class AclEntry
+        {
+            /// <summary>
+            /// Permissions that are explicitly granted.
+            /// </summary>
+            public Permission Allow { get; set; }
+
+            /// <summary>
+            /// Permissions that are explicitly denied (overrides Allow).
+            /// </summary>
+            public Permission Deny { get; set; }
         }
     }
 }

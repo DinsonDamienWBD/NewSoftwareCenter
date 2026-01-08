@@ -748,6 +748,46 @@ Before submitting any code, verify:
 
 ---
 
+### 11. Task Tracking & Documentation
+
+**RULE:** All tasks must be documented in TODO.md before implementation begins.
+
+**Task Documentation Requirements:**
+- ✅ Add tasks to TODO.md BEFORE starting work
+- ✅ Break large features into atomic, trackable tasks
+- ✅ Include estimated lines of code for each task
+- ✅ Mark tasks with status: NOT STARTED, IN PROGRESS, COMPLETED
+- ✅ Update TODO.md immediately when task status changes
+- ✅ Include file paths and commit references when completed
+
+**Rationale:**
+- Ensures continuity if session ends unexpectedly
+- Provides clear progress tracking
+- Helps prioritize remaining work
+- Documents implementation history
+
+**Example (Correct):**
+```markdown
+## Phase 14: Comprehensive RAID Support
+
+**Status:** IN PROGRESS
+**Estimated:** ~1,000 lines
+**Priority:** HIGH
+
+### Tasks
+- [x] Add RAID mode enum (RAID 0, 1, 5, 6, 10, 50, 60)
+- [ ] Implement RAID 0 (striping) in StoragePoolManager
+- [ ] Implement RAID 1 (mirroring) - enhanced from basic
+- [ ] Implement RAID 5 (striping with parity)
+- [ ] Implement RAID 6 (dual parity)
+- [ ] Add RAID configuration validation
+- [ ] Add rebuild logic for failed disks
+
+**Commit:** Phase 14: Implement RAID 0, 1, 5 support (abc1234)
+```
+
+---
+
 ## 📚 References
 
 - Microsoft C# Coding Conventions: https://docs.microsoft.com/en-us/dotnet/csharp/fundamentals/coding-style/coding-conventions
@@ -757,6 +797,6 @@ Before submitting any code, verify:
 
 ---
 
-**Last Updated:** 2025-01-07
-**Version:** 1.0
+**Last Updated:** 2026-01-08
+**Version:** 1.1
 **Status:** Active - All new code must comply with these standards
