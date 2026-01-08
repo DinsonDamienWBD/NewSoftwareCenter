@@ -442,22 +442,47 @@ Each blob's metadata stores its own transformation order:
 
 ### 3. Storage Pool Manager
 
+**Implementation:** `DataWarehouse.Kernel.Storage.StoragePoolManager` (600 lines)
+
 **Features:**
-- **Independent Mode:** Use storage providers separately
-- **Cache Mode:** Fast storage caches slow storage (write-through/write-back)
+- **Independent Mode:** Use primary storage provider
+- **Cache Mode:** Fast storage caches slow storage
+  - Write-through: Simultaneous write to cache + primary
+  - Write-back: Write to cache, async flush to primary
+  - Automatic cache population on miss
+  - Cache hit/miss logging
 - **Tiered Mode:** Hot/warm/cold automatic migration
-- **Pool Mode:** RAID-like redundancy/striping
-- LRU eviction for memory-limited providers
-- Cache hit/miss tracking
-- Async write-back with periodic flushing
+  - Access frequency tracking with metadata
+  - Background migration worker (configurable interval)
+  - Automatic promotion to hot tier on frequent access
+  - Access count decay over time (90% retention)
+  - Configurable tier thresholds
+- **Pool Mode:** RAID-like redundancy
+  - Mirroring: Write to multiple providers (configurable mirror count)
+  - Striping: 64KB chunk distribution across providers
+  - Automatic failover on provider failure
+- Thread-safe concurrent operations
+- Comprehensive error handling with retry logic
 
 **Functions:**
-- `ConfigureMode(StoragePoolMode mode)` - Set pool mode
-- `AddProvider(IStorageProvider provider, string tier)` - Add to pool
+- `RegisterProvider(string id, IStorageProvider provider)` - Add provider to pool
+- `UnregisterProvider(string id)` - Remove provider
 - `SaveAsync(Uri uri, Stream data)` - Smart routing based on mode
-- `LoadAsync(Uri uri)` - Check cache → backing store
-- `MigrateToTier(Uri uri, string targetTier)` - Move between tiers
-- `FlushCacheAsync()` - Force write-back flush
+- `LoadAsync(Uri uri)` - Check cache/tiers → backing store
+- `DeleteAsync(Uri uri)` - Remove from all providers
+- `ExistsAsync(Uri uri)` - Check all providers
+- `GetStatistics()` - Pool metrics (mode, provider count, tier metadata count)
+
+**Configuration:**
+```csharp
+var config = new StoragePoolConfig {
+    Mode = PoolMode.Tiered,
+    TierProviderIds = ["ramdisk", "localfs", "s3"],
+    HotTierAccessThreshold = 10,
+    WarmTierAccessThreshold = 3,
+    MigrationInterval = TimeSpan.FromMinutes(5)
+};
+```
 
 ### 4. Key Management System
 
@@ -529,58 +554,237 @@ Each blob's metadata stores its own transformation order:
 - `GetEventHistory()` - Retrieve event log
 - `GetStatistics()` - Event metrics
 
-### 8. Scheduler Service
+### 7.5. Command Bus (Message-Based Architecture)
+
+**Implementation:** `DataWarehouse.Kernel.Engine.CommandBus` (520 lines)
 
 **Features:**
-- Cron-like scheduling ("0 2 * * *" = 2 AM daily)
-- Periodic scheduling (every 5 minutes, hourly)
-- Event-driven scheduling (on BlobStored, on HighMemoryUsage)
-- On-demand execution
-- Background worker pool
-- Task cancellation and timeout
+- **Message-Based Communication:** All plugin operations invoked via commands (no direct function calls)
+- **Command Routing:** Automatic routing to registered handlers
+- **Automatic Retry Logic:**
+  - Exponential backoff (100ms, 200ms, 400ms)
+  - Max 3 retries per command
+  - Configurable per command type
+- **Circuit Breaker Pattern:**
+  - Opens after 5 consecutive failures
+  - Auto-closes after 1 minute timeout
+  - Prevents cascading failures
+- **Batch Execution:** Execute multiple commands in parallel
+- **Comprehensive Metrics:**
+  - Total executions per command type
+  - Success/failure counts
+  - Success rate percentage
+  - Average execution time
+  - Circuit breaker status
+- **Thread-Safe:**
+  - Concurrent command execution (max 100 concurrent by default)
+  - Semaphore-based throttling
+  - CancellationToken support
+
+**Standard Command Types:**
+- **Storage Commands:** SaveBlob, LoadBlob, DeleteBlob, ExistsBlob, ListBlobs
+- **Transformation Commands:** Compress, Decompress, Encrypt, Decrypt, Deduplicate
+- **Governance Commands:** EvaluatePolicy, ApplyCompliance, CheckAccess, AuditLog
+- **Agent Commands:** AnalyzePerformance, OptimizeCost, DetectAnomaly, GenerateInsights, AutoHeal
 
 **Functions:**
-- `ScheduleCron(string expression, Action task)` - Cron scheduling
-- `SchedulePeriodic(TimeSpan interval, Action task)` - Periodic
-- `ScheduleOnEvent(string eventType, Action<Event> task)` - Event-driven
-- `ExecuteNow(string taskId)` - On-demand execution
-- `CancelTask(string taskId)` - Cancel scheduled task
+- `RegisterHandler(string commandType, CommandHandler handler)` - Register command handler
+- `UnregisterHandler(string commandType)` - Remove handler
+- `ExecuteAsync(ICommand command, CancellationToken ct)` - Execute single command
+- `ExecuteAsync<T>(ICommand command, CancellationToken ct)` - Execute with typed result
+- `ExecuteBatchAsync(IEnumerable<ICommand> commands)` - Batch execution
+- `HasHandler(string commandType)` - Check handler registration
+- `GetRegisteredCommands()` - List all command types
+- `GetCommandMetrics(string commandType)` - Get metrics for command
+- `GetAllMetrics()` - Retrieve all command metrics
+
+**Example:**
+```csharp
+// Register handler
+commandBus.RegisterHandler(StorageCommands.SaveBlob, async (cmd, ct) => {
+    var uri = (Uri)cmd.Parameters["uri"];
+    var data = (Stream)cmd.Parameters["data"];
+    await storageProvider.SaveAsync(uri, data);
+    return new CommandResult { Success = true };
+});
+
+// Execute command
+var command = new Command {
+    CommandType = StorageCommands.SaveBlob,
+    Parameters = new() {
+        ["uri"] = new Uri("s3://bucket/file.txt"),
+        ["data"] = fileStream
+    },
+    InitiatedBy = "AI-Agent"
+};
+var result = await commandBus.ExecuteAsync(command);
+```
+
+### 8. Scheduler Service
+
+**Implementation:** `DataWarehouse.Kernel.Scheduling.SchedulerService` (460 lines)
+
+**Features:**
+- **Cron Scheduling:** Cron expression parser ("0 0 * * *" = daily at midnight)
+  - Support for */N interval syntax (e.g., "*/5 * * * *" = every 5 minutes)
+  - Automatic next-run calculation
+  - Auto-reschedule after execution
+- **Periodic Scheduling:** Fixed interval execution (e.g., every 5 minutes)
+- **Event-Driven Scheduling:** Pattern-based event triggers
+  - Wildcard pattern matching (e.g., "Blob.*" matches "Blob.Stored")
+  - Multiple tasks per event pattern
+- **On-Demand Execution:** Manual task triggering with context
+- **Task Priority:** Low/Normal/High/Critical priority levels
+- **Concurrency Control:**
+  - Max concurrent tasks (default: 10)
+  - Per-task concurrency limit
+  - Semaphore-based throttling
+- **Task Management:** Pause/Resume/Cancel functionality
+- **Comprehensive Metrics:**
+  - Total/enabled tasks by type
+  - Total executions per task
+  - Active execution count
+
+**Functions:**
+- `ScheduleTask(ScheduledTask task)` - Schedule new task (returns task ID)
+- `ExecuteTaskNowAsync(string taskId, Dictionary context)` - On-demand execution
+- `TriggerEventAsync(string eventName, Dictionary eventData)` - Trigger event-driven tasks
+- `CancelTask(string taskId)` - Remove task
+- `PauseTask(string taskId)` - Temporarily disable
+- `ResumeTask(string taskId)` - Re-enable task
+- `GetAllTasks()` - Retrieve all tasks
+- `GetTasksByType(ScheduleType type)` - Filter by type
+- `GetStatistics()` - Scheduler metrics
+
+**Example:**
+```csharp
+scheduler.ScheduleTask(new ScheduledTask {
+    Name = "Daily Cleanup",
+    Type = ScheduleType.Cron,
+    CronExpression = "0 2 * * *",
+    Priority = TaskPriority.Normal,
+    Action = async () => await CleanupOldDataAsync()
+});
+```
 
 ### 9. Metrics & Telemetry
 
+**Implementation:** `DataWarehouse.Kernel.Monitoring.MetricsCollector` (659 lines)
+
 **Features:**
-- Distributed tracing (OpenTelemetry compatible)
-- Operation counters (reads, writes, deletes)
-- Latency tracking (p50, p95, p99 percentiles)
-- Error rate tracking
-- Cache hit/miss rates
-- Storage usage tracking
-- Plugin health status
-- Memory usage tracking
+- **Counter Metrics:** Monotonically increasing counters
+  - Thread-safe Interlocked operations
+  - Label/tag support for dimensions
+  - Last updated timestamp tracking
+- **Gauge Metrics:** Bidirectional metrics (can increase/decrease)
+  - Thread-safe lock-based updates
+  - Set/Increment/Decrement operations
+  - Label/tag support
+- **Histogram Metrics:** Distribution tracking with percentiles
+  - Automatic percentile calculation (p50, p75, p90, p95, p99)
+  - Min/Max/Mean/Sum/Count aggregation
+  - Keeps last 1000 values per histogram (bounded memory)
+  - Sorted percentile calculation
+- **Distributed Tracing:** OpenTelemetry-compatible activity tracking
+  - TraceId and SpanId generation
+  - Activity lifecycle (Start → AddEvent → AddTag → Stop)
+  - Duration tracking
+  - Status tracking (Ok/Error/Cancelled)
+- **Export Formats:**
+  - Prometheus format (counters, gauges, histograms)
+  - JSON format (all metrics with metadata)
+- **System Health Metrics:**
+  - Memory usage (MB)
+  - CPU time (seconds)
+  - Thread count
+  - Handle count
+  - Process uptime
+- **Background Aggregation:** Periodic cleanup (default: 1 minute)
 
 **Functions:**
-- `RecordOperation(string operation, long durationMs)` - Track latency
-- `IncrementCounter(string metric)` - Increment counter
-- `RecordGauge(string metric, double value)` - Set gauge value
-- `GetMetrics()` - Retrieve all metrics
-- `ExportMetrics(string format)` - Export to Prometheus/JSON
+- `IncrementCounter(string name, long value, Dictionary labels)` - Increment counter
+- `SetGauge(string name, double value, Dictionary labels)` - Set gauge
+- `IncrementGauge/DecrementGauge(string name, double value)` - Adjust gauge
+- `RecordHistogram(string name, double value, Dictionary labels)` - Record value
+- `GetHistogramSnapshot(string name)` - Get percentiles
+- `StartActivity(string name, Dictionary tags)` - Begin trace span (returns activity ID)
+- `AddActivityEvent(string activityId, string eventName)` - Add trace event
+- `AddActivityTag(string activityId, string key, object value)` - Add tag
+- `StopActivity(string activityId, ActivityStatus status)` - End trace span
+- `RecordDuration(string operation, TimeSpan duration)` - Helper for timing
+- `RecordSize(string operation, long bytes)` - Helper for size tracking
+- `RecordResult(string operation, bool success)` - Helper for success/failure
+- `ExportPrometheus()` - Export to Prometheus format
+- `ExportJson()` - Export to JSON
+- `GetHealthMetrics()` - System health snapshot
+- `MeasureAsync<T>(string operation, Func<Task<T>> func)` - Extension for automatic timing
+
+**Example:**
+```csharp
+metrics.IncrementCounter("http_requests_total", 1, new() { ["method"] = "GET", ["status"] = "200" });
+metrics.RecordHistogram("request_duration_ms", 45.2);
+var activityId = metrics.StartActivity("StorageOperation", new() { ["provider"] = "S3" });
+// ... perform operation ...
+metrics.StopActivity(activityId, ActivityStatus.Ok);
+```
 
 ### 10. Configuration Management
 
+**Implementation:** `DataWarehouse.Kernel.Configuration.ConfigurationLoader` (460 lines)
+
 **Features:**
-- appsettings.json schema
-- Environment variable overrides
-- Command-line argument overrides
-- Validation of configuration
-- Hot reload support
-- Secrets management integration
+- **Multi-Source Loading:**
+  - JSON files (appsettings.json, custom configs)
+  - Environment variables (prefix-based, e.g., "DW_")
+  - Command-line arguments (--key=value or --key value format)
+- **Priority-Based Overrides:**
+  - JSON files: Priority 0 (lowest)
+  - Environment variables: Priority 10
+  - Command-line arguments: Priority 20 (highest)
+  - Higher priority values override lower priority
+- **Hot Reload Support:**
+  - FileSystemWatcher for JSON file changes
+  - Automatic reload on file modification
+  - 500ms debounce to wait for file write completion
+  - Change notification callbacks
+- **Type Conversion:**
+  - Automatic conversion to string, int, long, bool, double
+  - JSON object deserialization for complex types
+  - Fallback to default value on conversion failure
+- **Hierarchical Configuration:**
+  - Nested JSON objects flattened with colon notation (e.g., "Database:ConnectionString")
+  - Section retrieval for grouped settings
+- **Thread-Safe:**
+  - ConcurrentDictionary for concurrent access
+  - SemaphoreSlim for reload coordination
 
 **Functions:**
-- `LoadConfiguration()` - Load config from all sources
-- `GetValue<T>(string key)` - Retrieve config value
-- `SetValue(string key, object value)` - Update config
-- `ReloadConfiguration()` - Hot reload without restart
-- `ValidateConfiguration()` - Check for errors
+- `LoadFromFileAsync(string filePath, bool enableHotReload, int priority)` - Load JSON file
+- `LoadFromEnvironment(string prefix, int priority)` - Load environment variables
+- `LoadFromCommandLine(string[] args, int priority)` - Load CLI arguments
+- `SetValue(string key, object value, int priority)` - Programmatic update
+- `GetValue<T>(string key, T defaultValue)` - Retrieve typed value
+- `GetString/GetInt/GetBool(string key, default)` - Typed convenience methods
+- `HasKey(string key)` - Check existence
+- `GetAllKeys()` - List all configuration keys
+- `GetSection(string prefix)` - Retrieve grouped settings
+- `OnChange(Action<string, object> callback)` - Register change listener
+- `ReloadAsync()` - Manual reload all file-based configs
+
+**Example:**
+```csharp
+var config = new ConfigurationLoader(context);
+await config.LoadFromFileAsync("appsettings.json", enableHotReload: true, priority: 0);
+config.LoadFromEnvironment("DW_", priority: 10);
+config.LoadFromCommandLine(args, priority: 20);
+
+var maxMemory = config.GetInt("RAMDisk:MaxMemoryMB", 1024);
+var s3Bucket = config.GetString("Storage:S3:BucketName", "default-bucket");
+
+config.OnChange((key, value) => {
+    Console.WriteLine($"Config changed: {key} = {value}");
+});
+```
 
 ---
 
