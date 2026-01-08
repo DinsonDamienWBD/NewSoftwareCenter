@@ -29,6 +29,7 @@ namespace DataWarehouse.Kernel.Storage
         private readonly ConcurrentDictionary<string, TierMetadata> _tierMetadata; // URI -> Tier info
         private readonly Timer? _backgroundWorker;
         private readonly SemaphoreSlim _migrationLock = new(1, 1);
+        private readonly RaidEngine? _raidEngine; // Comprehensive RAID support
         private bool _disposed;
 
         /// <summary>
@@ -47,6 +48,7 @@ namespace DataWarehouse.Kernel.Storage
             public TimeSpan MigrationInterval { get; set; } = TimeSpan.FromMinutes(5);
             public int PoolMirrorCount { get; set; } = 2; // For mirroring
             public int PoolStripeSize { get; set; } = 64 * 1024; // 64KB chunks for striping
+            public RaidConfiguration? RaidConfig { get; set; } = null; // Comprehensive RAID configuration
         }
 
         public enum PoolMode
@@ -86,6 +88,13 @@ namespace DataWarehouse.Kernel.Storage
             _config = config;
             _providers = new ConcurrentDictionary<string, IStorageProvider>();
             _tierMetadata = new ConcurrentDictionary<string, TierMetadata>();
+
+            // Initialize RAID engine if configured
+            if (_config.RaidConfig != null && _config.Mode == PoolMode.Pool)
+            {
+                _raidEngine = new RaidEngine(_config.RaidConfig, context);
+                _context.LogInfo($"[StoragePool] RAID engine initialized: {_config.RaidConfig.Level}");
+            }
 
             // Start background migration worker for tiered mode
             if (_config.Mode == PoolMode.Tiered)
@@ -535,9 +544,40 @@ namespace DataWarehouse.Kernel.Storage
             }
         }
 
-        // ==================== POOL MODE (RAID-like) ====================
+        // ==================== POOL MODE (RAID) ====================
 
         private async Task SavePoolAsync(Uri uri, Stream data)
+        {
+            if (_raidEngine != null)
+            {
+                // Use comprehensive RAID engine
+                await _raidEngine.SaveAsync(uri.ToString(), data, GetPoolProviderByIndex);
+            }
+            else
+            {
+                // Fallback to basic mirroring (legacy behavior)
+                await SavePoolLegacyAsync(uri, data);
+            }
+        }
+
+        private async Task<Stream> LoadPoolAsync(Uri uri)
+        {
+            if (_raidEngine != null)
+            {
+                // Use comprehensive RAID engine
+                return await _raidEngine.LoadAsync(uri.ToString(), GetPoolProviderByIndex);
+            }
+            else
+            {
+                // Fallback to basic mirroring (legacy behavior)
+                return await LoadPoolLegacyAsync(uri);
+            }
+        }
+
+        /// <summary>
+        /// Legacy RAID-1 mirroring implementation (for backward compatibility).
+        /// </summary>
+        private async Task SavePoolLegacyAsync(Uri uri, Stream data)
         {
             var providers = _config.PoolProviderIds.Select(GetProvider).ToList();
 
@@ -565,10 +605,13 @@ namespace DataWarehouse.Kernel.Storage
             }
 
             await Task.WhenAll(tasks);
-            _context?.LogInfo($"[StoragePool] Mirrored {uri} to {mirrorCount} providers");
+            _context?.LogInfo($"[StoragePool] Mirrored {uri} to {mirrorCount} providers (legacy)");
         }
 
-        private async Task<Stream> LoadPoolAsync(Uri uri)
+        /// <summary>
+        /// Legacy RAID-1 mirroring load (for backward compatibility).
+        /// </summary>
+        private async Task<Stream> LoadPoolLegacyAsync(Uri uri)
         {
             var providers = _config.PoolProviderIds.Select(GetProvider).ToList();
 
@@ -589,6 +632,19 @@ namespace DataWarehouse.Kernel.Storage
             }
 
             throw new FileNotFoundException($"Blob not found in any pool provider: {uri}");
+        }
+
+        /// <summary>
+        /// Get pool provider by index for RAID engine.
+        /// </summary>
+        private IStorageProvider GetPoolProviderByIndex(int index)
+        {
+            if (index >= _config.PoolProviderIds.Count)
+            {
+                throw new IndexOutOfRangeException($"Pool provider index {index} out of range");
+            }
+
+            return GetProvider(_config.PoolProviderIds[index]);
         }
 
         // ==================== HELPER METHODS ====================
@@ -627,13 +683,24 @@ namespace DataWarehouse.Kernel.Storage
         /// </summary>
         public Dictionary<string, object> GetStatistics()
         {
-            return new Dictionary<string, object>
+            var stats = new Dictionary<string, object>
             {
                 ["Mode"] = _config.Mode.ToString(),
                 ["RegisteredProviders"] = _providers.Count,
                 ["TierMetadataCount"] = _tierMetadata.Count,
                 ["CacheStrategy"] = _config.CacheStrategy.ToString()
             };
+
+            // Add RAID statistics if enabled
+            if (_raidEngine != null && _config.RaidConfig != null)
+            {
+                stats["RaidLevel"] = _config.RaidConfig.Level.ToString();
+                stats["RaidStripeSize"] = _config.RaidConfig.StripeSize;
+                stats["RaidAutoRebuild"] = _config.RaidConfig.AutoRebuild;
+                stats["RaidProviderCount"] = _config.RaidConfig.ProviderCount;
+            }
+
+            return stats;
         }
 
         public void Dispose()
@@ -642,6 +709,7 @@ namespace DataWarehouse.Kernel.Storage
 
             _backgroundWorker?.Dispose();
             _migrationLock?.Dispose();
+            _raidEngine?.Dispose();
 
             foreach (var provider in _providers.Values)
             {
