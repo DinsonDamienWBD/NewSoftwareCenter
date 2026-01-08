@@ -1,0 +1,60 @@
+syntax = "proto3";
+
+option csharp_namespace = "DataWarehouse.Plugins.Interface.gRPC.Protos";
+
+package storage;
+
+service StorageTransport {
+  // Streams data to the server
+  rpc UploadBlob (stream UploadRequest) returns (UploadResponse);
+
+  // Streams data from the server
+  rpc DownloadBlob (DownloadRequest) returns (stream DownloadResponse);
+
+  // Check existence
+  rpc ExistsBlob (ExistsRequest) returns (ExistsResponse);
+
+  // Delete blob
+  rpc DeleteBlob (DeleteRequest) returns (DeleteResponse);
+}
+
+message BlobMetadata {
+  string uri = 1;
+  int64 total_size = 2;
+}
+
+message UploadRequest {
+  oneof payload {
+    BlobMetadata metadata = 1;
+    bytes chunk = 2;
+  }
+}
+
+message UploadResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message DownloadRequest {
+  string uri = 1;
+}
+
+message DownloadResponse {
+  bytes chunk = 1;
+}
+
+message ExistsRequest {
+  string uri = 1;
+}
+
+message ExistsResponse {
+  bool exists = 1;
+}
+
+message DeleteRequest {
+  string uri = 1;
+}
+
+message DeleteResponse {
+  bool success = 1;
+}
