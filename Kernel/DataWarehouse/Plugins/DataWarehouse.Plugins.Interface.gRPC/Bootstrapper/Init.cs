@@ -1,6 +1,7 @@
 using DataWarehouse.Plugins.Interface.gRPC.Engine;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Primitives;
+using System.Linq;
 
 namespace DataWarehouse.Plugins.Interface.gRPC.Bootstrapper
 {
@@ -10,49 +11,68 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Bootstrapper
     /// </summary>
     public class GrpcNetworkInterfacePlugin : IInterfacePlugin
     {
-        public string Id => "DataWarehouse.Interface.gRPC";
-        public string Version => "3.0.0";
-        public string Name => "gRPC Network Interface";
-
-        // AI Metadata
-        public string SemanticDescription =>
-            "High-performance gRPC-based network interface for distributed DataWarehouse clusters. " +
-            "Enables efficient node-to-node binary data streaming with HTTP/2, automatic retries, " +
-            "exponential backoff, and connection pooling. Supports upload, download, exists, and delete operations.";
-
-        public string[] SemanticTags => new[]
-        {
-            "network", "grpc", "distributed", "streaming", "http2", "node-to-node",
-            "cluster", "binary-transfer", "storage-provider", "interface"
-        };
-
-        public PerformanceProfile PerformanceProfile => new()
-        {
-            Category = "Network I/O",
-            Latency = "10-500ms (network dependent)",
-            Throughput = "100MB/s+ (64KB chunks)",
-            MemoryFootprint = "Low (streaming, no buffering)",
-            CpuUsage = "Low",
-            ScalabilityNotes = "Scales with network bandwidth and HTTP/2 connections"
-        };
-
         // Services
         private NetworkStorageProvider? _networkProvider;
         private IKernelContext? _context;
+        private string _pluginId = "DataWarehouse.Interface.gRPC";
 
         /// <summary>
-        /// Initialize the gRPC network interface
+        /// Handshake protocol handler
         /// </summary>
-        public void Initialize(IKernelContext context)
+        public async Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
         {
-            _context = context;
-            context.LogInfo($"[{Id}] Initializing gRPC Network Interface...");
+            _context = new KernelContextFromRequest(request);
+            _context.LogInfo($"[{_pluginId}] Initializing gRPC Network Interface...");
 
-            // Initialize Network Storage Provider
-            _networkProvider = new NetworkStorageProvider();
-            _networkProvider.Initialize(context);
+            try
+            {
+                // Initialize Network Storage Provider
+                _networkProvider = new NetworkStorageProvider();
+                var netRequest = new HandshakeRequest
+                {
+                    KernelId = request.KernelId,
+                    ProtocolVersion = request.ProtocolVersion,
+                    Mode = request.Mode,
+                    RootPath = request.RootPath,
+                    AlreadyLoadedPlugins = request.AlreadyLoadedPlugins
+                };
 
-            context.LogInfo($"[{Id}] gRPC Network Interface ready. Target: {_networkProvider.Id}");
+                var netResponse = await _networkProvider.OnHandshakeAsync(netRequest);
+                if (!netResponse.Success)
+                {
+                    return HandshakeResponse.Failure(
+                        _pluginId,
+                        "gRPC Network Interface",
+                        $"Network provider initialization failed: {netResponse.ErrorMessage}");
+                }
+
+                _context.LogInfo($"[{_pluginId}] gRPC Network Interface ready. Target: {netResponse.PluginId}");
+
+                return HandshakeResponse.Success(
+                    pluginId: _pluginId,
+                    name: "gRPC Network Interface",
+                    version: new Version(3, 0, 0),
+                    category: PluginCategory.Interface);
+            }
+            catch (Exception ex)
+            {
+                return HandshakeResponse.Failure(_pluginId, "gRPC Network Interface", ex.Message);
+            }
+        }
+
+        // Helper class to wrap HandshakeRequest as IKernelContext
+        private class KernelContextFromRequest : IKernelContext
+        {
+            private readonly HandshakeRequest _request;
+            public KernelContextFromRequest(HandshakeRequest request) => _request = request;
+            public OperatingMode Mode => _request.Mode;
+            public string RootPath => _request.RootPath;
+            public void LogInfo(string message) => Console.WriteLine($"[INFO] {message}");
+            public void LogError(string message, Exception? ex = null) => Console.WriteLine($"[ERROR] {message} {ex?.Message}");
+            public void LogWarning(string message) => Console.WriteLine($"[WARN] {message}");
+            public void LogDebug(string message) => Console.WriteLine($"[DEBUG] {message}");
+            public T? GetPlugin<T>() where T : class, IPlugin => null;
+            public System.Collections.Generic.IEnumerable<T> GetPlugins<T>() where T : class, IPlugin => Enumerable.Empty<T>();
         }
 
         /// <summary>
