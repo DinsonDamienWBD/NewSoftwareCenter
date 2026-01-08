@@ -1,8 +1,7 @@
-using System;
-using Feature.Tiering.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Feature.Tiering.Engine;
 
-namespace Feature.Tiering.Bootstrapper
+namespace DataWarehouse.Plugins.Feature.Tiering.Bootstrapper
 {
     public class TieringFeaturePlugin
     {
@@ -17,6 +16,6 @@ namespace Feature.Tiering.Bootstrapper
             Tags = new[] { "feature", "tiering", "storage", "optimization", "lifecycle" }
         };
 
-        public static TieringFeatureEngine CreateInstance() => new TieringFeatureEngine();
+        public static TieringFeatureEngine CreateInstance() => new();
     }
 }

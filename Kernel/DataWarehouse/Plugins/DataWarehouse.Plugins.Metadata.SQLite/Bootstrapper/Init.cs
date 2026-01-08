@@ -1,8 +1,7 @@
-using System;
-using Metadata.SQLite.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Metadata.SQLite.Engine;
 
-namespace Metadata.SQLite.Bootstrapper
+namespace DataWarehouse.Plugins.Metadata.SQLite.Bootstrapper
 {
     /// <summary>
     /// Plugin entry point for SQLite Metadata Indexing.

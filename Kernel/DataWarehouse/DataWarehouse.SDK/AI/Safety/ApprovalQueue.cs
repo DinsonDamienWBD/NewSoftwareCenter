@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.AI.Safety
 {
     /// <summary>
@@ -22,18 +17,13 @@ namespace DataWarehouse.SDK.AI.Safety
     /// - User-defined approval rules
     /// - First-time capability usage
     /// </summary>
-    public class ApprovalQueue
+    public class ApprovalQueue(AutoApprovalPolicy? autoApprovalPolicy = null)
     {
-        private readonly Dictionary<string, ApprovalRequest> _pendingRequests = new();
-        private readonly List<ApprovalRecord> _history = new();
-        private readonly AutoApprovalPolicy _autoApprovalPolicy;
-        private readonly object _lock = new();
+        private readonly Dictionary<string, ApprovalRequest> _pendingRequests = [];
+        private readonly List<ApprovalRecord> _history = [];
+        private readonly AutoApprovalPolicy _autoApprovalPolicy = autoApprovalPolicy ?? new AutoApprovalPolicy();
+        private readonly Lock _lock = new();
         private int _nextRequestId = 1;
-
-        public ApprovalQueue(AutoApprovalPolicy? autoApprovalPolicy = null)
-        {
-            _autoApprovalPolicy = autoApprovalPolicy ?? new AutoApprovalPolicy();
-        }
 
         /// <summary>
         /// Submits a request for approval.
@@ -48,8 +38,7 @@ namespace DataWarehouse.SDK.AI.Safety
         /// <returns>Approval result (may be immediate or pending).</returns>
         public async Task<ApprovalResult> RequestApprovalAsync(ApprovalRequest request)
         {
-            if (request == null)
-                throw new ArgumentNullException(nameof(request));
+            ArgumentNullException.ThrowIfNull(request);
 
             // Assign ID
             request.Id = GenerateRequestId();
@@ -171,7 +160,7 @@ namespace DataWarehouse.SDK.AI.Safety
         {
             lock (_lock)
             {
-                return _pendingRequests.Values.ToList();
+                return [.. _pendingRequests.Values];
             }
         }
 
@@ -184,10 +173,9 @@ namespace DataWarehouse.SDK.AI.Safety
         {
             lock (_lock)
             {
-                return _history
+                return [.. _history
                     .OrderByDescending(r => r.Request.SubmittedAt)
-                    .Take(limit)
-                    .ToList();
+                    .Take(limit)];
             }
         }
 
@@ -297,7 +285,7 @@ namespace DataWarehouse.SDK.AI.Safety
         public string? Justification { get; set; }
 
         /// <summary>Additional metadata.</summary>
-        public Dictionary<string, object> Metadata { get; init; } = new();
+        public Dictionary<string, object> Metadata { get; init; } = [];
 
         /// <summary>When request was submitted.</summary>
         public DateTime SubmittedAt { get; set; }

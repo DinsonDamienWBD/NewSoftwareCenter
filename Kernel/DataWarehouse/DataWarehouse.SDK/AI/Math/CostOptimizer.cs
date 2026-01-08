@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using DataWarehouse.SDK.AI.Graph;
-using DataWarehouse.SDK.Contracts;
 
 namespace DataWarehouse.SDK.AI.Math
 {
@@ -23,18 +19,13 @@ namespace DataWarehouse.SDK.AI.Math
     /// - MaximizeReliability: Choose most stable/reliable
     /// - BalancedEfficiency: Optimize cost-to-performance ratio
     /// </summary>
-    public class CostOptimizer
+    /// <remarks>
+    /// Constructs a cost optimizer with the given knowledge graph.
+    /// </remarks>
+    /// <param name="graph">Knowledge graph containing capability performance data.</param>
+    public class CostOptimizer(KnowledgeGraph graph)
     {
-        private readonly KnowledgeGraph _graph;
-
-        /// <summary>
-        /// Constructs a cost optimizer with the given knowledge graph.
-        /// </summary>
-        /// <param name="graph">Knowledge graph containing capability performance data.</param>
-        public CostOptimizer(KnowledgeGraph graph)
-        {
-            _graph = graph ?? throw new ArgumentNullException(nameof(graph));
-        }
+        private readonly KnowledgeGraph _graph = graph ?? throw new ArgumentNullException(nameof(graph));
 
         /// <summary>
         /// Compares multiple execution plans and selects the best based on objective.
@@ -74,7 +65,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// </summary>
         /// <param name="plan">Execution plan to evaluate.</param>
         /// <returns>Cost-to-performance ratio.</returns>
-        public double CalculateCostPerformanceRatio(ExecutionPlan plan)
+        public static double CalculateCostPerformanceRatio(ExecutionPlan plan)
         {
             if (plan.EstimatedTotalDurationMs == 0)
                 return plan.EstimatedTotalCostUsd == 0 ? 0 : double.MaxValue;
@@ -145,7 +136,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// <param name="originalPlan">Original execution plan.</param>
         /// <param name="optimizedPlan">Optimized execution plan.</param>
         /// <returns>Cost savings result.</returns>
-        public CostSavingsResult CalculateSavings(ExecutionPlan originalPlan, ExecutionPlan optimizedPlan)
+        public static CostSavingsResult CalculateSavings(ExecutionPlan originalPlan, ExecutionPlan optimizedPlan)
         {
             var costSavings = originalPlan.EstimatedTotalCostUsd - optimizedPlan.EstimatedTotalCostUsd;
             var durationSavings = originalPlan.EstimatedTotalDurationMs - optimizedPlan.EstimatedTotalDurationMs;
@@ -253,7 +244,7 @@ namespace DataWarehouse.SDK.AI.Math
             var outgoingAlternatives = _graph.GetOutgoingEdges(capabilityId, "alternative_to");
             alternatives.AddRange(outgoingAlternatives.Select(e => e.TargetId));
 
-            return alternatives.Distinct().ToList();
+            return [.. alternatives.Distinct()];
         }
 
         /// <summary>

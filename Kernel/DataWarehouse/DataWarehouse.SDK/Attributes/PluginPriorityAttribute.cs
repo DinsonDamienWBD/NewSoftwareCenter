@@ -1,5 +1,4 @@
-﻿using System;
-using DataWarehouse.SDK.Contracts;
+﻿using DataWarehouse.SDK.Contracts;
 
 namespace DataWarehouse.SDK.Attributes
 {

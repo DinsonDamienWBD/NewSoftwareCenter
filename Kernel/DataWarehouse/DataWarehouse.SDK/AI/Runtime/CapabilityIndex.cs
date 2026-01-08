@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.AI.Vector;
 using DataWarehouse.SDK.Contracts;
 
@@ -24,18 +20,12 @@ namespace DataWarehouse.SDK.AI.Runtime
     /// - Batch indexing for performance
     /// - Semantic grouping and clustering
     /// </summary>
-    public class CapabilityIndex
+    public class CapabilityIndex(IVectorStore vectorStore, IEmbeddingProvider embeddingProvider)
     {
-        private readonly IVectorStore _vectorStore;
-        private readonly IEmbeddingProvider _embeddings;
-        private readonly Dictionary<string, CapabilityIndexEntry> _entries = new();
-        private readonly object _lock = new();
-
-        public CapabilityIndex(IVectorStore vectorStore, IEmbeddingProvider embeddingProvider)
-        {
-            _vectorStore = vectorStore ?? throw new ArgumentNullException(nameof(vectorStore));
-            _embeddings = embeddingProvider ?? throw new ArgumentNullException(nameof(embeddingProvider));
-        }
+        private readonly IVectorStore _vectorStore = vectorStore ?? throw new ArgumentNullException(nameof(vectorStore));
+        private readonly IEmbeddingProvider _embeddings = embeddingProvider ?? throw new ArgumentNullException(nameof(embeddingProvider));
+        private readonly Dictionary<string, CapabilityIndexEntry> _entries = [];
+        private readonly Lock _lock = new();
 
         /// <summary>
         /// Indexes a single capability.
@@ -51,8 +41,7 @@ namespace DataWarehouse.SDK.AI.Runtime
             string semanticDescription,
             string[] tags)
         {
-            if (capability == null)
-                throw new ArgumentNullException(nameof(capability));
+            ArgumentNullException.ThrowIfNull(capability);
 
             // Generate text for embedding
             var embeddingText = BuildEmbeddingText(capability, semanticDescription, tags);
@@ -63,7 +52,7 @@ namespace DataWarehouse.SDK.AI.Runtime
             // Prepare metadata
             var metadata = new Dictionary<string, object>
             {
-                ["capabilityId"] = capability.Id,
+                ["capabilityId"] = capability.CapabilityId,
                 ["pluginId"] = pluginId,
                 ["description"] = capability.Description,
                 ["semanticDescription"] = semanticDescription,
@@ -72,18 +61,18 @@ namespace DataWarehouse.SDK.AI.Runtime
             };
 
             // Add to vector store
-            await _vectorStore.AddAsync(capability.Id, embedding, metadata);
+            await _vectorStore.AddAsync(capability.CapabilityId, embedding, metadata);
 
             // Track locally
             lock (_lock)
             {
-                _entries[capability.Id] = new CapabilityIndexEntry
+                _entries[capability.CapabilityId] = new CapabilityIndexEntry
                 {
-                    CapabilityId = capability.Id,
+                    CapabilityId = capability.CapabilityId,
                     PluginId = pluginId,
                     Embedding = embedding,
                     SemanticDescription = semanticDescription,
-                    Tags = tags.ToList(),
+                    Tags = [.. tags],
                     IndexedAt = DateTime.UtcNow
                 };
             }
@@ -117,7 +106,7 @@ namespace DataWarehouse.SDK.AI.Runtime
                 var cap = capabilities[i];
                 var metadata = new Dictionary<string, object>
                 {
-                    ["capabilityId"] = cap.Capability.Id,
+                    ["capabilityId"] = cap.Capability.CapabilityId,
                     ["pluginId"] = cap.PluginId,
                     ["description"] = cap.Capability.Description,
                     ["semanticDescription"] = cap.SemanticDescription,
@@ -125,18 +114,18 @@ namespace DataWarehouse.SDK.AI.Runtime
                     ["indexed"] = DateTime.UtcNow.ToString("O")
                 };
 
-                vectorEntries.Add(new VectorEntry(cap.Capability.Id, embeddings[i], metadata));
+                vectorEntries.Add(new VectorEntry(cap.Capability.CapabilityId, embeddings[i], metadata));
 
                 // Track locally
                 lock (_lock)
                 {
-                    _entries[cap.Capability.Id] = new CapabilityIndexEntry
+                    _entries[cap.Capability.CapabilityId] = new CapabilityIndexEntry
                     {
-                        CapabilityId = cap.Capability.Id,
+                        CapabilityId = cap.Capability.CapabilityId,
                         PluginId = cap.PluginId,
                         Embedding = embeddings[i],
                         SemanticDescription = cap.SemanticDescription,
-                        Tags = cap.Tags.ToList(),
+                        Tags = [.. cap.Tags],
                         IndexedAt = DateTime.UtcNow
                     };
                 }
@@ -180,14 +169,14 @@ namespace DataWarehouse.SDK.AI.Runtime
             var results = await _vectorStore.SearchAsync(queryEmbedding, topK, filters);
 
             // Convert to capability search results
-            return results.Select(r => new CapabilitySearchResult
+            return [.. results.Select(r => new CapabilitySearchResult
             {
                 CapabilityId = r.Entry.Id,
                 PluginId = r.Entry.Metadata.TryGetValue("pluginId", out var pid) ? pid.ToString() ?? "" : "",
                 Description = r.Entry.Metadata.TryGetValue("description", out var desc) ? desc.ToString() ?? "" : "",
                 SemanticDescription = r.Entry.Metadata.TryGetValue("semanticDescription", out var sdesc) ? sdesc.ToString() ?? "" : "",
                 SimilarityScore = r.SimilarityScore
-            }).ToList();
+            })];
         }
 
         /// <summary>
@@ -200,15 +189,13 @@ namespace DataWarehouse.SDK.AI.Runtime
         public async Task<List<CapabilitySearchResult>> FindSimilarAsync(string capabilityId, int topK = 5)
         {
             // Get the capability's embedding
-            var entry = await _vectorStore.GetByIdAsync(capabilityId);
-            if (entry == null)
-                throw new ArgumentException($"Capability '{capabilityId}' not found in index");
+            var entry = await _vectorStore.GetByIdAsync(capabilityId) ?? throw new ArgumentException($"Capability '{capabilityId}' not found in index");
 
             // Search using this embedding
             var results = await _vectorStore.SearchAsync(entry.Embedding, topK + 1); // +1 to exclude self
 
             // Remove self and convert to results
-            return results
+            return [.. results
                 .Where(r => r.Entry.Id != capabilityId)
                 .Take(topK)
                 .Select(r => new CapabilitySearchResult
@@ -218,8 +205,7 @@ namespace DataWarehouse.SDK.AI.Runtime
                     Description = r.Entry.Metadata.TryGetValue("description", out var desc) ? desc.ToString() ?? "" : "",
                     SemanticDescription = r.Entry.Metadata.TryGetValue("semanticDescription", out var sdesc) ? sdesc.ToString() ?? "" : "",
                     SimilarityScore = r.SimilarityScore
-                })
-                .ToList();
+                })];
         }
 
         /// <summary>
@@ -248,12 +234,12 @@ namespace DataWarehouse.SDK.AI.Runtime
         /// Builds text for embedding generation.
         /// Combines description and tags into optimized text.
         /// </summary>
-        private string BuildEmbeddingText(
+        private static string BuildEmbeddingText(
             PluginCapabilityDescriptor capability,
             string semanticDescription,
             string[] tags)
         {
-            var text = $"{capability.Id}\n\n";
+            var text = $"{capability.CapabilityId}\n\n";
             text += $"{semanticDescription}\n\n";
             text += $"Description: {capability.Description}\n\n";
             text += $"Tags: {string.Join(", ", tags)}\n";
@@ -270,7 +256,7 @@ namespace DataWarehouse.SDK.AI.Runtime
         public PluginCapabilityDescriptor Capability { get; init; } = new();
         public string PluginId { get; init; } = string.Empty;
         public string SemanticDescription { get; init; } = string.Empty;
-        public string[] Tags { get; init; } = Array.Empty<string>();
+        public string[] Tags { get; init; } = [];
     }
 
     /// <summary>
@@ -280,9 +266,9 @@ namespace DataWarehouse.SDK.AI.Runtime
     {
         public string CapabilityId { get; set; } = string.Empty;
         public string PluginId { get; set; } = string.Empty;
-        public float[] Embedding { get; set; } = Array.Empty<float>();
+        public float[] Embedding { get; set; } = [];
         public string SemanticDescription { get; set; } = string.Empty;
-        public List<string> Tags { get; set; } = new();
+        public List<string> Tags { get; set; } = [];
         public DateTime IndexedAt { get; set; }
     }
 

@@ -1,12 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
 
-namespace Storage.Local.Engine
+namespace DataWarehouse.Plugins.Storage.LocalNew.Engine
 {
     /// <summary>
     /// Local filesystem storage provider.

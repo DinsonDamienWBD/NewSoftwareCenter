@@ -1,20 +1,12 @@
 ﻿using DataWarehouse.Kernel.Diagnostics;
 using DataWarehouse.Kernel.Indexing;
 using DataWarehouse.Kernel.IO;
-using DataWarehouse.Kernel.Primitives;
-using DataWarehouse.Kernel.Security;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Governance; // [NEW] Governance Contracts
 using DataWarehouse.SDK.Primitives;
 using DataWarehouse.SDK.Security;
 using DataWarehouse.SDK.Services;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.Kernel.Engine
 {
@@ -120,8 +112,8 @@ namespace DataWarehouse.Kernel.Engine
                 var results = await _handshakeLoader.LoadPluginsFromAsync(pluginsDir);
 
                 // Log summary
-                var failed = results.Where(r => !r.Success).ToList();
-                if (failed.Any())
+                var failed = results.Where(r => !r.IsSuccess).ToList();
+                if (failed.Count != 0)
                 {
                     LogWarning("Failed plugins:");
                     foreach (var failure in failed)
@@ -501,26 +493,26 @@ namespace DataWarehouse.Kernel.Engine
         /// Log info
         /// </summary>
         /// <param name="m"></param>
-        public void LogInfo(string m) => _logger.LogInformation($"[INFO] {m}");
+        public void LogInfo(string m) => _logger.LogInformation("[INFO] {m}", m);
 
         /// <summary>
         /// Log warning
         /// </summary>
         /// <param name="m"></param>
-        public void LogWarning(string m) => _logger.LogWarning($"[WARN] {m}");
+        public void LogWarning(string m) => _logger.LogWarning("[WARN] {m}", m);
 
         /// <summary>
         /// Log error
         /// </summary>
         /// <param name="m"></param>
         /// <param name="e"></param>
-        public void LogError(string m, Exception? e) => _logger.LogError($"[ERR] {m} {e}");
+        public void LogError(string m, Exception? e) => _logger.LogError("[ERR] {m} {e}", m, e);
 
         /// <summary>
         /// Log debug
         /// </summary>
         /// <param name="m"></param>
-        public void LogDebug(string m) => _logger.LogDebug($"[DBG] {m}");
+        public void LogDebug(string m) => _logger.LogDebug("[DBG] {m}", m);
 
         private async Task<Dictionary<string, object>> PrepareRuntimeArgs(PipelineConfig config, ISecurityContext context)
         {
@@ -557,10 +549,10 @@ namespace DataWarehouse.Kernel.Engine
 
         private class UnsafeAclFallback : IAccessControl
         {
-            public string Id => "unsafe-acl";
-            public string Name => "Unsafe ACL";
-            public string Version => "0.0";
-            public void Initialize(IKernelContext c) { }
+            public static string Id => "unsafe-acl";
+            public static string Name => "Unsafe ACL";
+            public static string Version => "0.0";
+            public static void Initialize(IKernelContext c) { }
             public static Task StartAsync(CancellationToken c) => Task.CompletedTask;
             public static Task StopAsync() => Task.CompletedTask;
             public void CreateScope(string r, string o) { }
@@ -570,10 +562,10 @@ namespace DataWarehouse.Kernel.Engine
 
         private class PassiveSentinelFallback : INeuralSentinel
         {
-            public string Id => "passive-sentinel";
-            public string Name => "Passive Sentinel";
-            public string Version => "0.0";
-            public void Initialize(IKernelContext c) { }
+            public static string Id => "passive-sentinel";
+            public static string Name => "Passive Sentinel";
+            public static string Version => "0.0";
+            public static void Initialize(IKernelContext c) { }
             public static Task StartAsync(CancellationToken c) => Task.CompletedTask;
             public static Task StopAsync() => Task.CompletedTask;
             public Task<GovernanceJudgment> EvaluateAsync(SentinelContext c)

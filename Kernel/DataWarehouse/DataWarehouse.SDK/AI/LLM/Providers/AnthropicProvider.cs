@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
+using DataWarehouse.SDK.AI.Math;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.SDK.AI.LLM.Providers
 {
@@ -85,7 +81,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
 
         public async Task<LLMResponse> ChatAsync(List<LLMMessage> messages, string? model = null, int? maxTokens = null)
         {
-            return await ChatWithToolsAsync(messages, new List<LLMTool>(), model, maxTokens);
+            return await ChatWithToolsAsync(messages, [], model, maxTokens);
         }
 
         public async Task<LLMResponse> ChatWithToolsAsync(
@@ -150,7 +146,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                     // Handle rate limiting
                     if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
                     {
-                        var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                        var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(MathUtils.Pow(2, attempt));
                         await Task.Delay(retryAfter);
                         continue;
                     }
@@ -158,7 +154,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                     // Handle overloaded errors (529)
                     if ((int)response.StatusCode == 529)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+                        await Task.Delay(TimeSpan.FromSeconds(MathUtils.Pow(2, attempt)));
                         continue;
                     }
 
@@ -171,7 +167,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                     lastException = ex;
                     if (attempt < 2) // Not last attempt
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+                        await Task.Delay(TimeSpan.FromSeconds(MathUtils.Pow(2, attempt)));
                     }
                 }
             }
@@ -203,7 +199,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                     var toolId = block.GetProperty("id").GetString() ?? Guid.NewGuid().ToString();
                     var toolName = block.GetProperty("name").GetString() ?? "";
                     var inputJson = block.GetProperty("input").GetRawText();
-                    var arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(inputJson) ?? new();
+                    var arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(inputJson) ?? [];
 
                     toolCalls.Add(new LLMToolCall
                     {
@@ -279,7 +275,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
         /// <summary>
         /// Calculates cost based on token usage and model pricing.
         /// </summary>
-        private decimal CalculateCost(string model, int inputTokens, int outputTokens)
+        private static decimal CalculateCost(string model, int inputTokens, int outputTokens)
         {
             // Find pricing for model (try exact match first, then prefix match)
             (decimal inputPrice, decimal outputPrice) = (0, 0);

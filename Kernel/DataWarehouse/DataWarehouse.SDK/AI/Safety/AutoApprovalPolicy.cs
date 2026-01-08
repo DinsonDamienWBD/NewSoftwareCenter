@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace DataWarehouse.SDK.AI.Safety
 {
     /// <summary>
@@ -34,19 +30,19 @@ namespace DataWarehouse.SDK.AI.Safety
         /// Capabilities that are always auto-approved (whitelist).
         /// Example: ["transform.gzip.apply", "storage.local.read"]
         /// </summary>
-        public HashSet<string> WhitelistedCapabilities { get; init; } = new();
+        public HashSet<string> WhitelistedCapabilities { get; init; } = [];
 
         /// <summary>
         /// Capabilities that always require approval (blacklist).
         /// Example: ["storage.*.delete", "security.*", "admin.*"]
         /// </summary>
-        public HashSet<string> BlacklistedCapabilities { get; init; } = new();
+        public HashSet<string> BlacklistedCapabilities { get; init; } = [];
 
         /// <summary>
         /// Risk levels that can be auto-approved.
         /// Example: ["low", "medium"]
         /// </summary>
-        public HashSet<string> AutoApprovalRiskLevels { get; init; } = new() { "low" };
+        public HashSet<string> AutoApprovalRiskLevels { get; init; } = ["low"];
 
         /// <summary>
         /// Whether to auto-approve all read-only operations.
@@ -58,25 +54,25 @@ namespace DataWarehouse.SDK.AI.Safety
         /// Capability categories that are always safe.
         /// Example: ["metadata.search", "transform.compress"]
         /// </summary>
-        public HashSet<string> SafeCategories { get; init; } = new()
-        {
+        public HashSet<string> SafeCategories { get; init; } =
+        [
             "transform.compress",
             "transform.decompress",
             "metadata.search",
             "metadata.query"
-        };
+        ];
 
         /// <summary>
         /// Capability categories that always require approval.
         /// Example: ["storage.delete", "security", "admin"]
         /// </summary>
-        public HashSet<string> DangerousCategories { get; init; } = new()
-        {
+        public HashSet<string> DangerousCategories { get; init; } =
+        [
             "storage.delete",
             "security.admin",
             "admin",
             "system"
-        };
+        ];
 
         /// <summary>
         /// Determines if a request should be auto-approved.
@@ -181,7 +177,7 @@ namespace DataWarehouse.SDK.AI.Safety
         /// Checks if operation is read-only.
         /// Read operations: search, query, read, load, get, list
         /// </summary>
-        private bool IsReadOnly(ApprovalRequest request)
+        private static bool IsReadOnly(ApprovalRequest request)
         {
             if (request.CapabilityId == null)
                 return false;
@@ -196,7 +192,7 @@ namespace DataWarehouse.SDK.AI.Safety
         /// Matches capability ID against pattern with wildcards.
         /// Example: "storage.*.delete" matches "storage.s3.delete"
         /// </summary>
-        private bool MatchesPattern(string capabilityId, string pattern)
+        private static bool MatchesPattern(string capabilityId, string pattern)
         {
             if (pattern == "*")
                 return true;
@@ -229,14 +225,14 @@ namespace DataWarehouse.SDK.AI.Safety
             return new AutoApprovalPolicy
             {
                 MaxAutoApprovalCostUsd = 1.00m,
-                AutoApprovalRiskLevels = new HashSet<string> { "low", "medium" },
+                AutoApprovalRiskLevels = ["low", "medium"],
                 AutoApproveReadOnly = true,
-                BlacklistedCapabilities = new HashSet<string>
-                {
+                BlacklistedCapabilities =
+                [
                     "storage.*.delete",
                     "admin.*",
                     "system.*"
-                }
+                ]
             };
         }
 
@@ -249,15 +245,15 @@ namespace DataWarehouse.SDK.AI.Safety
             return new AutoApprovalPolicy
             {
                 MaxAutoApprovalCostUsd = 0.01m,
-                AutoApprovalRiskLevels = new HashSet<string> { "low" },
+                AutoApprovalRiskLevels = ["low"],
                 AutoApproveReadOnly = true,
-                WhitelistedCapabilities = new HashSet<string>
-                {
+                WhitelistedCapabilities =
+                [
                     "metadata.search",
                     "metadata.query"
-                },
-                BlacklistedCapabilities = new HashSet<string>
-                {
+                ],
+                BlacklistedCapabilities =
+                [
                     "storage.*.delete",
                     "storage.*.write",
                     "transform.encrypt",
@@ -265,7 +261,7 @@ namespace DataWarehouse.SDK.AI.Safety
                     "security.*",
                     "admin.*",
                     "system.*"
-                }
+                ]
             };
         }
     }

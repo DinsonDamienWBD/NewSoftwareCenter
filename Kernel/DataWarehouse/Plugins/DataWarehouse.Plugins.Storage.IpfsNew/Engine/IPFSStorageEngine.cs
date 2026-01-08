@@ -1,14 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
 
-namespace Storage.IPFS.Engine
+namespace DataWarehouse.Plugins.Storage.IpfsNew.Engine
 {
     /// <summary>
     /// IPFS (InterPlanetary File System) storage provider.

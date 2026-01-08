@@ -1,8 +1,7 @@
-using System;
-using Orchestration.Raft.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Orchestration.Raft.Engine;
 
-namespace Orchestration.Raft.Bootstrapper
+namespace DataWarehouse.Plugins.Orchestration.Raft.Bootstrapper
 {
     public class RaftOrchestrationPlugin
     {

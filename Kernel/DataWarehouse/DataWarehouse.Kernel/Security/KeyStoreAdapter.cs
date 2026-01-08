@@ -1,5 +1,4 @@
-﻿using DataWarehouse.SDK.Contracts;
-using DataWarehouse.SDK.Security;
+﻿using DataWarehouse.SDK.Security;
 using System.Collections.Concurrent;
 using System.Security.Cryptography;
 using System.Text;

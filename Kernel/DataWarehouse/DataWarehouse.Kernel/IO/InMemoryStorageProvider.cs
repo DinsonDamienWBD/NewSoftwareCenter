@@ -13,17 +13,17 @@ namespace DataWarehouse.Kernel.IO
         /// <summary>
         /// ID
         /// </summary>
-        public string Id => "builtin-ram-storage";
+        public static string Id => "builtin-ram-storage";
 
         /// <summary>
         /// Name
         /// </summary>
-        public string Name => "Volatile RAM Storage";
+        public static string Name => "Volatile RAM Storage";
 
         /// <summary>
         /// Version
         /// </summary>
-        public string Version => "1.0";
+        public static string Version => "1.0";
 
         /// <summary>
         /// Scheme
@@ -37,7 +37,7 @@ namespace DataWarehouse.Kernel.IO
         /// Initialize
         /// </summary>
         /// <param name="context"></param>
-        public void Initialize(IKernelContext context)
+        public static void Initialize(IKernelContext context)
         {
             context.LogWarning($"[{Id}] RUNNING IN VOLATILE MODE. DATA WILL BE LOST ON EXIT.");
         }

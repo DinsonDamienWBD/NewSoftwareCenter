@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace DataWarehouse.SDK.Primitives
+﻿namespace DataWarehouse.SDK.Primitives
 {
     /// <summary>
     /// Pipeline configuration

@@ -1,8 +1,8 @@
 using System;
-using Metadata.Postgres.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Metadata.Postgres.Engine;
 
-namespace Metadata.Postgres.Bootstrapper
+namespace DataWarehouse.Plugins.Metadata.Postgres.Bootstrapper
 {
     /// <summary>
     /// Plugin entry point for PostgreSQL Metadata Indexing.

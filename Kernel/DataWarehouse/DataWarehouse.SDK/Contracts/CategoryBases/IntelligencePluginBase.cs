@@ -9,13 +9,9 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
     /// Handles AI-driven governance, policy enforcement, anomaly detection, self-healing.
     /// Plugins implement AI/ML logic and governance rules.
     /// </summary>
-    public abstract class IntelligencePluginBase : PluginBase
+    /// <remarks>Constructs intelligence plugin</remarks>
+    public abstract class IntelligencePluginBase(string id, string name, Version version) : PluginBase(id, name, version, PluginCategory.Intelligence)
     {
-        /// <summary>Constructs intelligence plugin</summary>
-        protected IntelligencePluginBase(string id, string name, Version version)
-            : base(id, name, version, PluginCategory.Intelligence)
-        {
-        }
 
         // Abstract members
         /// <summary>Intelligence type (e.g., "neural-sentinel", "anomaly-detector")</summary>
@@ -33,7 +29,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
 
         // Capabilities - Intelligence plugins define custom capabilities
         /// <summary>Intelligence capabilities (override to define specific capabilities)</summary>
-        protected override PluginCapabilityDescriptor[] Capabilities => Array.Empty<PluginCapabilityDescriptor>();
+        protected override PluginCapabilityDescriptor[] Capabilities => [];
 
         // Initialization
         /// <summary>Initializes intelligence</summary>

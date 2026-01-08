@@ -1,6 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using DataWarehouse.SDK.AI.Math;
 
 namespace DataWarehouse.SDK.AI.Graph
 {
@@ -22,18 +20,13 @@ namespace DataWarehouse.SDK.AI.Graph
     /// - Cost optimization (choose cheaper alternatives)
     /// - Performance prediction (estimate duration)
     /// </summary>
-    public class ExecutionPlanner
+    /// <remarks>
+    /// Constructs an execution planner with the given knowledge graph.
+    /// </remarks>
+    /// <param name="graph">Knowledge graph containing capabilities and relationships.</param>
+    public class ExecutionPlanner(KnowledgeGraph graph)
     {
-        private readonly KnowledgeGraph _graph;
-
-        /// <summary>
-        /// Constructs an execution planner with the given knowledge graph.
-        /// </summary>
-        /// <param name="graph">Knowledge graph containing capabilities and relationships.</param>
-        public ExecutionPlanner(KnowledgeGraph graph)
-        {
-            _graph = graph ?? throw new ArgumentNullException(nameof(graph));
-        }
+        private readonly KnowledgeGraph _graph = graph ?? throw new ArgumentNullException(nameof(graph));
 
         /// <summary>
         /// Generates an execution plan for a sequence of capability IDs.
@@ -115,7 +108,7 @@ namespace DataWarehouse.SDK.AI.Graph
             var dependencies = new Dictionary<string, List<string>>();
             foreach (var capId in capabilityIds)
             {
-                dependencies[capId] = new List<string>();
+                dependencies[capId] = [];
 
                 // Check for "depends_on" relationships
                 var dependsOnEdges = _graph.GetOutgoingEdges(capId, "depends_on");
@@ -229,7 +222,7 @@ namespace DataWarehouse.SDK.AI.Graph
                 // For parallel steps, take maximum duration
                 if (step.CanRunInParallel)
                 {
-                    currentParallelDuration = Math.Max(currentParallelDuration, step.EstimatedDurationMs);
+                    currentParallelDuration = MathUtils.Max(currentParallelDuration, step.EstimatedDurationMs);
                 }
                 else
                 {
@@ -271,8 +264,10 @@ namespace DataWarehouse.SDK.AI.Graph
                 foreach (var edge in alternativeEdges)
                 {
                     // Create alternative plan with substitution
-                    var altCapabilityIds = new List<string>(capabilityIds);
-                    altCapabilityIds[i] = edge.SourceId;
+                    var altCapabilityIds = new List<string>(capabilityIds)
+                    {
+                        [i] = edge.SourceId
+                    };
 
                     try
                     {
@@ -369,7 +364,7 @@ namespace DataWarehouse.SDK.AI.Graph
     public class ExecutionPlan
     {
         /// <summary>Ordered list of execution steps.</summary>
-        public List<ExecutionStep> Steps { get; init; } = new();
+        public List<ExecutionStep> Steps { get; init; } = [];
 
         /// <summary>Estimated total cost in USD.</summary>
         public decimal EstimatedTotalCostUsd { get; set; }
@@ -411,6 +406,6 @@ namespace DataWarehouse.SDK.AI.Graph
         public bool IsValid { get; set; }
 
         /// <summary>List of validation errors (empty if valid).</summary>
-        public List<string> Errors { get; init; } = new();
+        public List<string> Errors { get; init; } = [];
     }
 }

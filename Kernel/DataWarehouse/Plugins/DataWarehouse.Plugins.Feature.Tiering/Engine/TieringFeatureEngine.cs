@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
 
-namespace Feature.Tiering.Engine
+namespace DataWarehouse.Plugins.Feature.Tiering.Engine
 {
     /// <summary>
     /// Storage tiering feature for hot/warm/cold data management.

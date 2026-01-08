@@ -1,13 +1,9 @@
-using System;
-using System.Collections.Generic;
 using System.Net;
 using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
 
-namespace Interface.REST.Engine
+namespace DataWarehouse.Plugins.Interface.REST.Engine
 {
     /// <summary>
     /// REST API interface for DataWarehouse.

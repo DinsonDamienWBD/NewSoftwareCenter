@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace DataWarehouse.SDK.Primitives
+﻿namespace DataWarehouse.SDK.Primitives
 {
     /// <summary>
     /// Composite Query
@@ -17,7 +13,7 @@ namespace DataWarehouse.SDK.Primitives
         /// <summary>
         /// Filters
         /// </summary>
-        public List<QueryFilter> Filters { get; set; } = new();
+        public List<QueryFilter> Filters { get; set; } = [];
     }
 
     /// <summary>

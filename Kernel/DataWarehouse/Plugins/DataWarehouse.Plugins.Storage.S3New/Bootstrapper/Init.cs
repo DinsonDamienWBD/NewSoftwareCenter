@@ -1,8 +1,7 @@
-using System;
-using Storage.S3.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Storage.S3New.Engine;
 
-namespace Storage.S3.Bootstrapper
+namespace DataWarehouse.Plugins.Storage.S3New.Bootstrapper
 {
     /// <summary>
     /// Plugin entry point for AWS S3 Cloud Storage.

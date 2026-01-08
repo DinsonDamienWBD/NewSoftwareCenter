@@ -1,4 +1,6 @@
-﻿namespace Core.Messages
+﻿using System;
+
+namespace Core.Messages
 {
     /// <summary>
     /// Interface for Queries that support result pagination.

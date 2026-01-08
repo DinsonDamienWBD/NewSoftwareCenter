@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.Contracts.CategoryBases
 {
     /// <summary>
@@ -10,13 +5,9 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
     /// Handles distributed coordination: consensus, leader election, federation, tiering, replication.
     /// Plugins implement protocol-specific orchestration logic.
     /// </summary>
-    public abstract class OrchestrationPluginBase : PluginBase
+    /// <remarks>Constructs orchestration plugin</remarks>
+    public abstract class OrchestrationPluginBase(string id, string name, Version version) : PluginBase(id, name, version, PluginCategory.Orchestration)
     {
-        /// <summary>Constructs orchestration plugin</summary>
-        protected OrchestrationPluginBase(string id, string name, Version version)
-            : base(id, name, version, PluginCategory.Orchestration)
-        {
-        }
 
         // Abstract members
         /// <summary>Orchestration type (e.g., "raft", "paxos", "tiering")</summary>
@@ -34,7 +25,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
 
         // Capabilities - Orchestration plugins define custom capabilities
         /// <summary>Orchestration capabilities (override to define specific capabilities)</summary>
-        protected override PluginCapabilityDescriptor[] Capabilities => Array.Empty<PluginCapabilityDescriptor>();
+        protected override PluginCapabilityDescriptor[] Capabilities => [];
 
         // Initialization
         /// <summary>Initializes orchestration</summary>

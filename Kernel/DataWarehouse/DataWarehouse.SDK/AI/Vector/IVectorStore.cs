@@ -1,6 +1,3 @@
-using System.Collections.Generic;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.AI.Vector
 {
     /// <summary>
@@ -146,10 +143,10 @@ namespace DataWarehouse.SDK.AI.Vector
         public string Id { get; init; } = string.Empty;
 
         /// <summary>Embedding vector.</summary>
-        public float[] Embedding { get; init; } = System.Array.Empty<float>();
+        public float[] Embedding { get; init; } = [];
 
         /// <summary>Metadata associated with this vector.</summary>
-        public Dictionary<string, object> Metadata { get; init; } = new();
+        public Dictionary<string, object> Metadata { get; init; } = [];
 
         /// <summary>Constructs an empty vector entry.</summary>
         public VectorEntry() { }

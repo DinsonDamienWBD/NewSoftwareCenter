@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.SDK.AI.Events
 {
@@ -21,17 +17,12 @@ namespace DataWarehouse.SDK.AI.Events
     /// - Security events (UnauthorizedAccess, SuspiciousPattern)
     /// - System events (PluginLoaded, PluginUnloaded, Error)
     /// </summary>
-    public class EventBus
+    public class EventBus(int maxHistorySize = 10000)
     {
-        private readonly Dictionary<string, List<IEventHandler>> _handlers = new();
-        private readonly List<SystemEvent> _eventHistory = new();
-        private readonly object _lock = new();
-        private readonly int _maxHistorySize;
-
-        public EventBus(int maxHistorySize = 10000)
-        {
-            _maxHistorySize = maxHistorySize;
-        }
+        private readonly Dictionary<string, List<IEventHandler>> _handlers = [];
+        private readonly List<SystemEvent> _eventHistory = [];
+        private readonly Lock _lock = new();
+        private readonly int _maxHistorySize = maxHistorySize;
 
         /// <summary>
         /// Publishes an event to all subscribed handlers.
@@ -40,8 +31,7 @@ namespace DataWarehouse.SDK.AI.Events
         /// <param name="event">Event to publish.</param>
         public async Task PublishAsync(SystemEvent @event)
         {
-            if (@event == null)
-                throw new ArgumentNullException(nameof(@event));
+            ArgumentNullException.ThrowIfNull(@event);
 
             @event.Timestamp = DateTime.UtcNow;
             @event.Id = Guid.NewGuid().ToString();
@@ -56,7 +46,7 @@ namespace DataWarehouse.SDK.AI.Events
                 _handlers.TryGetValue(@event.EventType, out var typeHandlers);
                 _handlers.TryGetValue("*", out var wildcardHandlers); // Wildcard handlers get all events
 
-                handlers = new List<IEventHandler>();
+                handlers = [];
                 if (typeHandlers != null) handlers.AddRange(typeHandlers);
                 if (wildcardHandlers != null) handlers.AddRange(wildcardHandlers);
             }
@@ -75,17 +65,17 @@ namespace DataWarehouse.SDK.AI.Events
         {
             if (string.IsNullOrWhiteSpace(eventType))
                 throw new ArgumentException("Event type cannot be empty");
-            if (handler == null)
-                throw new ArgumentNullException(nameof(handler));
+            ArgumentNullException.ThrowIfNull(handler);
 
             lock (_lock)
             {
-                if (!_handlers.ContainsKey(eventType))
+                if (!_handlers.TryGetValue(eventType, out List<IEventHandler>? value))
                 {
-                    _handlers[eventType] = new List<IEventHandler>();
+                    value = [];
+                    _handlers[eventType] = value;
                 }
 
-                _handlers[eventType].Add(handler);
+                value.Add(handler);
             }
         }
 
@@ -122,10 +112,9 @@ namespace DataWarehouse.SDK.AI.Events
                     query = query.Where(e => e.EventType == eventType);
                 }
 
-                return query
+                return [.. query
                     .OrderByDescending(e => e.Timestamp)
-                    .Take(limit)
-                    .ToList();
+                    .Take(limit)];
             }
         }
 
@@ -175,7 +164,7 @@ namespace DataWarehouse.SDK.AI.Events
         /// Executes handler with exception handling.
         /// Prevents one handler's exception from affecting others.
         /// </summary>
-        private async Task SafeHandleAsync(IEventHandler handler, SystemEvent @event)
+        private static async Task SafeHandleAsync(IEventHandler handler, SystemEvent @event)
         {
             try
             {
@@ -207,7 +196,7 @@ namespace DataWarehouse.SDK.AI.Events
         public string Source { get; set; } = string.Empty;
 
         /// <summary>Event data (specific to event type).</summary>
-        public Dictionary<string, object> Data { get; init; } = new();
+        public Dictionary<string, object> Data { get; init; } = [];
 
         /// <summary>Severity level.</summary>
         public EventSeverity Severity { get; set; } = EventSeverity.Info;

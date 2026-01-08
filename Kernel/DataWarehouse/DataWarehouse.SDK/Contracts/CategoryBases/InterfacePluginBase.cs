@@ -1,7 +1,3 @@
-using System;
-using System.Threading;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.Contracts.CategoryBases
 {
     /// <summary>
@@ -9,13 +5,9 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
     /// Exposes external APIs/protocols: SQL, REST, GraphQL, gRPC, etc.
     /// Plugins implement protocol-specific listeners and handlers.
     /// </summary>
-    public abstract class InterfacePluginBase : PluginBase
+    /// <remarks>Constructs interface plugin</remarks>
+    public abstract class InterfacePluginBase(string id, string name, Version version) : PluginBase(id, name, version, PluginCategory.Interface)
     {
-        /// <summary>Constructs interface plugin</summary>
-        protected InterfacePluginBase(string id, string name, Version version)
-            : base(id, name, version, PluginCategory.Interface)
-        {
-        }
 
         // Abstract members
         /// <summary>Interface type (e.g., "sql", "rest", "graphql")</summary>
@@ -33,7 +25,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
 
         // Capabilities - Interface plugins define custom capabilities
         /// <summary>Interface capabilities (override to define specific capabilities)</summary>
-        protected override PluginCapabilityDescriptor[] Capabilities => Array.Empty<PluginCapabilityDescriptor>();
+        protected override PluginCapabilityDescriptor[] Capabilities => [];
 
         // Initialization
         /// <summary>Initializes interface</summary>

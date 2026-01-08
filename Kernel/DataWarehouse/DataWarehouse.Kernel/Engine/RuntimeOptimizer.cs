@@ -1,4 +1,5 @@
-﻿using DataWarehouse.SDK.Contracts;
+﻿using DataWarehouse.SDK.AI.Math;
+using DataWarehouse.SDK.Contracts;
 using Microsoft.Extensions.Logging;
 
 namespace DataWarehouse.Kernel.Engine
@@ -68,7 +69,7 @@ namespace DataWarehouse.Kernel.Engine
         {
             return CurrentMode switch
             {
-                OperatingMode.Laptop => Math.Max(2, Environment.ProcessorCount / 2), // Conservative
+                OperatingMode.Laptop => MathUtils.Max(2, Environment.ProcessorCount / 2), // Conservative
                 OperatingMode.Workstation => Environment.ProcessorCount - 1,         // Leave 1 for UI
                 OperatingMode.Server => Environment.ProcessorCount * 2,              // Saturation
                 OperatingMode.Hyperscale => Environment.ProcessorCount * 4,          // High IO wait tolerance

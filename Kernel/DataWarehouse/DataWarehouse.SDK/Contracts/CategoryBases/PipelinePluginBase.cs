@@ -1,8 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Threading.Tasks;
-
 namespace DataWarehouse.SDK.Contracts.CategoryBases
 {
     /// <summary>
@@ -22,23 +17,19 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
     ///
     /// Everything else (handshake, message handling, capability registration) is done automatically.
     /// </summary>
-    public abstract class PipelinePluginBase : PluginBase
+    /// <remarks>
+    /// Constructs a pipeline plugin with the specified metadata.
+    /// Automatically sets category to Pipeline.
+    /// </remarks>
+    /// <param name="id">Unique plugin identifier (e.g., "DataWarehouse.Pipeline.GZip").</param>
+    /// <param name="name">Human-readable name (e.g., "GZip Compression").</param>
+    /// <param name="version">Plugin version.</param>
+    public abstract class PipelinePluginBase(string id, string name, Version version) : PluginBase(id, name, version, PluginCategory.Pipeline)
     {
         // =========================================================================
         // CONSTRUCTOR
         // =========================================================================
 
-        /// <summary>
-        /// Constructs a pipeline plugin with the specified metadata.
-        /// Automatically sets category to Pipeline.
-        /// </summary>
-        /// <param name="id">Unique plugin identifier (e.g., "DataWarehouse.Pipeline.GZip").</param>
-        /// <param name="name">Human-readable name (e.g., "GZip Compression").</param>
-        /// <param name="version">Plugin version.</param>
-        protected PipelinePluginBase(string id, string name, Version version)
-            : base(id, name, version, PluginCategory.Pipeline)
-        {
-        }
 
         // =========================================================================
         // ABSTRACT MEMBERS - Plugin must implement these
@@ -119,8 +110,8 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
         ///
         /// No need to override unless you want custom capabilities.
         /// </summary>
-        protected override PluginCapabilityDescriptor[] Capabilities => new[]
-        {
+        protected override PluginCapabilityDescriptor[] Capabilities =>
+        [
             // Forward transformation capability
             new PluginCapabilityDescriptor
             {
@@ -131,7 +122,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 RequiredPermission = Security.Permission.Read,
                 RequiresApproval = false,
                 ParameterSchemaJson = BuildApplySchema(),
-                Tags = new List<string> { "transform", TransformType, "forward" }
+                Tags = ["transform", TransformType, "forward"]
             },
 
             // Reverse transformation capability
@@ -144,9 +135,9 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 RequiredPermission = Security.Permission.Read,
                 RequiresApproval = false,
                 ParameterSchemaJson = BuildReverseSchema(),
-                Tags = new List<string> { "transform", TransformType, "reverse" }
+                Tags = ["transform", TransformType, "reverse"]
             }
-        };
+        ];
 
         // =========================================================================
         // INITIALIZATION - Automatically registers capability handlers
@@ -209,14 +200,12 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
         /// </summary>
         /// <param name="parameters">Message parameters.</param>
         /// <returns>Input data as byte array.</returns>
-        private byte[] ExtractInputData(Dictionary<string, object> parameters)
+        private static byte[] ExtractInputData(Dictionary<string, object> parameters)
         {
-            if (!parameters.ContainsKey("input"))
+            if (!parameters.TryGetValue("input", out object? input))
             {
                 throw new ArgumentException("Missing required parameter: input");
             }
-
-            var input = parameters["input"];
 
             // Handle different input types
             return input switch
@@ -234,14 +223,14 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
         /// </summary>
         /// <param name="parameters">Message parameters.</param>
         /// <returns>Transformation arguments.</returns>
-        private Dictionary<string, object> ExtractArgs(Dictionary<string, object> parameters)
+        private static Dictionary<string, object> ExtractArgs(Dictionary<string, object> parameters)
         {
-            if (parameters.ContainsKey("args") && parameters["args"] is Dictionary<string, object> args)
+            if (parameters.TryGetValue("args", out object? value) && value is Dictionary<string, object> args)
             {
                 return args;
             }
 
-            return new Dictionary<string, object>();
+            return [];
         }
 
         /// <summary>
@@ -249,7 +238,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
         /// </summary>
         /// <param name="stream">Input stream.</param>
         /// <returns>Stream contents as byte array.</returns>
-        private byte[] ReadStreamToBytes(Stream stream)
+        private static byte[] ReadStreamToBytes(Stream stream)
         {
             if (stream is MemoryStream ms)
             {

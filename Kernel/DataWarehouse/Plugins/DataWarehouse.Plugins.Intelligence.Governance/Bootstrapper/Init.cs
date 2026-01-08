@@ -1,8 +1,7 @@
-using System;
-using Intelligence.Governance.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Intelligence.Governance.Engine;
 
-namespace Intelligence.Governance.Bootstrapper
+namespace DataWarehouse.Plugins.Intelligence.Governance.Bootstrapper
 {
     public class GovernancePlugin
     {

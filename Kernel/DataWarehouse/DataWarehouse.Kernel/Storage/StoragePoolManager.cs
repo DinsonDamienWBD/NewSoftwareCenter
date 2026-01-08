@@ -1,13 +1,5 @@
 using DataWarehouse.SDK.Contracts;
-using DataWarehouse.SDK.Primitives;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.Kernel.Storage
 {
@@ -456,7 +448,7 @@ namespace DataWarehouse.Kernel.Storage
                     else if (metadata.AccessCount >= _config.WarmTierAccessThreshold)
                     {
                         targetTier = "warm";
-                        targetTierIndex = Math.Min(1, _config.TierProviderIds.Count - 1);
+                        targetTierIndex = MathUtils.Min(1, _config.TierProviderIds.Count - 1);
                     }
                     else
                     {
@@ -591,7 +583,7 @@ namespace DataWarehouse.Kernel.Storage
             await data.CopyToAsync(buffer);
 
             var tasks = new List<Task>();
-            int mirrorCount = Math.Min(_config.PoolMirrorCount, providers.Count);
+            int mirrorCount = MathUtils.Min(_config.PoolMirrorCount, providers.Count);
 
             for (int i = 0; i < mirrorCount; i++)
             {

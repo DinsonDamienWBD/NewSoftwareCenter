@@ -1,5 +1,3 @@
-using System.Collections.Generic;
-using System.Linq;
 using DataWarehouse.SDK.Contracts;
 
 namespace DataWarehouse.SDK.AI.LLM
@@ -27,7 +25,7 @@ namespace DataWarehouse.SDK.AI.LLM
         /// </summary>
         /// <param name="capabilities">List of plugin capabilities.</param>
         /// <returns>List of LLM tool definitions.</returns>
-        public List<LLMTool> GenerateToolDefinitions(List<PluginCapabilityDescriptor> capabilities)
+        public static List<LLMTool> GenerateToolDefinitions(List<PluginCapabilityDescriptor> capabilities)
         {
             var tools = new List<LLMTool>();
 
@@ -35,7 +33,7 @@ namespace DataWarehouse.SDK.AI.LLM
             {
                 var tool = new LLMTool
                 {
-                    Name = capability.Id,
+                    Name = capability.CapabilityId,
                     Description = capability.Description,
                     Parameters = GenerateParameterSchema(capability)
                 };
@@ -60,7 +58,7 @@ namespace DataWarehouse.SDK.AI.LLM
         ///   "required": ["data"]
         /// }
         /// </summary>
-        private Dictionary<string, object> GenerateParameterSchema(PluginCapabilityDescriptor capability)
+        private static Dictionary<string, object> GenerateParameterSchema(PluginCapabilityDescriptor capability)
         {
             var schema = new Dictionary<string, object>
             {
@@ -73,7 +71,7 @@ namespace DataWarehouse.SDK.AI.LLM
             var required = (List<string>)schema["required"];
 
             // Add common parameters based on capability type
-            if (capability.Id.Contains("transform"))
+            if (capability.CapabilityId.Contains("transform"))
             {
                 // Transformation capabilities
                 properties["data"] = new Dictionary<string, object>
@@ -84,7 +82,7 @@ namespace DataWarehouse.SDK.AI.LLM
                 required.Add("data");
 
                 // Optional parameters
-                if (capability.Id.Contains("gzip"))
+                if (capability.CapabilityId.Contains("gzip"))
                 {
                     properties["level"] = new Dictionary<string, object>
                     {
@@ -93,7 +91,7 @@ namespace DataWarehouse.SDK.AI.LLM
                         ["description"] = "Compression level (default: fastest)"
                     };
                 }
-                else if (capability.Id.Contains("aes"))
+                else if (capability.CapabilityId.Contains("aes"))
                 {
                     properties["key"] = new Dictionary<string, object>
                     {
@@ -103,10 +101,10 @@ namespace DataWarehouse.SDK.AI.LLM
                     required.Add("key");
                 }
             }
-            else if (capability.Id.Contains("storage"))
+            else if (capability.CapabilityId.Contains("storage"))
             {
                 // Storage capabilities
-                if (capability.Id.Contains("write") || capability.Id.Contains("save"))
+                if (capability.CapabilityId.Contains("write") || capability.CapabilityId.Contains("save"))
                 {
                     properties["key"] = new Dictionary<string, object>
                     {
@@ -121,7 +119,7 @@ namespace DataWarehouse.SDK.AI.LLM
                     required.Add("key");
                     required.Add("data");
                 }
-                else if (capability.Id.Contains("read") || capability.Id.Contains("load"))
+                else if (capability.CapabilityId.Contains("read") || capability.CapabilityId.Contains("load"))
                 {
                     properties["key"] = new Dictionary<string, object>
                     {
@@ -131,7 +129,7 @@ namespace DataWarehouse.SDK.AI.LLM
                     required.Add("key");
                 }
             }
-            else if (capability.Id.Contains("metadata"))
+            else if (capability.CapabilityId.Contains("metadata"))
             {
                 // Metadata/search capabilities
                 properties["query"] = new Dictionary<string, object>
@@ -163,7 +161,7 @@ namespace DataWarehouse.SDK.AI.LLM
         /// <param name="allowedCategories">Allowed capability categories (null = all).</param>
         /// <param name="excludePatterns">Patterns to exclude (e.g., "security.*").</param>
         /// <returns>Filtered list of tools.</returns>
-        public List<LLMTool> FilterTools(
+        public static List<LLMTool> FilterTools(
             List<LLMTool> tools,
             List<string>? allowedCategories = null,
             List<string>? excludePatterns = null)
@@ -188,7 +186,7 @@ namespace DataWarehouse.SDK.AI.LLM
                 }
             }
 
-            return filtered.ToList();
+            return [.. filtered];
         }
 
         /// <summary>
@@ -197,7 +195,7 @@ namespace DataWarehouse.SDK.AI.LLM
         /// </summary>
         /// <param name="tools">Available tools.</param>
         /// <returns>System prompt text.</returns>
-        public string GenerateSystemPrompt(List<LLMTool> tools)
+        public static string GenerateSystemPrompt(List<LLMTool> tools)
         {
             var prompt = @"You are an AI assistant with access to DataWarehouse capabilities.
 

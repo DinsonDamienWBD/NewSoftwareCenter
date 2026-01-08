@@ -154,7 +154,7 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Engine
                     }
 
                     // Exponential Backoff with Jitter: 200ms, 400ms, 800ms...
-                    int delay = (int)(Math.Pow(2, attempt) * 100) + Random.Shared.Next(0, 50);
+                    int delay = (int)(MathUtils.Pow(2, attempt) * 100) + Random.Shared.Next(0, 50);
                     _context?.LogWarning($"[Network] Upload failed. Retrying in {delay}ms... Error: {ex.Message}");
                     await Task.Delay(delay);
                 }

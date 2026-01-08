@@ -7,4 +7,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\DataWarehouse.SDK\DataWarehouse.SDK.csproj" />
+  </ItemGroup>
+
 </Project>

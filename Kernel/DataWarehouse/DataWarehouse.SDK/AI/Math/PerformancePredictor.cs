@@ -1,8 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using DataWarehouse.SDK.AI.Graph;
-using DataWarehouse.SDK.Contracts;
 
 namespace DataWarehouse.SDK.AI.Math
 {
@@ -23,19 +19,14 @@ namespace DataWarehouse.SDK.AI.Math
     /// - Historical execution patterns
     /// - System load and concurrency
     /// </summary>
-    public class PerformancePredictor
+    /// <remarks>
+    /// Constructs a performance predictor with the given knowledge graph.
+    /// </remarks>
+    /// <param name="graph">Knowledge graph containing capability metadata.</param>
+    public class PerformancePredictor(KnowledgeGraph graph)
     {
-        private readonly KnowledgeGraph _graph;
-        private readonly Dictionary<string, List<ExecutionHistory>> _history = new();
-
-        /// <summary>
-        /// Constructs a performance predictor with the given knowledge graph.
-        /// </summary>
-        /// <param name="graph">Knowledge graph containing capability metadata.</param>
-        public PerformancePredictor(KnowledgeGraph graph)
-        {
-            _graph = graph ?? throw new ArgumentNullException(nameof(graph));
-        }
+        private readonly KnowledgeGraph _graph = graph ?? throw new ArgumentNullException(nameof(graph));
+        private readonly Dictionary<string, List<ExecutionHistory>> _history = [];
 
         /// <summary>
         /// Predicts execution duration for a capability given input size.
@@ -56,9 +47,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// <returns>Predicted duration in milliseconds.</returns>
         public double PredictDuration(string capabilityId, long inputSizeBytes)
         {
-            var node = _graph.GetNode(capabilityId);
-            if (node == null)
-                throw new ArgumentException($"Capability '{capabilityId}' not found");
+            var node = _graph.GetNode(capabilityId) ?? throw new ArgumentException($"Capability '{capabilityId}' not found");
 
             // Get performance characteristics from metadata
             double avgLatencyMs = 0;
@@ -86,13 +75,13 @@ namespace DataWarehouse.SDK.AI.Math
             {
                 // Non-linear scaling (e.g., O(n²))
                 // Use a pessimistic multiplier
-                durationMs *= (1 + Math.Log(inputSizeBytes / 1024.0));
+                durationMs *= (1 + MathUtils.Log(inputSizeBytes / 1024.0));
             }
 
             // Apply historical accuracy adjustment
             durationMs = ApplyHistoricalAdjustment(capabilityId, durationMs, inputSizeBytes);
 
-            return Math.Max(0, durationMs);
+            return MathUtils.Max(0, durationMs);
         }
 
         /// <summary>
@@ -113,9 +102,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// <returns>Predicted memory usage in bytes.</returns>
         public long PredictMemoryUsage(string capabilityId, long inputSizeBytes)
         {
-            var node = _graph.GetNode(capabilityId);
-            if (node == null)
-                throw new ArgumentException($"Capability '{capabilityId}' not found");
+            var node = _graph.GetNode(capabilityId) ?? throw new ArgumentException($"Capability '{capabilityId}' not found");
 
             // Get base memory usage
             long baseMemory = 0;
@@ -124,7 +111,7 @@ namespace DataWarehouse.SDK.AI.Math
 
             // For most operations, memory = base + small buffer
             // Streaming operations don't load entire input
-            var bufferSize = Math.Min(inputSizeBytes, 64 * 1024 * 1024); // Max 64MB buffer
+            var bufferSize = MathUtils.Min(inputSizeBytes, 64 * 1024 * 1024); // Max 64MB buffer
 
             return baseMemory + bufferSize;
         }
@@ -147,9 +134,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// <returns>Predicted cost in USD.</returns>
         public decimal PredictCost(string capabilityId, long inputSizeBytes)
         {
-            var node = _graph.GetNode(capabilityId);
-            if (node == null)
-                throw new ArgumentException($"Capability '{capabilityId}' not found");
+            var node = _graph.GetNode(capabilityId) ?? throw new ArgumentException($"Capability '{capabilityId}' not found");
 
             // Get cost per operation
             decimal costPerOperation = 0;
@@ -196,19 +181,19 @@ namespace DataWarehouse.SDK.AI.Math
                     if (prevStep.CanRunInParallel)
                     {
                         // Parallel steps: max duration, sum memory
-                        prediction.TotalDurationMs = Math.Max(prediction.TotalDurationMs, stepDuration);
-                        prediction.PeakMemoryBytes = Math.Max(prediction.PeakMemoryBytes, stepMemory);
+                        prediction.TotalDurationMs = MathUtils.Max(prediction.TotalDurationMs, stepDuration);
+                        prediction.PeakMemoryBytes = MathUtils.Max(prediction.PeakMemoryBytes, stepMemory);
                     }
                     else
                     {
                         prediction.TotalDurationMs += stepDuration;
-                        prediction.PeakMemoryBytes = Math.Max(prediction.PeakMemoryBytes, stepMemory);
+                        prediction.PeakMemoryBytes = MathUtils.Max(prediction.PeakMemoryBytes, stepMemory);
                     }
                 }
                 else
                 {
                     prediction.TotalDurationMs += stepDuration;
-                    prediction.PeakMemoryBytes = Math.Max(prediction.PeakMemoryBytes, stepMemory);
+                    prediction.PeakMemoryBytes = MathUtils.Max(prediction.PeakMemoryBytes, stepMemory);
                 }
 
                 prediction.TotalCostUsd += stepCost;
@@ -252,12 +237,13 @@ namespace DataWarehouse.SDK.AI.Math
             long actualMemoryBytes,
             decimal actualCostUsd)
         {
-            if (!_history.ContainsKey(capabilityId))
+            if (!_history.TryGetValue(capabilityId, out List<ExecutionHistory>? value))
             {
-                _history[capabilityId] = new List<ExecutionHistory>();
+                value = [];
+                _history[capabilityId] = value;
             }
 
-            _history[capabilityId].Add(new ExecutionHistory
+            value.Add(new ExecutionHistory
             {
                 Timestamp = DateTime.UtcNow,
                 InputSizeBytes = inputSizeBytes,
@@ -267,12 +253,9 @@ namespace DataWarehouse.SDK.AI.Math
             });
 
             // Keep only recent history (last 100 executions)
-            if (_history[capabilityId].Count > 100)
+            if (value.Count > 100)
             {
-                _history[capabilityId] = _history[capabilityId]
-                    .OrderByDescending(h => h.Timestamp)
-                    .Take(100)
-                    .ToList();
+                _history[capabilityId] = [.. value.OrderByDescending(h => h.Timestamp).Take(100)];
             }
         }
 
@@ -284,12 +267,11 @@ namespace DataWarehouse.SDK.AI.Math
         /// <returns>Prediction accuracy metrics.</returns>
         public PredictionAccuracy GetPredictionAccuracy(string capabilityId)
         {
-            if (!_history.ContainsKey(capabilityId) || _history[capabilityId].Count == 0)
+            if (!_history.TryGetValue(capabilityId, out List<ExecutionHistory>? history) || history.Count == 0)
             {
                 return new PredictionAccuracy { SampleCount = 0 };
             }
 
-            var history = _history[capabilityId];
             double totalError = 0;
             int count = 0;
 
@@ -297,7 +279,7 @@ namespace DataWarehouse.SDK.AI.Math
             {
                 var predicted = PredictDuration(capabilityId, record.InputSizeBytes);
                 var actual = record.DurationMs;
-                var error = Math.Abs(predicted - actual) / actual;
+                var error = MathUtils.Abs(predicted - actual) / actual;
                 totalError += error;
                 count++;
             }
@@ -318,11 +300,11 @@ namespace DataWarehouse.SDK.AI.Math
         /// </summary>
         private double ApplyHistoricalAdjustment(string capabilityId, double predictedDuration, long inputSize)
         {
-            if (!_history.ContainsKey(capabilityId) || _history[capabilityId].Count < 10)
+            if (!_history.TryGetValue(capabilityId, out List<ExecutionHistory>? value) || value.Count < 10)
                 return predictedDuration; // Need sufficient history
 
             // Calculate average prediction error
-            var recentHistory = _history[capabilityId].TakeLast(20).ToList();
+            var recentHistory = value.TakeLast(20).ToList();
             double totalError = 0;
             int count = 0;
 
@@ -380,7 +362,7 @@ namespace DataWarehouse.SDK.AI.Math
         public decimal TotalCostUsd { get; set; }
 
         /// <summary>Per-step predictions.</summary>
-        public List<StepPrediction> StepPredictions { get; init; } = new();
+        public List<StepPrediction> StepPredictions { get; init; } = [];
     }
 
     /// <summary>

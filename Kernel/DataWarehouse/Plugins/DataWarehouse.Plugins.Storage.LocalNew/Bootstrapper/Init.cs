@@ -1,8 +1,7 @@
-using System;
-using Storage.Local.Engine;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.Plugins.Storage.LocalNew.Engine;
 
-namespace Storage.Local.Bootstrapper
+namespace DataWarehouse.Plugins.Storage.LocalNew.Bootstrapper
 {
     /// <summary>
     /// Plugin entry point for Local Filesystem Storage.

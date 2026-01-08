@@ -1,10 +1,6 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net.Http;
+using DataWarehouse.SDK.AI.Math;
 using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.SDK.AI.LLM.Providers
 {
@@ -74,7 +70,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
 
         public async Task<LLMResponse> ChatAsync(List<LLMMessage> messages, string? model = null, int? maxTokens = null)
         {
-            return await ChatWithToolsAsync(messages, new List<LLMTool>(), model, maxTokens);
+            return await ChatWithToolsAsync(messages, [], model, maxTokens);
         }
 
         public async Task<LLMResponse> ChatWithToolsAsync(
@@ -141,7 +137,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                     // Handle server errors (model might be loading)
                     if ((int)response.StatusCode >= 500)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+                        await Task.Delay(TimeSpan.FromSeconds(MathUtils.Pow(2, attempt)));
                         continue;
                     }
 
@@ -154,7 +150,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                     lastException = ex;
                     if (attempt < 2) // Not last attempt
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+                        await Task.Delay(TimeSpan.FromSeconds(MathUtils.Pow(2, attempt)));
                     }
                 }
                 catch (TaskCanceledException ex) // Timeout
@@ -188,7 +184,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                 {
                     var function = toolCall.GetProperty("function");
                     var argumentsJson = function.GetProperty("arguments").GetString() ?? "{}";
-                    var arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(argumentsJson) ?? new();
+                    var arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(argumentsJson) ?? [];
 
                     toolCalls.Add(new LLMToolCall
                     {
@@ -276,7 +272,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                 var response = await _httpClient.GetAsync("/api/tags");
                 if (!response.IsSuccessStatusCode)
                 {
-                    return new List<string>();
+                    return [];
                 }
 
                 var responseBody = await response.Content.ReadAsStringAsync();
@@ -298,7 +294,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
             }
             catch
             {
-                return new List<string>();
+                return [];
             }
         }
 

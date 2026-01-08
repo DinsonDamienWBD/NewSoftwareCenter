@@ -1,6 +1,5 @@
 using DataWarehouse.Plugins.Storage.RAMDisk.Engine;
 using DataWarehouse.SDK.Contracts;
-using DataWarehouse.SDK.Primitives;
 
 namespace DataWarehouse.Plugins.Storage.RAMDisk.Bootstrapper
 {
@@ -10,24 +9,24 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Bootstrapper
     /// </summary>
     public class RAMDiskStoragePlugin : IStoragePlugin
     {
-        public string Id => "DataWarehouse.Storage.RAMDisk";
-        public string Version => "1.0.0";
-        public string Name => "RAMDisk Storage";
+        public static string Id => "DataWarehouse.Storage.RAMDisk";
+        public static string Version => "1.0.0";
+        public static string Name => "RAMDisk Storage";
 
         // AI Metadata
-        public string SemanticDescription =>
+        public static string SemanticDescription =>
             "Ultra-high-performance in-memory storage provider designed for blazing-fast data access. " +
             "Stores all data in RAM using thread-safe concurrent dictionaries with optional persistence to disk. " +
             "Features automatic LRU eviction when memory limits are reached, configurable auto-save intervals, " +
             "and atomic save/load operations. Ideal for high-frequency trading data, real-time analytics caching, " +
             "temporary computation results, and performance-critical workloads where nanosecond-level latency is required.";
 
-        public string[] SemanticTags => new[]
-        {
+        public static string[] SemanticTags =>
+        [
             "storage", "in-memory", "ramdisk", "high-performance", "volatile", "persistence",
             "lru-eviction", "thread-safe", "concurrent", "cache", "fast", "low-latency",
             "memory-limit", "auto-save", "atomic-operations", "blazing-fast"
-        };
+        ];
 
         public PerformanceProfile PerformanceProfile => new()
         {
@@ -40,8 +39,8 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Bootstrapper
                               "Can handle millions of small objects or gigabytes of large blobs."
         };
 
-        public CapabilityRelationship[] CapabilityRelationships => new[]
-        {
+        public CapabilityRelationship[] CapabilityRelationships =>
+        [
             new CapabilityRelationship
             {
                 TargetCapabilityId = "DataWarehouse.Storage.LocalNew",
@@ -70,10 +69,10 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Bootstrapper
                 Description = "RAMDisk serves as hot tier in tiering architecture",
                 Strength = 0.9
             }
-        };
+        ];
 
-        public PluginUsageExample[] UsageExamples => new[]
-        {
+        public PluginUsageExample[] UsageExamples =>
+        [
             new PluginUsageExample
             {
                 Title = "High-Frequency Trading Data Storage",
@@ -143,7 +142,7 @@ Console.WriteLine($""Memory: {stats.MemoryUsage / 1024 / 1024}MB, Items: {stats.
 ",
                 ExpectedOutcome = "RAMDisk stays within memory limit by automatically evicting least recently used items"
             }
-        };
+        ];
 
         private RAMDiskStorageEngine? _engine;
         private IKernelContext? _context;

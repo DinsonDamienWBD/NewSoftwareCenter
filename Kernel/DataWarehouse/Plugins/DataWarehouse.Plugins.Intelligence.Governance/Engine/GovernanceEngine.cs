@@ -1,11 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Threading;
-using System.Threading.Tasks;
 using DataWarehouse.SDK.Contracts;
 using DataWarehouse.SDK.Contracts.CategoryBases;
 
-namespace Intelligence.Governance.Engine
+namespace DataWarehouse.Plugins.Intelligence.Governance.Engine
 {
     /// <summary>
     /// AI-driven governance and compliance engine.

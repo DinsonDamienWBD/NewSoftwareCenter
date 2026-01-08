@@ -1,7 +1,3 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-
 namespace DataWarehouse.SDK.AI.Math
 {
     /// <summary>
@@ -38,22 +34,22 @@ namespace DataWarehouse.SDK.AI.Math
         /// <param name="values">Time series data points.</param>
         /// <param name="threshold">Z-score threshold (default 3.0).</param>
         /// <returns>List of anomalies with indices and Z-scores.</returns>
-        public List<Anomaly> DetectAnomalies(List<double> values, double threshold = 3.0)
+        public static List<Anomaly> DetectAnomalies(List<double> values, double threshold = 3.0)
         {
             if (values == null || values.Count < 3)
-                return new List<Anomaly>(); // Need sufficient data
+                return []; // Need sufficient data
 
             var mean = CalculateMean(values);
             var stddev = CalculateStandardDeviation(values, mean);
 
             if (stddev == 0)
-                return new List<Anomaly>(); // No variation = no anomalies
+                return []; // No variation = no anomalies
 
             var anomalies = new List<Anomaly>();
 
             for (int i = 0; i < values.Count; i++)
             {
-                var zScore = Math.Abs((values[i] - mean) / stddev);
+                var zScore = MathUtils.Abs((values[i] - mean) / stddev);
                 if (zScore > threshold)
                 {
                     anomalies.Add(new Anomaly
@@ -83,10 +79,10 @@ namespace DataWarehouse.SDK.AI.Math
         /// </summary>
         /// <param name="values">Time series data points.</param>
         /// <returns>List of anomalies with indices.</returns>
-        public List<Anomaly> DetectAnomaliesIQR(List<double> values)
+        public static List<Anomaly> DetectAnomaliesIQR(List<double> values)
         {
             if (values == null || values.Count < 4)
-                return new List<Anomaly>();
+                return [];
 
             var sorted = values.OrderBy(v => v).ToList();
             var q1 = CalculatePercentile(sorted, 25);
@@ -134,7 +130,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// </summary>
         /// <param name="values">Time series data points.</param>
         /// <returns>Trend analysis result.</returns>
-        public TrendAnalysis AnalyzeTrend(List<double> values)
+        public static TrendAnalysis AnalyzeTrend(List<double> values)
         {
             if (values == null || values.Count < 2)
             {
@@ -168,13 +164,13 @@ namespace DataWarehouse.SDK.AI.Math
             var intercept = yMean - (slope * xMean);
 
             // Calculate R² (coefficient of determination)
-            var ssTotal = y.Sum(val => Math.Pow(val - yMean, 2));
+            var ssTotal = y.Sum(val => MathUtils.Pow(val - yMean, 2));
             var ssResidual = 0.0;
 
             for (int i = 0; i < x.Count; i++)
             {
                 var predicted = intercept + (slope * x[i]);
-                ssResidual += Math.Pow(y[i] - predicted, 2);
+                ssResidual += MathUtils.Pow(y[i] - predicted, 2);
             }
 
             var rSquared = ssTotal > 0 ? 1 - (ssResidual / ssTotal) : 0;
@@ -215,7 +211,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// <param name="x">First variable data points.</param>
         /// <param name="y">Second variable data points.</param>
         /// <returns>Correlation analysis result.</returns>
-        public CorrelationAnalysis CalculateCorrelation(List<double> x, List<double> y)
+        public static CorrelationAnalysis CalculateCorrelation(List<double> x, List<double> y)
         {
             if (x == null || y == null || x.Count != y.Count || x.Count < 2)
             {
@@ -239,7 +235,7 @@ namespace DataWarehouse.SDK.AI.Math
                 yDenominator += yDiff * yDiff;
             }
 
-            var denominator = Math.Sqrt(xDenominator * yDenominator);
+            var denominator = MathUtils.Sqrt(xDenominator * yDenominator);
 
             if (denominator == 0)
             {
@@ -252,8 +248,8 @@ namespace DataWarehouse.SDK.AI.Math
             {
                 IsValid = true,
                 Coefficient = correlation,
-                Strength = Math.Abs(correlation) > 0.7 ? CorrelationStrength.Strong
-                    : Math.Abs(correlation) > 0.4 ? CorrelationStrength.Moderate
+                Strength = MathUtils.Abs(correlation) > 0.7 ? CorrelationStrength.Strong
+                    : MathUtils.Abs(correlation) > 0.4 ? CorrelationStrength.Moderate
                     : CorrelationStrength.Weak,
                 Direction = correlation > 0 ? CorrelationDirection.Positive : CorrelationDirection.Negative
             };
@@ -271,16 +267,16 @@ namespace DataWarehouse.SDK.AI.Math
         /// <param name="values">Time series data points.</param>
         /// <param name="windowSize">Number of points in moving average (default 5).</param>
         /// <returns>Smoothed time series.</returns>
-        public List<double> CalculateMovingAverage(List<double> values, int windowSize = 5)
+        public static List<double> CalculateMovingAverage(List<double> values, int windowSize = 5)
         {
             if (values == null || values.Count < windowSize)
-                return values ?? new List<double>();
+                return values ?? [];
 
             var smoothed = new List<double>();
 
             for (int i = 0; i < values.Count; i++)
             {
-                var start = Math.Max(0, i - windowSize + 1);
+                var start = MathUtils.Max(0, i - windowSize + 1);
                 var window = values.Skip(start).Take(i - start + 1).ToList();
                 smoothed.Add(CalculateMean(window));
             }
@@ -295,10 +291,10 @@ namespace DataWarehouse.SDK.AI.Math
         /// <param name="values">Time series data points.</param>
         /// <param name="alpha">Smoothing factor (0-1, default 0.3).</param>
         /// <returns>Exponentially smoothed time series.</returns>
-        public List<double> CalculateExponentialMovingAverage(List<double> values, double alpha = 0.3)
+        public static List<double> CalculateExponentialMovingAverage(List<double> values, double alpha = 0.3)
         {
             if (values == null || values.Count == 0)
-                return new List<double>();
+                return [];
 
             if (alpha < 0 || alpha > 1)
                 throw new ArgumentException("Alpha must be between 0 and 1");
@@ -318,28 +314,28 @@ namespace DataWarehouse.SDK.AI.Math
         // HELPER METHODS
         // =========================================================================
 
-        private double CalculateMean(List<double> values)
+        private static double CalculateMean(List<double> values)
         {
             return values.Count > 0 ? values.Average() : 0;
         }
 
-        private double CalculateStandardDeviation(List<double> values, double mean)
+        private static double CalculateStandardDeviation(List<double> values, double mean)
         {
             if (values.Count < 2)
                 return 0;
 
-            var variance = values.Sum(v => Math.Pow(v - mean, 2)) / (values.Count - 1);
-            return Math.Sqrt(variance);
+            var variance = values.Sum(v => MathUtils.Pow(v - mean, 2)) / (values.Count - 1);
+            return MathUtils.Sqrt(variance);
         }
 
-        private double CalculatePercentile(List<double> sortedValues, double percentile)
+        private static double CalculatePercentile(List<double> sortedValues, double percentile)
         {
             if (sortedValues.Count == 0)
                 return 0;
 
             var index = (percentile / 100.0) * (sortedValues.Count - 1);
-            var lowerIndex = (int)Math.Floor(index);
-            var upperIndex = (int)Math.Ceiling(index);
+            var lowerIndex = (int)MathUtils.Floor(index);
+            var upperIndex = (int)MathUtils.Ceiling(index);
 
             if (lowerIndex == upperIndex)
                 return sortedValues[lowerIndex];

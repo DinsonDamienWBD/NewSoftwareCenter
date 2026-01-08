@@ -63,8 +63,8 @@ namespace DataWarehouse.Kernel.Engine
 
                     var response = plugin.OnHandshakeAsync(request).GetAwaiter().GetResult();
 
-                    _registry.Register(plugin);
-                    _context.LogInfo($"Loaded Plugin: {response.PluginId} v{response.Version} ({response.State})");
+                    _registry.Register(plugin, response);
+                    _context.LogInfo($"Loaded Plugin: {response.PluginId} v{response.Version} ({response.ReadyState})");
                 }
             }
         }

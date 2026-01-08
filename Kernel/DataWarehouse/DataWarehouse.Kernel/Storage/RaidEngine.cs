@@ -1,12 +1,6 @@
+using DataWarehouse.SDK.AI.Math;
 using DataWarehouse.SDK.Contracts;
-using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace DataWarehouse.Kernel.Storage
 {
@@ -224,7 +218,7 @@ namespace DataWarehouse.Kernel.Storage
             buffer.Position = 0;
 
             var tasks = new List<Task>();
-            int mirrorCount = Math.Min(_config.MirrorCount, _config.ProviderCount);
+            int mirrorCount = MathUtils.Min(_config.MirrorCount, _config.ProviderCount);
 
             for (int i = 0; i < mirrorCount; i++)
             {
@@ -285,7 +279,7 @@ namespace DataWarehouse.Kernel.Storage
 
             var chunks = SplitIntoChunks(data, _config.StripeSize);
             int dataDisks = _config.ProviderCount - 1;
-            int stripeCount = (int)Math.Ceiling((double)chunks.Count / dataDisks);
+            int stripeCount = (int)MathUtils.Ceiling((double)chunks.Count / dataDisks);
 
             var tasks = new List<Task>();
             var metadata = new RaidMetadata
@@ -343,7 +337,7 @@ namespace DataWarehouse.Kernel.Storage
                 throw new FileNotFoundException($"RAID metadata not found for {key}");
 
             int dataDisks = _config.ProviderCount - 1;
-            int stripeCount = (int)Math.Ceiling((double)metadata.ChunkCount / dataDisks);
+            int stripeCount = (int)MathUtils.Ceiling((double)metadata.ChunkCount / dataDisks);
             var allChunks = new List<byte[]>();
 
             for (int stripe = 0; stripe < stripeCount; stripe++)
@@ -405,7 +399,7 @@ namespace DataWarehouse.Kernel.Storage
 
             var chunks = SplitIntoChunks(data, _config.StripeSize);
             int dataDisks = _config.ProviderCount - 2; // Two parity disks
-            int stripeCount = (int)Math.Ceiling((double)chunks.Count / dataDisks);
+            int stripeCount = (int)MathUtils.Ceiling((double)chunks.Count / dataDisks);
 
             var tasks = new List<Task>();
             var metadata = new RaidMetadata
@@ -471,7 +465,7 @@ namespace DataWarehouse.Kernel.Storage
                 throw new FileNotFoundException($"RAID metadata not found for {key}");
 
             int dataDisks = _config.ProviderCount - 2;
-            int stripeCount = (int)Math.Ceiling((double)metadata.ChunkCount / dataDisks);
+            int stripeCount = (int)MathUtils.Ceiling((double)metadata.ChunkCount / dataDisks);
             var allChunks = new List<byte[]>();
 
             for (int stripe = 0; stripe < stripeCount; stripe++)
@@ -780,7 +774,7 @@ namespace DataWarehouse.Kernel.Storage
 
             var chunks = SplitIntoChunks(data, _config.StripeSize);
             int dataDisks = _config.ProviderCount - 3; // Triple parity
-            int stripeCount = (int)Math.Ceiling((double)chunks.Count / dataDisks);
+            int stripeCount = (int)MathUtils.Ceiling((double)chunks.Count / dataDisks);
 
             var tasks = new List<Task>();
 
@@ -863,14 +857,14 @@ namespace DataWarehouse.Kernel.Storage
         {
             // Unraid: 1 or 2 parity disks, rest are data disks
             // Unraid writes entire file to ONE disk (not striped)
-            int parityCount = Math.Min(2, _config.ProviderCount - 1);
+            int parityCount = MathUtils.Min(2, _config.ProviderCount - 1);
             int dataDisks = _config.ProviderCount - parityCount;
 
             if (dataDisks < 1)
                 throw new InvalidOperationException("Unraid requires at least 1 data disk and 1-2 parity disks");
 
             // Deterministically select disk based on key hash
-            int targetDisk = Math.Abs(key.GetHashCode()) % dataDisks;
+            int targetDisk = MathUtils.Abs(key.GetHashCode()) % dataDisks;
 
             // Write entire file to one disk
             var dataKey = $"{key}.data";
@@ -881,9 +875,9 @@ namespace DataWarehouse.Kernel.Storage
 
         private async Task<Stream> LoadUnraidAsync(string key, Func<int, IStorageProvider> getProvider)
         {
-            int parityCount = Math.Min(2, _config.ProviderCount - 1);
+            int parityCount = MathUtils.Min(2, _config.ProviderCount - 1);
             int dataDisks = _config.ProviderCount - parityCount;
-            int targetDisk = Math.Abs(key.GetHashCode()) % dataDisks;
+            int targetDisk = MathUtils.Abs(key.GetHashCode()) % dataDisks;
 
             var dataKey = $"{key}.data";
             var chunk = await LoadChunkAsync(getProvider(targetDisk), dataKey);
@@ -1008,7 +1002,7 @@ namespace DataWarehouse.Kernel.Storage
 
             foreach (var chunk in chunks.Where(c => c != null))
             {
-                for (int i = 0; i < Math.Min(chunk.Length, result.Length); i++)
+                for (int i = 0; i < MathUtils.Min(chunk.Length, result.Length); i++)
                 {
                     result[i] ^= chunk[i];
                 }
@@ -1133,7 +1127,7 @@ namespace DataWarehouse.Kernel.Storage
         public int StripeSize { get; set; } = 64 * 1024; // 64KB default
         public int MirrorCount { get; set; } = 2;
         public ParityAlgorithm ParityAlgorithm { get; set; } = ParityAlgorithm.XOR;
-        public RebuildPriority RebuildPriority { get; set} = RebuildPriority.Medium;
+        public RebuildPriority RebuildPriority { get; set; } = RebuildPriority.Medium;
         public TimeSpan HealthCheckInterval { get; set; } = TimeSpan.FromMinutes(5);
         public bool AutoRebuild { get; set; } = true;
     }
