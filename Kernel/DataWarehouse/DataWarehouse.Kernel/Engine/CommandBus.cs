@@ -163,7 +163,7 @@ namespace DataWarehouse.Kernel.Engine
                         {
                             if (attempt > 0)
                             {
-                                var delay = TimeSpan.FromMilliseconds(Math.Pow(2, attempt) * 100);
+                                var delay = TimeSpan.FromMilliseconds(MathUtils.Pow(2, attempt) * 100);
                                 _context?.LogWarning($"[CommandBus] Retry attempt {attempt} for '{command.CommandType}' after {delay.TotalMilliseconds}ms");
                                 await Task.Delay(delay, cancellationToken);
                             }

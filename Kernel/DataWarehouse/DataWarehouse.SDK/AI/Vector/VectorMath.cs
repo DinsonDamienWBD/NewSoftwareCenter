@@ -1,3 +1,4 @@
+using DataWarehouse.SDK.AI.Math;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -55,8 +56,8 @@ namespace DataWarehouse.SDK.AI.Vector
                 magnitudeA += a[i] * a[i];
                 magnitudeB += b[i] * b[i];
             }
-            magnitudeA = (float)Math.Sqrt(magnitudeA);
-            magnitudeB = (float)Math.Sqrt(magnitudeB);
+            magnitudeA = (float)MathUtils.Sqrt(magnitudeA);
+            magnitudeB = (float)MathUtils.Sqrt(magnitudeB);
 
             // Handle zero vectors
             if (magnitudeA == 0 || magnitudeB == 0)
@@ -90,7 +91,7 @@ namespace DataWarehouse.SDK.AI.Vector
             {
                 magnitude += vector[i] * vector[i];
             }
-            magnitude = (float)Math.Sqrt(magnitude);
+            magnitude = (float)MathUtils.Sqrt(magnitude);
 
             // Handle zero vector
             if (magnitude == 0)
@@ -158,7 +159,7 @@ namespace DataWarehouse.SDK.AI.Vector
                 float diff = a[i] - b[i];
                 sumSquares += diff * diff;
             }
-            return (float)Math.Sqrt(sumSquares);
+            return (float)MathUtils.Sqrt(sumSquares);
         }
 
         /// <summary>
@@ -175,7 +176,7 @@ namespace DataWarehouse.SDK.AI.Vector
             {
                 sumSquares += vector[i] * vector[i];
             }
-            return (float)Math.Sqrt(sumSquares);
+            return (float)MathUtils.Sqrt(sumSquares);
         }
 
         /// <summary>

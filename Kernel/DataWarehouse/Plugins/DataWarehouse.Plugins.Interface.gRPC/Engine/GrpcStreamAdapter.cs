@@ -41,7 +41,7 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Engine
                 }
 
                 int available = _currentBuffer.Length - _currentOffset;
-                int toCopy = Math.Min(count, available);
+                int toCopy = MathUtils.Min(count, available);
 
                 Buffer.BlockCopy(_currentBuffer, _currentOffset, buffer, offset + totalRead, toCopy);
 

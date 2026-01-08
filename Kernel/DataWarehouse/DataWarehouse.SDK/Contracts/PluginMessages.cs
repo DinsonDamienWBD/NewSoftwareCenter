@@ -1,3 +1,4 @@
+using DataWarehouse.SDK.Security;
 using System;
 using System.Collections.Generic;
 
@@ -45,7 +46,7 @@ namespace DataWarehouse.SDK.Contracts
         /// <summary>
         /// List of plugins already loaded (for dependency resolution).
         /// </summary>
-        public List<PluginDescriptor> AlreadyLoadedPlugins { get; init; } = new();
+        public List<PluginDescriptor> AlreadyLoadedPlugins { get; init; } = [];
     }
 
     /// <summary>
@@ -57,7 +58,7 @@ namespace DataWarehouse.SDK.Contracts
         public string Name { get; init; } = string.Empty;
         public string Version { get; init; } = string.Empty;
         public PluginCategory Category { get; init; }
-        public List<string> Interfaces { get; init; } = new();
+        public List<string> Interfaces { get; init; } = [];
     }
 
     /// <summary>
@@ -93,7 +94,7 @@ namespace DataWarehouse.SDK.Contracts
         /// <summary>
         /// Whether initialization succeeded.
         /// </summary>
-        public bool Success { get; init; }
+        public bool IsSuccess { get; init; }
 
         /// <summary>
         /// Current operational state of the plugin.
@@ -111,21 +112,21 @@ namespace DataWarehouse.SDK.Contracts
         /// List of capabilities this plugin provides.
         /// Used by AI and Kernel for dynamic discovery.
         /// </summary>
-        public List<PluginCapabilityDescriptor> Capabilities { get; init; } = new();
+        public List<PluginCapabilityDescriptor> Capabilities { get; init; } = [];
 
         // ===== DEPENDENCIES =====
 
         /// <summary>
         /// Other plugins/interfaces this plugin requires.
         /// </summary>
-        public List<PluginDependency> Dependencies { get; init; } = new();
+        public List<PluginDependency> Dependencies { get; init; } = [];
 
         // ===== METADATA =====
 
         /// <summary>
         /// Custom metadata for specific plugins (model paths, config, etc.).
         /// </summary>
-        public Dictionary<string, object> Metadata { get; init; } = new();
+        public Dictionary<string, object> Metadata { get; init; } = [];
 
         /// <summary>
         /// How long initialization took (for performance monitoring).
@@ -149,13 +150,13 @@ namespace DataWarehouse.SDK.Contracts
         {
             return new HandshakeResponse
             {
-                Success = true,
+                IsSuccess = true,
                 PluginId = pluginId,
                 Name = name,
                 Version = version,
                 Category = category,
                 ReadyState = PluginReadyState.Ready,
-                Capabilities = capabilities ?? new(),
+                Capabilities = capabilities ?? [],
                 InitializationDuration = initDuration ?? TimeSpan.Zero
             };
         }
@@ -167,7 +168,7 @@ namespace DataWarehouse.SDK.Contracts
         {
             return new HandshakeResponse
             {
-                Success = false,
+                IsSuccess = false,
                 PluginId = pluginId,
                 Name = name,
                 ReadyState = PluginReadyState.NotReady,
@@ -184,7 +185,7 @@ namespace DataWarehouse.SDK.Contracts
         {
             return new HandshakeResponse
             {
-                Success = true,
+                IsSuccess = true,
                 PluginId = pluginId,
                 Name = name,
                 Version = version,
@@ -345,7 +346,7 @@ namespace DataWarehouse.SDK.Contracts
         /// <summary>
         /// Tags for semantic search and discovery.
         /// </summary>
-        public List<string> Tags { get; init; } = new();
+        public List<string> Tags { get; init; } = [];
     }
 
     /// <summary>
@@ -400,7 +401,7 @@ namespace DataWarehouse.SDK.Contracts
         public PluginReadyState CurrentState { get; init; }
         public bool IsHealthy { get; init; }
         public string? StatusMessage { get; init; }
-        public Dictionary<string, object> Metrics { get; init; } = new();
+        public Dictionary<string, object> Metrics { get; init; } = [];
     }
 
     /// <summary>
@@ -433,6 +434,6 @@ namespace DataWarehouse.SDK.Contracts
         public string PluginId { get; init; } = string.Empty;
         public string MessageType { get; init; } = string.Empty;
         public DateTime Timestamp { get; init; } = DateTime.UtcNow;
-        public Dictionary<string, object> Payload { get; init; } = new();
+        public Dictionary<string, object> Payload { get; init; } = [];
     }
 }

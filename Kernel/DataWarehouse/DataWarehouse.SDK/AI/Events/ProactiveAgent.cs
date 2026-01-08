@@ -23,17 +23,11 @@ namespace DataWarehouse.SDK.AI.Events
     /// - SecurityMonitoringAgent: Detect suspicious patterns, alert security team
     /// - DataHealthAgent: Monitor data quality, detect corruption
     /// </summary>
-    public abstract class ProactiveAgent : IEventHandler
+    public abstract class ProactiveAgent(EventBus eventBus, string agentName) : IEventHandler
     {
-        protected readonly EventBus EventBus;
-        protected readonly string AgentName;
+        protected readonly EventBus EventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
+        protected readonly string AgentName = agentName;
         protected bool IsRunning;
-
-        protected ProactiveAgent(EventBus eventBus, string agentName)
-        {
-            EventBus = eventBus ?? throw new ArgumentNullException(nameof(eventBus));
-            AgentName = agentName;
-        }
 
         /// <summary>
         /// Starts the agent.
@@ -119,20 +113,15 @@ namespace DataWarehouse.SDK.AI.Events
     /// <summary>
     /// Agent that monitors performance and suggests optimizations.
     /// </summary>
-    public class PerformanceOptimizationAgent : ProactiveAgent
+    public class PerformanceOptimizationAgent(EventBus eventBus) : ProactiveAgent(eventBus, "PerformanceOptimizer")
     {
         private readonly StatisticalAnalyzer _analyzer = new();
-        private readonly List<double> _recentDurations = new();
+        private readonly List<double> _recentDurations = [];
         private const int MaxHistorySize = 50;
-
-        public PerformanceOptimizationAgent(EventBus eventBus)
-            : base(eventBus, "PerformanceOptimizer")
-        {
-        }
 
         protected override string[] GetMonitoredEventTypes()
         {
-            return new[] { "SlowOperation", "CapabilityExecuted" };
+            return ["SlowOperation", "CapabilityExecuted"];
         }
 
         protected override async Task OnEventAsync(SystemEvent @event)
@@ -178,7 +167,7 @@ namespace DataWarehouse.SDK.AI.Events
                 // Analyze trend every 10 executions
                 if (_recentDurations.Count >= 10 && _recentDurations.Count % 10 == 0)
                 {
-                    var trend = _analyzer.AnalyzeTrend(_recentDurations);
+                    var trend = StatisticalAnalyzer.AnalyzeTrend(_recentDurations);
                     if (trend.HasTrend && trend.TrendDirection == TrendDirection.Increasing)
                     {
                         Console.WriteLine($"[{AgentName}] Performance degradation detected (slope: {trend.Slope:F2})");
@@ -194,19 +183,14 @@ namespace DataWarehouse.SDK.AI.Events
     /// <summary>
     /// Agent that monitors costs and suggests cheaper alternatives.
     /// </summary>
-    public class CostOptimizationAgent : ProactiveAgent
+    public class CostOptimizationAgent(EventBus eventBus) : ProactiveAgent(eventBus, "CostOptimizer")
     {
         private decimal _totalCost = 0;
         private const decimal DailyCostThreshold = 10.00m;
 
-        public CostOptimizationAgent(EventBus eventBus)
-            : base(eventBus, "CostOptimizer")
-        {
-        }
-
         protected override string[] GetMonitoredEventTypes()
         {
-            return new[] { "CapabilityExecuted", "LLMRequestCompleted" };
+            return ["CapabilityExecuted", "LLMRequestCompleted"];
         }
 
         protected override async Task OnEventAsync(SystemEvent @event)
@@ -236,19 +220,14 @@ namespace DataWarehouse.SDK.AI.Events
     /// <summary>
     /// Agent that monitors security events and detects threats.
     /// </summary>
-    public class SecurityMonitoringAgent : ProactiveAgent
+    public class SecurityMonitoringAgent(EventBus eventBus) : ProactiveAgent(eventBus, "SecurityMonitor")
     {
-        private readonly Dictionary<string, int> _accessAttempts = new();
+        private readonly Dictionary<string, int> _accessAttempts = [];
         private const int SuspiciousAccessThreshold = 10;
-
-        public SecurityMonitoringAgent(EventBus eventBus)
-            : base(eventBus, "SecurityMonitor")
-        {
-        }
 
         protected override string[] GetMonitoredEventTypes()
         {
-            return new[] { "BlobAccessed", "BlobDeleted", "UnauthorizedAccess", "SafetyViolation" };
+            return ["BlobAccessed", "BlobDeleted", "UnauthorizedAccess", "SafetyViolation"];
         }
 
         protected override async Task OnEventAsync(SystemEvent @event)
@@ -259,7 +238,7 @@ namespace DataWarehouse.SDK.AI.Events
             }
             else if (@event.EventType == "SafetyViolation")
             {
-                Console.WriteLine($"[{AgentName}] Safety violation detected: {@event.Data.TryGetValue("message", out var msg) ? msg : "Unknown"}");
+                Console.WriteLine($"[{AgentName}] Safety violation detected: {(@event.Data.TryGetValue("message", out var msg) ? msg : "Unknown")}");
             }
             else if (@event.EventType == "UnauthorizedAccess")
             {
@@ -274,16 +253,17 @@ namespace DataWarehouse.SDK.AI.Events
             {
                 var userId = user.ToString() ?? "anonymous";
 
-                if (!_accessAttempts.ContainsKey(userId))
+                if (!_accessAttempts.TryGetValue(userId, out int value))
                 {
-                    _accessAttempts[userId] = 0;
+                    value = 0;
+                    _accessAttempts[userId] = value;
                 }
 
-                _accessAttempts[userId]++;
+                _accessAttempts[userId] = ++value;
 
-                if (_accessAttempts[userId] > SuspiciousAccessThreshold)
+                if (value > SuspiciousAccessThreshold)
                 {
-                    Console.WriteLine($"[{AgentName}] Suspicious access pattern: User '{userId}' accessed {_accessAttempts[userId]} times");
+                    Console.WriteLine($"[{AgentName}] Suspicious access pattern: User '{userId}' accessed {value} times");
                     // Alert security team
                 }
             }
@@ -295,19 +275,14 @@ namespace DataWarehouse.SDK.AI.Events
     /// <summary>
     /// Agent that monitors data health and detects corruption.
     /// </summary>
-    public class DataHealthAgent : ProactiveAgent
+    public class DataHealthAgent(EventBus eventBus) : ProactiveAgent(eventBus, "DataHealth")
     {
-        private readonly List<string> _recentErrors = new();
+        private readonly List<string> _recentErrors = [];
         private const int ErrorThreshold = 5;
-
-        public DataHealthAgent(EventBus eventBus)
-            : base(eventBus, "DataHealth")
-        {
-        }
 
         protected override string[] GetMonitoredEventTypes()
         {
-            return new[] { "CapabilityFailed", "DataCorruption", "ChecksumMismatch" };
+            return ["CapabilityFailed", "DataCorruption", "ChecksumMismatch"];
         }
 
         protected override async Task OnEventAsync(SystemEvent @event)
@@ -329,11 +304,12 @@ namespace DataWarehouse.SDK.AI.Events
                 var errorsByType = new Dictionary<string, int>();
                 foreach (var errorType in _recentErrors)
                 {
-                    if (!errorsByType.ContainsKey(errorType))
+                    if (!errorsByType.TryGetValue(errorType, out int value))
                     {
-                        errorsByType[errorType] = 0;
+                        value = 0;
+                        errorsByType[errorType] = value;
                     }
-                    errorsByType[errorType]++;
+                    errorsByType[errorType] = ++value;
                 }
 
                 Console.WriteLine($"[{AgentName}] Error breakdown:");

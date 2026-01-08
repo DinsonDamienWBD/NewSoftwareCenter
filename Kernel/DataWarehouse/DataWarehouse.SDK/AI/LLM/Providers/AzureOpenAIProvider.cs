@@ -1,3 +1,4 @@
+using DataWarehouse.SDK.AI.Math;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -99,7 +100,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
 
         public async Task<LLMResponse> ChatAsync(List<LLMMessage> messages, string? model = null, int? maxTokens = null)
         {
-            return await ChatWithToolsAsync(messages, new List<LLMTool>(), model, maxTokens);
+            return await ChatWithToolsAsync(messages, [], model, maxTokens);
         }
 
         public async Task<LLMResponse> ChatWithToolsAsync(
@@ -162,7 +163,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                     // Handle rate limiting
                     if (response.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
                     {
-                        var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(Math.Pow(2, attempt));
+                        var retryAfter = response.Headers.RetryAfter?.Delta ?? TimeSpan.FromSeconds(MathUtils.Pow(2, attempt));
                         await Task.Delay(retryAfter);
                         continue;
                     }
@@ -170,7 +171,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                     // Handle throttling (429)
                     if ((int)response.StatusCode == 429)
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt + 1)));
+                        await Task.Delay(TimeSpan.FromSeconds(MathUtils.Pow(2, attempt + 1)));
                         continue;
                     }
 
@@ -183,7 +184,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                     lastException = ex;
                     if (attempt < 2) // Not last attempt
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(Math.Pow(2, attempt)));
+                        await Task.Delay(TimeSpan.FromSeconds(MathUtils.Pow(2, attempt)));
                     }
                 }
             }
@@ -212,7 +213,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
                 {
                     var function = toolCall.GetProperty("function");
                     var argumentsJson = function.GetProperty("arguments").GetString() ?? "{}";
-                    var arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(argumentsJson) ?? new();
+                    var arguments = JsonSerializer.Deserialize<Dictionary<string, object>>(argumentsJson) ?? [];
 
                     toolCalls.Add(new LLMToolCall
                     {
@@ -280,7 +281,7 @@ namespace DataWarehouse.SDK.AI.LLM.Providers
         /// Calculates cost based on token usage and model pricing.
         /// Infers model type from deployment name.
         /// </summary>
-        private decimal CalculateCost(string deployment, int inputTokens, int outputTokens)
+        private static decimal CalculateCost(string deployment, int inputTokens, int outputTokens)
         {
             // Try to infer model from deployment name
             var modelKey = "gpt-35-turbo"; // Default

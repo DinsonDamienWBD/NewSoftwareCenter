@@ -67,8 +67,8 @@ namespace DataWarehouse.Kernel.Monitoring
                 Values.Add(value);
                 Count++;
                 Sum += value;
-                Min = Math.Min(Min, value);
-                Max = Math.Max(Max, value);
+                Min = MathUtils.Min(Min, value);
+                Max = MathUtils.Max(Max, value);
                 LastUpdated = DateTime.UtcNow;
 
                 // Keep only last 1000 values to prevent unbounded growth
@@ -113,8 +113,8 @@ namespace DataWarehouse.Kernel.Monitoring
             {
                 if (sorted.Length == 0) return 0;
 
-                var index = (int)Math.Ceiling(sorted.Length * percentile) - 1;
-                index = Math.Max(0, Math.Min(sorted.Length - 1, index));
+                var index = (int)MathUtils.Ceiling(sorted.Length * percentile) - 1;
+                index = MathUtils.Max(0, MathUtils.Min(sorted.Length - 1, index));
 
                 return sorted[index];
             }

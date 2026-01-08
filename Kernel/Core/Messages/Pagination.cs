@@ -51,7 +51,7 @@
         /// <summary>
         /// Calculated total number of pages.
         /// </summary>
-        public int TotalPages => (int)Math.Ceiling((double)TotalCount / PageSize);
+        public int TotalPages => (int)MathUtils.Ceiling((double)TotalCount / PageSize);
     }
 
     /// <summary>

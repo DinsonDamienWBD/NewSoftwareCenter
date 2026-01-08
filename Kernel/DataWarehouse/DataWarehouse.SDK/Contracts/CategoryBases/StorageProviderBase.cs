@@ -1,3 +1,4 @@
+using DataWarehouse.SDK.AI.Math;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -31,21 +32,16 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
     /// 6. ExistsBytesAsync() - Check existence
     /// 7. ListKeysAsync() - List keys
     /// </summary>
-    public abstract class StorageProviderBase : PluginBase
+    /// <remarks>
+    /// Constructs a storage provider with specified metadata.
+    /// Automatically sets category to Storage.
+    /// </remarks>
+    public abstract class StorageProviderBase(string id, string name, Version version) : PluginBase(id, name, version, PluginCategory.Storage)
     {
         /// <summary>Current storage size in bytes</summary>
         private long _currentSize;
         /// <summary>Reserved storage capacity in bytes</summary>
         private long _reservedSize;
-
-        /// <summary>
-        /// Constructs a storage provider with specified metadata.
-        /// Automatically sets category to Storage.
-        /// </summary>
-        protected StorageProviderBase(string id, string name, Version version)
-            : base(id, name, version, PluginCategory.Storage)
-        {
-        }
 
         // =========================================================================
         // ABSTRACT MEMBERS - Plugin must implement
@@ -90,8 +86,8 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
         // =========================================================================
 
         /// <summary>Declares standard CRUD capabilities for this storage provider</summary>
-        protected override PluginCapabilityDescriptor[] Capabilities => new[]
-        {
+        protected override PluginCapabilityDescriptor[] Capabilities =>
+        [
             new PluginCapabilityDescriptor
             {
                 CapabilityId = $"storage.{StorageType}.save",
@@ -100,7 +96,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 Category = CapabilityCategory.Storage,
                 RequiredPermission = Security.Permission.Write,
                 RequiresApproval = false,
-                Tags = new List<string> { "storage", "save", "write", StorageType }
+                Tags = ["storage", "save", "write", StorageType]
             },
             new PluginCapabilityDescriptor
             {
@@ -110,7 +106,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 Category = CapabilityCategory.Storage,
                 RequiredPermission = Security.Permission.Read,
                 RequiresApproval = false,
-                Tags = new List<string> { "storage", "load", "read", StorageType }
+                Tags = ["storage", "load", "read", StorageType]
             },
             new PluginCapabilityDescriptor
             {
@@ -120,7 +116,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 Category = CapabilityCategory.Storage,
                 RequiredPermission = Security.Permission.Delete,
                 RequiresApproval = true, // Delete requires approval
-                Tags = new List<string> { "storage", "delete", StorageType }
+                Tags = ["storage", "delete", StorageType]
             },
             new PluginCapabilityDescriptor
             {
@@ -130,7 +126,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 Category = CapabilityCategory.Storage,
                 RequiredPermission = Security.Permission.Read,
                 RequiresApproval = false,
-                Tags = new List<string> { "storage", "exists", StorageType }
+                Tags = ["storage", "exists", StorageType]
             },
             new PluginCapabilityDescriptor
             {
@@ -140,9 +136,9 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
                 Category = CapabilityCategory.Storage,
                 RequiredPermission = Security.Permission.Read,
                 RequiresApproval = false,
-                Tags = new List<string> { "storage", "list", StorageType }
+                Tags = ["storage", "list", StorageType]
             }
-        };
+        ];
 
         // =========================================================================
         // INITIALIZATION - Registers CRUD handlers
@@ -224,7 +220,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
         /// <summary>Handles list requests</summary>
         private async Task<object?> HandleListAsync(Dictionary<string, object> parameters)
         {
-            var prefix = parameters.ContainsKey("prefix") ? (string)parameters["prefix"] : "";
+            var prefix = parameters.TryGetValue("prefix", out object? value) ? (string)value : "";
             var keys = await ListKeysAsync(prefix);
             return new { keys, count = keys.Count, storageType = StorageType };
         }
@@ -237,7 +233,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
         /// Sanitizes key for cross-platform compatibility.
         /// Removes dangerous characters, normalizes paths.
         /// </summary>
-        private string SanitizeKey(string key)
+        private static string SanitizeKey(string key)
         {
             // Remove path traversal attempts
             key = key.Replace("..", "").Replace("//", "/");
@@ -253,7 +249,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
         }
 
         /// <summary>Extracts data from various formats (byte[]/Stream/base64)</summary>
-        private byte[] ExtractData(object data)
+        private static byte[] ExtractData(object data)
         {
             return data switch
             {
@@ -265,7 +261,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
         }
 
         /// <summary>Reads stream to byte array</summary>
-        private byte[] ReadStreamToBytes(Stream stream)
+        private static byte[] ReadStreamToBytes(Stream stream)
         {
             using var ms = new MemoryStream();
             stream.CopyTo(ms);
@@ -280,7 +276,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
             if (_currentSize + additionalBytes > _reservedSize)
             {
                 // Grow by 50% or required size, whichever is larger
-                var growthNeeded = Math.Max(additionalBytes, _reservedSize / 2);
+                var growthNeeded = MathUtils.Max(additionalBytes, _reservedSize / 2);
                 _reservedSize += growthNeeded;
                 Context?.LogInfo($"Storage grew to {_reservedSize / 1024 / 1024}MB");
             }

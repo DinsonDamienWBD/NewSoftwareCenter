@@ -75,18 +75,18 @@ namespace DataWarehouse.SDK.AI.Runtime
             {
                 // Step 1: Semantic search for relevant capabilities
                 var relevantCapabilities = await FindRelevantCapabilitiesAsync(request, topK: 10);
-                result.DiscoveredCapabilities = relevantCapabilities.Select(c => c.Entry.Id).ToList();
+                result.DiscoveredCapabilities = [.. relevantCapabilities.Select(c => c.Entry.Id)];
 
                 // Step 2: Generate tool definitions
                 var capabilityDescriptors = relevantCapabilities
                     .Select(c => MapToCapabilityDescriptor(c))
                     .ToList();
-                var tools = _toolGenerator.GenerateToolDefinitions(capabilityDescriptors);
+                var tools = ToolDefinitionGenerator.GenerateToolDefinitions(capabilityDescriptors);
 
                 // Step 3: Prepare conversation
                 var messages = new List<LLMMessage>
                 {
-                    LLMMessage.System(_toolGenerator.GenerateSystemPrompt(tools)),
+                    LLMMessage.System(ToolDefinitionGenerator.GenerateSystemPrompt(tools)),
                     LLMMessage.User(request)
                 };
 
@@ -97,7 +97,7 @@ namespace DataWarehouse.SDK.AI.Runtime
                 // Step 5: Execute tool calls if any
                 if (llmResponse.HasToolCalls)
                 {
-                    result.PlannedCapabilities = llmResponse.ToolCalls.Select(tc => tc.ToolName).ToList();
+                    result.PlannedCapabilities = [.. llmResponse.ToolCalls.Select(tc => tc.ToolName)];
 
                     foreach (var toolCall in llmResponse.ToolCalls)
                     {
@@ -143,7 +143,7 @@ namespace DataWarehouse.SDK.AI.Runtime
         /// <summary>
         /// Executes a single capability (tool call).
         /// </summary>
-        private async Task<CapabilityExecutionResult> ExecuteCapabilityAsync(LLMToolCall toolCall)
+        private static async Task<CapabilityExecutionResult> ExecuteCapabilityAsync(LLMToolCall toolCall)
         {
             var result = new CapabilityExecutionResult
             {
@@ -176,7 +176,7 @@ namespace DataWarehouse.SDK.AI.Runtime
         /// <summary>
         /// Generates final user-facing response from execution results.
         /// </summary>
-        private string GenerateFinalResponse(AIExecutionResult result)
+        private static string GenerateFinalResponse(AIExecutionResult result)
         {
             if (!result.Success)
             {
@@ -226,7 +226,7 @@ namespace DataWarehouse.SDK.AI.Runtime
         public List<string>? AllowedCategories { get; set; }
 
         /// <summary>Additional context metadata.</summary>
-        public Dictionary<string, object> Metadata { get; init; } = new();
+        public Dictionary<string, object> Metadata { get; init; } = [];
     }
 
     /// <summary>
@@ -244,13 +244,13 @@ namespace DataWarehouse.SDK.AI.Runtime
         public string Response { get; set; } = string.Empty;
 
         /// <summary>Capabilities discovered via semantic search.</summary>
-        public List<string> DiscoveredCapabilities { get; set; } = new();
+        public List<string> DiscoveredCapabilities { get; set; } = [];
 
         /// <summary>Capabilities planned for execution by LLM.</summary>
-        public List<string> PlannedCapabilities { get; set; } = new();
+        public List<string> PlannedCapabilities { get; set; } = [];
 
         /// <summary>Individual capability execution results.</summary>
-        public List<CapabilityExecutionResult> ExecutionResults { get; set; } = new();
+        public List<CapabilityExecutionResult> ExecutionResults { get; set; } = [];
 
         /// <summary>Total cost in USD.</summary>
         public decimal TotalCostUsd { get; set; }

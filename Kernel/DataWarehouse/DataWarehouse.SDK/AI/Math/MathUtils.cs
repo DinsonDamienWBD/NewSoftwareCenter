@@ -43,8 +43,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// </summary>
         public static T Min<T>(IEnumerable<T> values) where T : IComparable<T>
         {
-            if (values == null)
-                throw new ArgumentNullException(nameof(values));
+            ArgumentNullException.ThrowIfNull(values);
 
             using var enumerator = values.GetEnumerator();
             if (!enumerator.MoveNext())
@@ -89,8 +88,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// </summary>
         public static T Max<T>(IEnumerable<T> values) where T : IComparable<T>
         {
-            if (values == null)
-                throw new ArgumentNullException(nameof(values));
+            ArgumentNullException.ThrowIfNull(values);
 
             using var enumerator = values.GetEnumerator();
             if (!enumerator.MoveNext())
@@ -108,34 +106,34 @@ namespace DataWarehouse.SDK.AI.Math
         /// <summary>
         /// Returns the absolute value of a number.
         /// </summary>
-        public static int Abs(int value) => System.Math.Abs(value);
+        public static int Abs(int value) => MathUtils.Abs(value);
 
         /// <summary>
         /// Returns the absolute value of a long.
         /// </summary>
-        public static long Abs(long value) => System.Math.Abs(value);
+        public static long Abs(long value) => MathUtils.Abs(value);
 
         /// <summary>
         /// Returns the absolute value of a float.
         /// </summary>
-        public static float Abs(float value) => System.Math.Abs(value);
+        public static float Abs(float value) => MathUtils.Abs(value);
 
         /// <summary>
         /// Returns the absolute value of a double.
         /// </summary>
-        public static double Abs(double value) => System.Math.Abs(value);
+        public static double Abs(double value) => MathUtils.Abs(value);
 
         /// <summary>
         /// Returns the absolute value of a decimal.
         /// </summary>
-        public static decimal Abs(decimal value) => System.Math.Abs(value);
+        public static decimal Abs(decimal value) => MathUtils.Abs(value);
 
         // ==================== POWER & ROOT ====================
 
         /// <summary>
         /// Returns a specified number raised to the specified power.
         /// </summary>
-        public static double Pow(double x, double y) => System.Math.Pow(x, y);
+        public static double Pow(double x, double y) => MathUtils.Pow(x, y);
 
         /// <summary>
         /// Returns the square root of a specified number.
@@ -144,13 +142,13 @@ namespace DataWarehouse.SDK.AI.Math
         {
             if (value < 0)
                 throw new ArgumentException("Cannot compute square root of negative number");
-            return System.Math.Sqrt(value);
+            return MathUtils.Sqrt(value);
         }
 
         /// <summary>
         /// Returns the cube root of a specified number.
         /// </summary>
-        public static double Cbrt(double value) => System.Math.Pow(value, 1.0 / 3.0);
+        public static double Cbrt(double value) => MathUtils.Pow(value, 1.0 / 3.0);
 
         /// <summary>
         /// Returns the square of a number (x²).
@@ -177,12 +175,12 @@ namespace DataWarehouse.SDK.AI.Math
         /// <summary>
         /// Returns the largest integer less than or equal to the specified number.
         /// </summary>
-        public static double Floor(double value) => System.Math.Floor(value);
+        public static double Floor(double value) => MathUtils.Floor(value);
 
         /// <summary>
         /// Returns the smallest integer greater than or equal to the specified number.
         /// </summary>
-        public static double Ceiling(double value) => System.Math.Ceiling(value);
+        public static double Ceiling(double value) => MathUtils.Ceiling(value);
 
         /// <summary>
         /// Returns the integer part of a number.
@@ -236,22 +234,22 @@ namespace DataWarehouse.SDK.AI.Math
         /// <summary>
         /// Returns the natural (base e) logarithm of a specified number.
         /// </summary>
-        public static double Log(double value) => System.Math.Log(value);
+        public static double Log(double value) => MathUtils.Log(value);
 
         /// <summary>
         /// Returns the logarithm of a specified number in a specified base.
         /// </summary>
-        public static double Log(double value, double baseValue) => System.Math.Log(value, baseValue);
+        public static double Log(double value, double baseValue) => MathUtils.Log(value, baseValue);
 
         /// <summary>
         /// Returns the base 10 logarithm of a specified number.
         /// </summary>
-        public static double Log10(double value) => System.Math.Log10(value);
+        public static double Log10(double value) => MathUtils.Log10(value);
 
         /// <summary>
         /// Returns the base 2 logarithm of a specified number.
         /// </summary>
-        public static double Log2(double value) => System.Math.Log2(value);
+        public static double Log2(double value) => MathUtils.Log2(value);
 
         // ==================== STATISTICAL FUNCTIONS ====================
 
@@ -260,8 +258,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// </summary>
         public static double Mean(IEnumerable<double> values)
         {
-            if (values == null)
-                throw new ArgumentNullException(nameof(values));
+            ArgumentNullException.ThrowIfNull(values);
 
             double sum = 0;
             int count = 0;
@@ -283,8 +280,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// </summary>
         public static double Median(IEnumerable<double> values)
         {
-            if (values == null)
-                throw new ArgumentNullException(nameof(values));
+            ArgumentNullException.ThrowIfNull(values);
 
             var sorted = values.OrderBy(x => x).ToArray();
             if (sorted.Length == 0)
@@ -302,8 +298,7 @@ namespace DataWarehouse.SDK.AI.Math
         /// </summary>
         public static double Variance(IEnumerable<double> values)
         {
-            if (values == null)
-                throw new ArgumentNullException(nameof(values));
+            ArgumentNullException.ThrowIfNull(values);
 
             var valueList = values.ToList();
             if (valueList.Count == 0)

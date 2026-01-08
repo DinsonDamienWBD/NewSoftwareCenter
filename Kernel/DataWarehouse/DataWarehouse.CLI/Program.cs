@@ -1,4 +1,5 @@
-﻿using System.Text.Json;
+﻿using DataWarehouse.SDK.AI.Math;
+using System.Text.Json;
 
 namespace DataWarehouse.CLI
 {
@@ -60,7 +61,7 @@ namespace DataWarehouse.CLI
 
             // Read Bitmap
             fs.Seek(bitmapStart * blockSize, SeekOrigin.Begin);
-            int bitmapBytes = (int)Math.Ceiling(totalBlocks / 8.0);
+            int bitmapBytes = (int)MathUtils.Ceiling(totalBlocks / 8.0);
             byte[] bitmap = reader.ReadBytes(bitmapBytes);
 
             int usedBlocks = 0;
@@ -171,7 +172,7 @@ namespace DataWarehouse.CLI
         // Minimal DTOs for JSON deserialization
         public class VdiFileRecord
         {
-            public List<VdiExtent> Extents { get; set; } = new();
+            public List<VdiExtent> Extents { get; set; } = [];
         }
         public class VdiExtent
         {

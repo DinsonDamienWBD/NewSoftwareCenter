@@ -27,7 +27,7 @@ namespace DataWarehouse.SDK.AI.LLM
         /// </summary>
         /// <param name="capabilities">List of plugin capabilities.</param>
         /// <returns>List of LLM tool definitions.</returns>
-        public List<LLMTool> GenerateToolDefinitions(List<PluginCapabilityDescriptor> capabilities)
+        public static List<LLMTool> GenerateToolDefinitions(List<PluginCapabilityDescriptor> capabilities)
         {
             var tools = new List<LLMTool>();
 
@@ -60,7 +60,7 @@ namespace DataWarehouse.SDK.AI.LLM
         ///   "required": ["data"]
         /// }
         /// </summary>
-        private Dictionary<string, object> GenerateParameterSchema(PluginCapabilityDescriptor capability)
+        private static Dictionary<string, object> GenerateParameterSchema(PluginCapabilityDescriptor capability)
         {
             var schema = new Dictionary<string, object>
             {
@@ -163,7 +163,7 @@ namespace DataWarehouse.SDK.AI.LLM
         /// <param name="allowedCategories">Allowed capability categories (null = all).</param>
         /// <param name="excludePatterns">Patterns to exclude (e.g., "security.*").</param>
         /// <returns>Filtered list of tools.</returns>
-        public List<LLMTool> FilterTools(
+        public static List<LLMTool> FilterTools(
             List<LLMTool> tools,
             List<string>? allowedCategories = null,
             List<string>? excludePatterns = null)
@@ -188,7 +188,7 @@ namespace DataWarehouse.SDK.AI.LLM
                 }
             }
 
-            return filtered.ToList();
+            return [.. filtered];
         }
 
         /// <summary>
@@ -197,7 +197,7 @@ namespace DataWarehouse.SDK.AI.LLM
         /// </summary>
         /// <param name="tools">Available tools.</param>
         /// <returns>System prompt text.</returns>
-        public string GenerateSystemPrompt(List<LLMTool> tools)
+        public static string GenerateSystemPrompt(List<LLMTool> tools)
         {
             var prompt = @"You are an AI assistant with access to DataWarehouse capabilities.
 
