@@ -10,21 +10,6 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
     public class SelfHealingMirror(IStorageProvider primary, IStorageProvider secondary, ILogger logger) : IStorageProvider
     {
         /// <summary>
-        /// ID
-        /// </summary>
-        public string Id => "Mirror-RAID1";
-        
-        /// <summary>
-        /// Version
-        /// </summary>
-        public string Version => "5.0.0";
-
-        /// <summary>
-        /// Name
-        /// </summary>
-        string IPlugin.Name => "Self healing mirror";
-
-        /// <summary>
         /// Scheme
         /// </summary>
         public string Scheme => "mirror";
@@ -37,10 +22,9 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
         private Task? _repairTask;
 
         /// <summary>
-        /// Constructor
+        /// Handshake protocol handler
         /// </summary>
-        /// <param name="context"></param>
-        public void Initialize(IKernelContext context)
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
         {
             _logger.LogInformation($"[Mirror] Initializing. Primary: {_primary.GetType().Name}, Secondary: {_secondary.GetType().Name}");
 
@@ -53,11 +37,23 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
             catch (Exception ex)
             {
                 _logger.LogError(ex, "[Mirror] Warning: One or more mirrors are offline at startup.");
+                return Task.FromResult(HandshakeResponse.Failure(
+                    "Mirror-RAID1",
+                    "Self Healing Mirror",
+                    $"Initialization warning: {ex.Message}"));
             }
 
             // 2. Start Background Repair Agent
             _cts = new CancellationTokenSource();
             _repairTask = Task.Run(() => ProcessRepairQueueAsync(_cts.Token));
+
+            var response = HandshakeResponse.Success(
+                pluginId: "Mirror-RAID1",
+                name: "Self Healing Mirror",
+                version: new Version(5, 0, 0),
+                category: PluginCategory.Storage);
+
+            return Task.FromResult(response);
         }
 
         /// <summary>

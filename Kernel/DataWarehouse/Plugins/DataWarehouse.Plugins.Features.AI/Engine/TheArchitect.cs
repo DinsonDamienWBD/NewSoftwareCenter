@@ -74,16 +74,34 @@ namespace DataWarehouse.Plugins.Features.AI.Engine
             ms.Seek(0, SeekOrigin.Begin);
             var assembly = AssemblyLoadContext.Default.LoadFromStream(ms);
 
-            // 5. Instantiate Plugin
+            // 5. Instantiate Plugin and perform handshake
             foreach (var type in assembly.GetTypes())
             {
                 if (typeof(IPlugin).IsAssignableFrom(type) && !type.IsInterface)
                 {
                     var plugin = (IPlugin)Activator.CreateInstance(type)!;
-                    plugin.Initialize(_context);
-                    _registry.Register(plugin);
-                    _context.LogInfo($"[Architect] Successfully Evolved: {plugin.Name} v{plugin.Version}");
-                    return plugin.Id;
+
+                    // Perform handshake protocol
+                    var handshakeRequest = new HandshakeRequest
+                    {
+                        KernelId = Guid.NewGuid().ToString(),
+                        ProtocolVersion = "1.0",
+                        Timestamp = DateTime.UtcNow,
+                        Mode = _context.Mode,
+                        RootPath = _context.RootPath,
+                        AlreadyLoadedPlugins = _registry.GetAllDescriptors()
+                    };
+
+                    var response = plugin.OnHandshakeAsync(handshakeRequest).GetAwaiter().GetResult();
+
+                    if (!response.Success)
+                    {
+                        throw new InvalidOperationException($"Plugin handshake failed: {response.ErrorMessage}");
+                    }
+
+                    _registry.Register(plugin, response);
+                    _context.LogInfo($"[Architect] Successfully Evolved: {response.Name} v{response.Version}");
+                    return response.PluginId;
                 }
             }
 

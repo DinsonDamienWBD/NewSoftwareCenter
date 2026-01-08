@@ -292,13 +292,12 @@ namespace DataWarehouse.SDK.Contracts
 
         /// <summary>
         /// Health check handler (optional override).
-        /// Default implementation returns "healthy".
+        /// Default implementation logs "healthy".
         /// Override to provide custom health status.
         /// </summary>
-        /// <returns>Health status as MessageResponse.</returns>
-        protected virtual MessageResponse OnHealthCheck()
+        protected virtual void OnHealthCheck()
         {
-            return MessageResponse.SuccessResponse(new { status = "healthy", plugin = PluginId });
+            Context?.LogDebug($"Health check: {PluginId} is healthy");
         }
 
         /// <summary>
@@ -334,44 +333,6 @@ namespace DataWarehouse.SDK.Contracts
             PluginName = name ?? throw new ArgumentNullException(nameof(name));
             PluginVersion = version ?? throw new ArgumentNullException(nameof(version));
             PluginCategory = category;
-        }
-
-        // =========================================================================
-        // IPLUGIN IMPLEMENTATION - Backward compatibility properties (deprecated)
-        // =========================================================================
-
-        /// <summary>
-        /// Plugin ID (deprecated - use HandshakeResponse instead).
-        /// Kept for backward compatibility with legacy loader.
-        /// </summary>
-        [Obsolete("Use HandshakeResponse.PluginId instead")]
-        public string Id => PluginId;
-
-        /// <summary>
-        /// Plugin name (deprecated - use HandshakeResponse instead).
-        /// Kept for backward compatibility with legacy loader.
-        /// </summary>
-        [Obsolete("Use HandshakeResponse.Name instead")]
-        public string Name => PluginName;
-
-        /// <summary>
-        /// Plugin version (deprecated - use HandshakeResponse instead).
-        /// Kept for backward compatibility with legacy loader.
-        /// </summary>
-        [Obsolete("Use HandshakeResponse.Version instead")]
-        public string Version => PluginVersion.ToString();
-
-        /// <summary>
-        /// Legacy initialization method (deprecated).
-        /// Use OnHandshakeAsync instead.
-        /// Kept for backward compatibility with old plugins.
-        /// </summary>
-        /// <param name="context">Kernel context.</param>
-        [Obsolete("Use OnHandshakeAsync instead")]
-        public virtual void Initialize(IKernelContext context)
-        {
-            Context = context;
-            InitializeInternal(context);
         }
 
         // =========================================================================
@@ -442,8 +403,8 @@ namespace DataWarehouse.SDK.Contracts
         /// Plugins don't override this - they register handlers via RegisterCapability().
         /// </summary>
         /// <param name="message">The message to handle.</param>
-        /// <returns>MessageResponse with result or error.</returns>
-        public virtual async Task<MessageResponse> OnMessageAsync(PluginMessage message)
+        /// <returns>Task representing async message handling (IPlugin interface).</returns>
+        public virtual async Task OnMessageAsync(PluginMessage message)
         {
             try
             {
@@ -457,7 +418,8 @@ namespace DataWarehouse.SDK.Contracts
                         // Find handler
                         if (!_capabilityHandlers.TryGetValue(capabilityId, out var handler))
                         {
-                            return MessageResponse.ErrorResponse($"Unknown capability: {capabilityId}");
+                            Context?.LogError($"Unknown capability: {capabilityId}");
+                            return;
                         }
 
                         // Call pre-invocation hook
@@ -472,8 +434,6 @@ namespace DataWarehouse.SDK.Contracts
 
                             // Call post-invocation hook
                             OnAfterCapabilityInvoked(capabilityId, parameters, result, durationMs);
-
-                            return MessageResponse.SuccessResponse(result);
                         }
                         catch (Exception handlerEx)
                         {
@@ -481,24 +441,27 @@ namespace DataWarehouse.SDK.Contracts
                             OnCapabilityFailed(capabilityId, parameters, handlerEx);
                             throw; // Re-throw to be caught by outer catch block
                         }
+                        break;
 
                     case "HealthCheck":
                         // Health check request
-                        return OnHealthCheck();
+                        OnHealthCheck();
+                        break;
 
                     case "Shutdown":
                         // Shutdown request
                         await OnShutdownAsync();
-                        return MessageResponse.SuccessResponse(new { shutdown = true });
+                        break;
 
                     default:
-                        return MessageResponse.ErrorResponse($"Unknown message type: {message.MessageType}");
+                        Context?.LogWarning($"Unknown message type: {message.MessageType}");
+                        break;
                 }
             }
             catch (Exception ex)
             {
                 Context?.LogError($"Plugin '{PluginName}' message handling failed", ex);
-                return MessageResponse.FromException(ex);
+                throw;
             }
         }
 

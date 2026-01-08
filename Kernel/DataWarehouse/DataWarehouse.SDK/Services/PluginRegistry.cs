@@ -12,8 +12,17 @@ namespace DataWarehouse.SDK.Services
     /// </summary>
     public class PluginRegistry
     {
-        // Primary Store: Map PluginID -> Plugin Instance
-        private readonly ConcurrentDictionary<string, IPlugin> _plugins = new(StringComparer.OrdinalIgnoreCase);
+        /// <summary>
+        /// Plugin registration entry containing both the instance and its metadata.
+        /// </summary>
+        private class PluginEntry
+        {
+            public IPlugin Instance { get; init; } = null!;
+            public HandshakeResponse Response { get; init; } = null!;
+        }
+
+        // Primary Store: Map PluginID -> Plugin Entry
+        private readonly ConcurrentDictionary<string, PluginEntry> _plugins = new(StringComparer.OrdinalIgnoreCase);
 
         // Type Index: Map InterfaceType -> List of PluginIDs
         private readonly ConcurrentDictionary<Type, List<string>> _typeIndex = new();
@@ -33,12 +42,20 @@ namespace DataWarehouse.SDK.Services
         /// Registers a plugin and indexes it by all its implemented interfaces.
         /// </summary>
         /// <param name="plugin">The initialized plugin instance.</param>
-        public void Register(IPlugin plugin)
+        /// <param name="response">The handshake response containing plugin metadata.</param>
+        public void Register(IPlugin plugin, HandshakeResponse response)
         {
             ArgumentNullException.ThrowIfNull(plugin);
+            ArgumentNullException.ThrowIfNull(response);
+
+            var entry = new PluginEntry
+            {
+                Instance = plugin,
+                Response = response
+            };
 
             // 1. Store by ID
-            _plugins[plugin.Id] = plugin;
+            _plugins[response.PluginId] = entry;
 
             // 2. Index by Interfaces
             var interfaces = plugin.GetType().GetInterfaces();
@@ -48,10 +65,10 @@ namespace DataWarehouse.SDK.Services
                 if (typeof(IPlugin).IsAssignableFrom(iface) && iface != typeof(IPlugin))
                 {
                     _typeIndex.AddOrUpdate(iface,
-                        addValueFactory: _ => [plugin.Id],
+                        addValueFactory: _ => [response.PluginId],
                         updateValueFactory: (_, list) =>
                         {
-                            lock (list) { if (!list.Contains(plugin.Id)) list.Add(plugin.Id); }
+                            lock (list) { if (!list.Contains(response.PluginId)) list.Add(response.PluginId); }
                             return list;
                         });
                 }
@@ -84,7 +101,7 @@ namespace DataWarehouse.SDK.Services
         /// </summary>
         public T? GetPlugin<T>(string id) where T : class, IPlugin
         {
-            if (_plugins.TryGetValue(id, out var plugin) && plugin is T typed)
+            if (_plugins.TryGetValue(id, out var entry) && entry.Instance is T typed)
             {
                 return typed;
             }
@@ -103,7 +120,7 @@ namespace DataWarehouse.SDK.Services
                 {
                     foreach (var id in ids)
                     {
-                        if (_plugins.TryGetValue(id, out var plugin) && plugin is T typed)
+                        if (_plugins.TryGetValue(id, out var entry) && entry.Instance is T typed)
                             yield return typed;
                     }
                 }
@@ -111,9 +128,9 @@ namespace DataWarehouse.SDK.Services
             else
             {
                 // Fallback scan
-                foreach (var p in _plugins.Values)
+                foreach (var entry in _plugins.Values)
                 {
-                    if (p is T typed) yield return typed;
+                    if (entry.Instance is T typed) yield return typed;
                 }
             }
         }
@@ -156,9 +173,9 @@ namespace DataWarehouse.SDK.Services
         {
             var descriptors = new List<PluginDescriptor>();
 
-            foreach (var plugin in _plugins.Values)
+            foreach (var entry in _plugins.Values)
             {
-                var type = plugin.GetType();
+                var type = entry.Instance.GetType();
                 var interfaces = type.GetInterfaces()
                     .Where(i => typeof(IPlugin).IsAssignableFrom(i) && i != typeof(IPlugin))
                     .Select(i => i.Name)
@@ -166,11 +183,10 @@ namespace DataWarehouse.SDK.Services
 
                 descriptors.Add(new PluginDescriptor
                 {
-                    PluginId = plugin.Id,
-                    Name = plugin.Name,
-                    Version = plugin.Version,
-                    // Category will be determined from HandshakeResponse in new system
-                    Category = PluginCategory.Feature, // Default
+                    PluginId = entry.Response.PluginId,
+                    Name = entry.Response.Name,
+                    Version = entry.Response.Version.ToString(),
+                    Category = entry.Response.Category,
                     Interfaces = interfaces
                 });
             }
@@ -194,8 +210,18 @@ namespace DataWarehouse.SDK.Services
             }
 
             // Fallback: scan all plugins
-            return _plugins.Values.Any(p =>
-                p.GetType().GetInterfaces().Any(i => i.Name == interfaceName));
+            return _plugins.Values.Any(entry =>
+                entry.Instance.GetType().GetInterfaces().Any(i => i.Name == interfaceName));
+        }
+
+        /// <summary>
+        /// Gets the HandshakeResponse for a specific plugin by ID.
+        /// </summary>
+        /// <param name="pluginId">The plugin ID to look up.</param>
+        /// <returns>The HandshakeResponse if found, null otherwise.</returns>
+        public HandshakeResponse? GetPluginResponse(string pluginId)
+        {
+            return _plugins.TryGetValue(pluginId, out var entry) ? entry.Response : null;
         }
     }
 }
