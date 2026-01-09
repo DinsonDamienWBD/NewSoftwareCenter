@@ -1,20 +1,34 @@
 ﻿using DataWarehouse.SDK.Utilities;
-using System.Collections.Concurrent; // For DurableState
+using System.Collections.Concurrent;
 
 namespace DataWarehouse.Kernel.Configuration
 {
     /// <summary>
-    /// Feature manager to turn features on and off
+    /// Feature manager to turn features on and off.
+    /// Uses DurableStateV2 for storage-agnostic persistence with write-ahead logging.
     /// </summary>
-    public class FeatureManager(string rootPath)
+    public class FeatureManager
     {
-        // Layer 1: Persistent User Overrides (Disk)
-        private readonly DurableState<bool> _features = new(Path.Combine(rootPath, "features.json"));
+        // Layer 1: Persistent User Overrides (Storage-backed with DurableStateV2)
+        private readonly DurableStateV2<bool> _features;
 
         // Layer 2: Ephemeral/Smart Auto-Settings (RAM only)
         private readonly ConcurrentDictionary<string, bool> _ephemeral = new();
 
         private const bool DefaultState = true;
+
+        /// <summary>
+        /// Initializes the feature manager with storage-backed persistence.
+        /// </summary>
+        /// <param name="rootPath">Root path for DataWarehouse metadata storage</param>
+        public FeatureManager(string rootPath)
+        {
+            // Create simple local storage provider for internal use
+            var storageProvider = new SimpleLocalStorageProvider(rootPath);
+
+            // Initialize DurableStateV2 with features journal
+            _features = new DurableStateV2<bool>(storageProvider, "features.journal");
+        }
 
         /// <summary>
         /// Check if plugin is enabled
@@ -44,12 +58,12 @@ namespace DataWarehouse.Kernel.Configuration
         }
 
         /// <summary>
-        /// Set feature on/off foa a plugin
+        /// Set feature on/off for a plugin
         /// </summary>
         /// <param name="pluginId"></param>
         /// <param name="isEnabled"></param>
         /// <param name="ephemeral"></param>
-        public void SetFeatureState(string pluginId, bool isEnabled, bool ephemeral = false)
+        public async Task SetFeatureStateAsync(string pluginId, bool isEnabled, bool ephemeral = false)
         {
             if (ephemeral)
             {
@@ -59,11 +73,19 @@ namespace DataWarehouse.Kernel.Configuration
             else
             {
                 // User is making a manual decision. Persist it.
-                _features.Set(pluginId, isEnabled);
+                await _features.SetAsync(pluginId, isEnabled);
 
                 // Clear ephemeral so persistent takes precedence immediately
                 _ephemeral.TryRemove(pluginId, out _);
             }
+        }
+
+        /// <summary>
+        /// Set feature on/off for a plugin (synchronous wrapper).
+        /// </summary>
+        public void SetFeatureState(string pluginId, bool isEnabled, bool ephemeral = false)
+        {
+            SetFeatureStateAsync(pluginId, isEnabled, ephemeral).GetAwaiter().GetResult();
         }
 
         /// <summary>

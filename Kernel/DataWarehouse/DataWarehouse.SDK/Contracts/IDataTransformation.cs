@@ -4,6 +4,9 @@
     /// The Universal Contract.
     /// Any plugin that mutates data (Crypto, Zip, AI, Watermark) implements this.
     /// </summary>
+    [Obsolete("Use PipelinePluginBase abstract class instead. Interfaces force code duplication. " +
+              "PipelinePluginBase provides complete implementation - plugins only override ApplyTransformAsync() and ReverseTransformAsync(). " +
+              "See RULES.md Section 6 for CategoryBase pattern.", error: false)]
     public interface IDataTransformation : IPlugin
     {
         /// <summary>

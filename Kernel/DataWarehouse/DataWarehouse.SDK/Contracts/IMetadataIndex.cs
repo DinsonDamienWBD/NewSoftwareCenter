@@ -5,6 +5,9 @@ namespace DataWarehouse.SDK.Contracts
     /// <summary>
     /// Search Provider for Semantic Memory
     /// </summary>
+    [Obsolete("Use MetadataProviderBase abstract class instead. Interfaces force code duplication. " +
+              "MetadataProviderBase provides complete implementation - plugins only override InitializeIndexAsync(), UpsertIndexEntryAsync(), GetIndexEntryAsync(), DeleteIndexEntryAsync(), ExecuteSearchAsync(). " +
+              "See RULES.md Section 6 for CategoryBase pattern.", error: false)]
     public interface IMetadataIndex : IPlugin
     {
         /// <summary>
