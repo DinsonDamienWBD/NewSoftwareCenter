@@ -1,9 +1,7 @@
-using DataWarehouse.SDK.Contracts;
-
 namespace DataWarehouse.SDK.Utilities
 {
     /// <summary>
-    /// Simple local filesystem storage provider for internal kernel use.
+    /// Simple local filesystem storage backend for internal kernel use.
     /// Used by DurableStateV2 for components like FeatureManager and ACLSecurityEngine.
     ///
     /// This is a minimal implementation providing only basic file operations needed
@@ -14,7 +12,7 @@ namespace DataWarehouse.SDK.Utilities
     /// - Synchronous and asynchronous file I/O
     /// - Automatic directory creation
     /// - Thread-safe operations
-    /// - No dependencies on plugin infrastructure
+    /// - No plugin infrastructure overhead
     ///
     /// Limitations:
     /// - No RAID support (use LocalStorageEngine for that)
@@ -22,7 +20,7 @@ namespace DataWarehouse.SDK.Utilities
     /// - No compression
     /// - Fixed to local filesystem
     /// </summary>
-    public class SimpleLocalStorageProvider : IStorageProvider
+    public class SimpleLocalStorageProvider : IStorageBackend
     {
         private readonly string _basePath;
         private readonly Lock _lock = new();

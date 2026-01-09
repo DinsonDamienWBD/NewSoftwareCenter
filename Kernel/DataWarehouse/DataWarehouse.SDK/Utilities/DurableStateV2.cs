@@ -1,4 +1,3 @@
-using DataWarehouse.SDK.Contracts;
 using System.Collections.Concurrent;
 using System.Text;
 using System.Text.Json;
@@ -9,14 +8,14 @@ namespace DataWarehouse.SDK.Utilities
     /// Storage-Agnostic Durable State with Write-Ahead Logging.
     ///
     /// Improvements over DurableState:
-    /// - Uses IStorageProvider abstraction (not hardcoded to local disk)
+    /// - Uses IStorageBackend abstraction (not hardcoded to local disk)
     /// - Fully async API
     /// - Benefits from RAID protection if configured
     /// - Works with ANY storage backend (Local, S3, IPFS, RAMDisk, etc.)
     /// - Maintains in-memory cache for O(1) read performance
     ///
     /// Architecture:
-    ///   Application → DurableStateV2 (In-Memory Cache) → IStorageProvider → Backend (RAID/Cloud/Disk)
+    ///   Application → DurableStateV2 (In-Memory Cache) → IStorageBackend → Backend (RAID/Cloud/Disk)
     ///
     /// Write-Ahead Log Format:
     ///   [OpCode:1][Key:string][Length:4][JSON:N bytes]
@@ -26,7 +25,7 @@ namespace DataWarehouse.SDK.Utilities
     /// <typeparam name="T">Value type (must be JSON-serializable)</typeparam>
     public class DurableStateV2<T> : IAsyncDisposable, IDisposable
     {
-        private readonly IStorageProvider _storageProvider;
+        private readonly IStorageBackend _storageBackend;
         private readonly Uri _journalUri;
         private readonly ConcurrentDictionary<string, T> _cache = new();
         private readonly SemaphoreSlim _lock = new(1, 1);
@@ -37,12 +36,12 @@ namespace DataWarehouse.SDK.Utilities
         /// <summary>
         /// Initializes a storage-agnostic durable state.
         /// </summary>
-        /// <param name="storageProvider">Storage backend (can be Local, S3, RAID, etc.)</param>
+        /// <param name="storageBackend">Storage backend (can be Local, S3, RAID, etc.)</param>
         /// <param name="journalKey">Unique key for this journal (e.g., "security/acl.journal")</param>
-        public DurableStateV2(IStorageProvider storageProvider, string journalKey)
+        public DurableStateV2(IStorageBackend storageBackend, string journalKey)
         {
-            _storageProvider = storageProvider ?? throw new ArgumentNullException(nameof(storageProvider));
-            _journalUri = new Uri($"{storageProvider.Scheme}://{journalKey}");
+            _storageBackend = storageBackend ?? throw new ArgumentNullException(nameof(storageBackend));
+            _journalUri = new Uri($"{storageBackend.Scheme}://{journalKey}");
 
             // Synchronous load for constructor (async version below)
             LoadAsync().GetAwaiter().GetResult();
@@ -55,14 +54,14 @@ namespace DataWarehouse.SDK.Utilities
         {
             try
             {
-                if (!await _storageProvider.ExistsAsync(_journalUri))
+                if (!await _storageBackend.ExistsAsync(_journalUri))
                 {
                     // Journal doesn't exist yet (first run)
                     return;
                 }
 
                 // Load journal from storage backend
-                using var stream = await _storageProvider.LoadAsync(_journalUri);
+                using var stream = await _storageBackend.LoadAsync(_journalUri);
                 await ReplayJournalAsync(stream);
             }
             catch (FileNotFoundException)
@@ -215,9 +214,9 @@ namespace DataWarehouse.SDK.Utilities
                 _cache.Clear();
 
                 // Delete journal from storage
-                if (await _storageProvider.ExistsAsync(_journalUri))
+                if (await _storageBackend.ExistsAsync(_journalUri))
                 {
-                    await _storageProvider.DeleteAsync(_journalUri);
+                    await _storageBackend.DeleteAsync(_journalUri);
                 }
 
                 _opCount = 0;
@@ -260,14 +259,14 @@ namespace DataWarehouse.SDK.Utilities
             ms.Position = 0;
 
             // Append to existing journal
-            // Note: This requires "append" support, but IStorageProvider uses SaveAsync (overwrite)
+            // Note: This requires "append" support, but IStorageBackend uses SaveAsync (overwrite)
             // Workaround: Load existing journal, append, and save back
-            // TODO: Future enhancement - Add AppendAsync to IStorageProvider
+            // TODO: Future enhancement - Add AppendAsync to IStorageBackend
 
             Stream existingJournal;
             try
             {
-                existingJournal = await _storageProvider.LoadAsync(_journalUri);
+                existingJournal = await _storageBackend.LoadAsync(_journalUri);
             }
             catch (FileNotFoundException)
             {
@@ -281,7 +280,7 @@ namespace DataWarehouse.SDK.Utilities
             combined.Position = 0;
 
             // Save combined journal
-            await _storageProvider.SaveAsync(_journalUri, combined);
+            await _storageBackend.SaveAsync(_journalUri, combined);
 
             existingJournal.Dispose();
             _opCount++;
@@ -328,20 +327,20 @@ namespace DataWarehouse.SDK.Utilities
                 ms.Position = 0;
 
                 // Save compacted journal
-                await _storageProvider.SaveAsync(tempUri, ms);
+                await _storageBackend.SaveAsync(tempUri, ms);
 
                 // Atomic swap: Delete old journal, rename compact to journal
-                if (await _storageProvider.ExistsAsync(_journalUri))
+                if (await _storageBackend.ExistsAsync(_journalUri))
                 {
-                    await _storageProvider.DeleteAsync(_journalUri);
+                    await _storageBackend.DeleteAsync(_journalUri);
                 }
 
                 // Copy compact to journal location
                 ms.Position = 0;
-                await _storageProvider.SaveAsync(_journalUri, ms);
+                await _storageBackend.SaveAsync(_journalUri, ms);
 
                 // Delete temp compact file
-                await _storageProvider.DeleteAsync(tempUri);
+                await _storageBackend.DeleteAsync(tempUri);
 
                 _opCount = 0;
             }
@@ -362,9 +361,9 @@ namespace DataWarehouse.SDK.Utilities
         public int Count => _cache.Count;
 
         /// <summary>
-        /// Gets the storage provider backing this durable state.
+        /// Gets the storage backend backing this durable state.
         /// </summary>
-        public IStorageProvider StorageProvider => _storageProvider;
+        public IStorageBackend StorageBackend => _storageBackend;
 
         /// <summary>
         /// Gets the journal URI.
