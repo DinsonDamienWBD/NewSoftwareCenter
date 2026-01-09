@@ -49,7 +49,7 @@ namespace DataWarehouse.Kernel.Storage
         /// <summary>
         /// Saves data using the configured RAID level.
         /// </summary>
-        public async Task SaveAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        public async Task SaveAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             switch (_config.Level)
             {
@@ -160,7 +160,7 @@ namespace DataWarehouse.Kernel.Storage
         /// <summary>
         /// Loads data using the configured RAID level.
         /// </summary>
-        public async Task<Stream> LoadAsync(string key, Func<int, IStorageProvider> getProvider)
+        public async Task<Stream> LoadAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             switch (_config.Level)
             {
@@ -241,7 +241,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 0: Striping (Performance) ====================
 
-        private async Task SaveRAID0Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID0Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             var chunks = SplitIntoChunks(data, _config.StripeSize);
             var metadata = new RaidMetadata
@@ -271,7 +271,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID0] Saved {key}: {chunks.Count} chunks across {_config.ProviderCount} providers");
         }
 
-        private async Task<Stream> LoadRAID0Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID0Async(string key, Func<int, IStorageBackend> getProvider)
         {
             if (!_metadata.TryGetValue(key, out var metadata))
                 throw new FileNotFoundException($"RAID metadata not found for {key}");
@@ -297,7 +297,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 1: Mirroring (Redundancy) ====================
 
-        private async Task SaveRAID1Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID1Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             var buffer = new MemoryStream();
             await data.CopyToAsync(buffer);
@@ -330,7 +330,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID1] Mirrored {key} to {mirrorCount} providers");
         }
 
-        private async Task<Stream> LoadRAID1Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID1Async(string key, Func<int, IStorageBackend> getProvider)
         {
             if (!_metadata.TryGetValue(key, out var metadata))
                 throw new FileNotFoundException($"RAID metadata not found for {key}");
@@ -358,7 +358,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 5: Distributed Parity ====================
 
-        private async Task SaveRAID5Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID5Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 3)
                 throw new InvalidOperationException("RAID 5 requires at least 3 providers");
@@ -417,7 +417,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID5] Saved {key} with distributed parity across {_config.ProviderCount} providers");
         }
 
-        private async Task<Stream> LoadRAID5Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID5Async(string key, Func<int, IStorageBackend> getProvider)
         {
             if (!_metadata.TryGetValue(key, out var metadata))
                 throw new FileNotFoundException($"RAID metadata not found for {key}");
@@ -478,7 +478,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 6: Dual Parity ====================
 
-        private async Task SaveRAID6Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID6Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 4)
                 throw new InvalidOperationException("RAID 6 requires at least 4 providers");
@@ -545,7 +545,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID6] Saved {key} with dual parity (P+Q) across {_config.ProviderCount} providers");
         }
 
-        private async Task<Stream> LoadRAID6Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID6Async(string key, Func<int, IStorageBackend> getProvider)
         {
             if (!_metadata.TryGetValue(key, out var metadata))
                 throw new FileNotFoundException($"RAID metadata not found for {key}");
@@ -621,7 +621,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 10: Mirrored Stripes (RAID 1+0) ====================
 
-        private async Task SaveRAID10Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID10Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 4 || _config.ProviderCount % 2 != 0)
                 throw new InvalidOperationException("RAID 10 requires an even number of providers (minimum 4)");
@@ -659,7 +659,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID10] Saved {key} with mirrored striping across {_config.ProviderCount} providers");
         }
 
-        private async Task<Stream> LoadRAID10Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID10Async(string key, Func<int, IStorageBackend> getProvider)
         {
             if (!_metadata.TryGetValue(key, out var metadata))
                 throw new FileNotFoundException($"RAID metadata not found for {key}");
@@ -698,7 +698,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 50: Striped RAID 5 Sets (RAID 5+0) ====================
 
-        private async Task SaveRAID50Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID50Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             // RAID 50 = Multiple RAID 5 sets striped together
             // For simplicity, we'll stripe data across two RAID 5 sets
@@ -726,7 +726,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID50] Saved {key} using RAID 5+0 configuration");
         }
 
-        private async Task<Stream> LoadRAID50Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID50Async(string key, Func<int, IStorageBackend> getProvider)
         {
             // Simplified load for RAID 50
             // In production, this would implement full RAID 5 logic per set
@@ -735,7 +735,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 60: Striped RAID 6 Sets (RAID 6+0) ====================
 
-        private async Task SaveRAID60Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID60Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 8)
                 throw new InvalidOperationException("RAID 60 requires at least 8 providers");
@@ -745,14 +745,14 @@ namespace DataWarehouse.Kernel.Storage
             await SaveRAID6Async(key, data, getProvider); // Simplified
         }
 
-        private async Task<Stream> LoadRAID60Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID60Async(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID6Async(key, getProvider); // Simplified
         }
 
         // ==================== RAID 01: Striped Mirrors (RAID 0+1) ====================
 
-        private async Task SaveRAID01Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID01Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 4 || _config.ProviderCount % 2 != 0)
                 throw new InvalidOperationException("RAID 01 requires an even number of providers (minimum 4)");
@@ -782,7 +782,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID01] Saved {key} with striped mirroring (RAID 0+1)");
         }
 
-        private async Task<Stream> LoadRAID01Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID01Async(string key, Func<int, IStorageBackend> getProvider)
         {
             var mirrorGroups = _config.ProviderCount / 2;
             var chunkCount = 0; // Determine from metadata
@@ -818,7 +818,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID-Z1: ZFS Single Parity ====================
 
-        private async Task SaveRAIDZ1Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDZ1Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             // RAID-Z1 is equivalent to RAID 5 but with ZFS optimizations
             // For simplicity, use RAID 5 implementation with variable stripe width
@@ -829,14 +829,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-Z1] Saved {key} with ZFS single parity");
         }
 
-        private async Task<Stream> LoadRAIDZ1Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDZ1Async(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID5Async(key, getProvider);
         }
 
         // ==================== RAID-Z2: ZFS Double Parity ====================
 
-        private async Task SaveRAIDZ2Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDZ2Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             // RAID-Z2 is equivalent to RAID 6 but with ZFS optimizations
             if (_config.ProviderCount < 4)
@@ -846,14 +846,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-Z2] Saved {key} with ZFS double parity");
         }
 
-        private async Task<Stream> LoadRAIDZ2Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDZ2Async(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID6Async(key, getProvider);
         }
 
         // ==================== RAID-Z3: ZFS Triple Parity ====================
 
-        private async Task SaveRAIDZ3Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDZ3Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 5)
                 throw new InvalidOperationException("RAID-Z3 requires at least 5 providers");
@@ -913,7 +913,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-Z3] Saved {key} with ZFS triple parity (3 disk fault tolerance)");
         }
 
-        private async Task<Stream> LoadRAIDZ3Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDZ3Async(string key, Func<int, IStorageBackend> getProvider)
         {
             // Simplified load - in production would implement triple parity recovery
             return await LoadRAID6Async(key, getProvider);
@@ -921,7 +921,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID-DP: NetApp Double Parity ====================
 
-        private async Task SaveRAIDDPAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDDPAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 4)
                 throw new InvalidOperationException("RAID-DP requires at least 4 providers");
@@ -932,14 +932,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-DP] Saved {key} with NetApp diagonal parity");
         }
 
-        private async Task<Stream> LoadRAIDDPAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDDPAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID6Async(key, getProvider);
         }
 
         // ==================== Unraid: Parity System ====================
 
-        private async Task SaveUnraidAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveUnraidAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             // Unraid: 1 or 2 parity disks, rest are data disks
             // Unraid writes entire file to ONE disk (not striped)
@@ -959,7 +959,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[Unraid] Saved {key} to disk {targetDisk} with {parityCount} parity disks");
         }
 
-        private async Task<Stream> LoadUnraidAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadUnraidAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             int parityCount = MathUtils.Min(2, _config.ProviderCount - 1);
             int dataDisks = _config.ProviderCount - parityCount;
@@ -972,7 +972,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 2: Bit-Level Striping with Hamming Code ====================
 
-        private async Task SaveRAID2Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID2Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 3)
                 throw new InvalidOperationException("RAID 2 requires at least 3 providers (data + Hamming ECC)");
@@ -1004,7 +1004,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-2] Saved {key} with Hamming code ECC");
         }
 
-        private async Task<Stream> LoadRAID2Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID2Async(string key, Func<int, IStorageBackend> getProvider)
         {
             int dataDisks = _config.ProviderCount - 1;
             var chunks = new List<byte[]>();
@@ -1022,7 +1022,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 3: Byte-Level Striping with Dedicated Parity ====================
 
-        private async Task SaveRAID3Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID3Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 3)
                 throw new InvalidOperationException("RAID 3 requires at least 3 providers");
@@ -1056,7 +1056,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-3] Saved {key} with byte-level striping and dedicated parity");
         }
 
-        private async Task<Stream> LoadRAID3Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID3Async(string key, Func<int, IStorageBackend> getProvider)
         {
             int dataDisks = _config.ProviderCount - 1;
             var chunks = new List<byte[]>();
@@ -1073,7 +1073,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 4: Block-Level Striping with Dedicated Parity ====================
 
-        private async Task SaveRAID4Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID4Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 3)
                 throw new InvalidOperationException("RAID 4 requires at least 3 providers");
@@ -1119,7 +1119,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-4] Saved {key} with block-level striping and dedicated parity");
         }
 
-        private async Task<Stream> LoadRAID4Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID4Async(string key, Func<int, IStorageBackend> getProvider)
         {
             // Similar to RAID 5 load but parity is always on last disk
             return await LoadRAID5Async(key, getProvider);
@@ -1127,7 +1127,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 03: Striped RAID 3 Sets ====================
 
-        private async Task SaveRAID03Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID03Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 6)
                 throw new InvalidOperationException("RAID 03 requires at least 6 providers (2 RAID 3 arrays)");
@@ -1142,14 +1142,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-03] Saved {key} with striped RAID 3 configuration");
         }
 
-        private async Task<Stream> LoadRAID03Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID03Async(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID3Async(key, getProvider);
         }
 
         // ==================== RAID 100: Striped RAID 10 (Mirrors of Mirrors) ====================
 
-        private async Task SaveRAID100Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID100Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 8)
                 throw new InvalidOperationException("RAID 100 requires at least 8 providers");
@@ -1160,14 +1160,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-100] Saved {key} with striped RAID 10 configuration");
         }
 
-        private async Task<Stream> LoadRAID100Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID100Async(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID10Async(key, getProvider);
         }
 
         // ==================== RAID 1E: Enhanced Mirrored Striping ====================
 
-        private async Task SaveRAID1EAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID1EAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 3)
                 throw new InvalidOperationException("RAID 1E requires at least 3 providers");
@@ -1191,7 +1191,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-1E] Saved {key} with enhanced mirrored striping");
         }
 
-        private async Task<Stream> LoadRAID1EAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID1EAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             // Load from primary chunks
             var chunks = new List<byte[]>();
@@ -1217,7 +1217,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== RAID 5E: RAID 5 with Integrated Hot Spare ====================
 
-        private async Task SaveRAID5EAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID5EAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 4)
                 throw new InvalidOperationException("RAID 5E requires at least 4 providers");
@@ -1228,14 +1228,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-5E] Saved {key} with integrated hot spare capacity");
         }
 
-        private async Task<Stream> LoadRAID5EAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID5EAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID5Async(key, getProvider);
         }
 
         // ==================== RAID 5EE: RAID 5 with Distributed Spare ====================
 
-        private async Task SaveRAID5EEAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID5EEAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 4)
                 throw new InvalidOperationException("RAID 5EE requires at least 4 providers");
@@ -1245,14 +1245,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-5EE] Saved {key} with distributed spare space");
         }
 
-        private async Task<Stream> LoadRAID5EEAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID5EEAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID5Async(key, getProvider);
         }
 
         // ==================== RAID 6E: RAID 6 Enhanced ====================
 
-        private async Task SaveRAID6EAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID6EAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 5)
                 throw new InvalidOperationException("RAID 6E requires at least 5 providers");
@@ -1262,14 +1262,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-6E] Saved {key} with enhanced dual parity");
         }
 
-        private async Task<Stream> LoadRAID6EAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID6EAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID6Async(key, getProvider);
         }
 
         // ==================== RAID-S: Dell/EMC Parity RAID ====================
 
-        private async Task SaveRAIDSAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDSAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 4)
                 throw new InvalidOperationException("RAID-S requires at least 4 providers");
@@ -1279,14 +1279,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-S] Saved {key} with Dell/EMC parity configuration");
         }
 
-        private async Task<Stream> LoadRAIDSAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDSAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID5Async(key, getProvider);
         }
 
         // ==================== RAID 7: Cached Striping with Parity ====================
 
-        private async Task SaveRAID7Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAID7Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 5)
                 throw new InvalidOperationException("RAID 7 requires at least 5 providers");
@@ -1297,14 +1297,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-7] Saved {key} with cached striping and parity");
         }
 
-        private async Task<Stream> LoadRAID7Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAID7Async(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID5Async(key, getProvider);
         }
 
         // ==================== RAID-FR: IBM Fast Rebuild ====================
 
-        private async Task SaveRAIDFRAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDFRAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 4)
                 throw new InvalidOperationException("RAID-FR requires at least 4 providers");
@@ -1314,14 +1314,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-FR] Saved {key} with fast rebuild metadata");
         }
 
-        private async Task<Stream> LoadRAIDFRAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDFRAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID5Async(key, getProvider);
         }
 
         // ==================== RAID MD10: Linux MD RAID 10 ====================
 
-        private async Task SaveRAIDMD10Async(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDMD10Async(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 3)
                 throw new InvalidOperationException("RAID MD10 requires at least 3 providers");
@@ -1332,14 +1332,14 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[RAID-MD10] Saved {key} with Linux MD RAID 10 layout");
         }
 
-        private async Task<Stream> LoadRAIDMD10Async(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDMD10Async(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID10Async(key, getProvider);
         }
 
         // ==================== Adaptive RAID: IBM Auto-Tuning ====================
 
-        private async Task SaveRAIDAdaptiveAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDAdaptiveAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 3)
                 throw new InvalidOperationException("Adaptive RAID requires at least 3 providers");
@@ -1361,7 +1361,7 @@ namespace DataWarehouse.Kernel.Storage
             }
         }
 
-        private async Task<Stream> LoadRAIDAdaptiveAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDAdaptiveAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             // Try RAID 1 first, fallback to RAID 5
             try
@@ -1376,7 +1376,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== BeyondRAID: Drobo Dynamic RAID ====================
 
-        private async Task SaveRAIDBeyondAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDBeyondAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 2)
                 throw new InvalidOperationException("BeyondRAID requires at least 2 providers");
@@ -1400,7 +1400,7 @@ namespace DataWarehouse.Kernel.Storage
             }
         }
 
-        private async Task<Stream> LoadRAIDBeyondAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDBeyondAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             // Try different RAID levels based on provider count
             if (_config.ProviderCount == 2)
@@ -1413,7 +1413,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== Declustered RAID: Advanced Parity Distribution ====================
 
-        private async Task SaveRAIDDeclusteredAsync(string key, Stream data, Func<int, IStorageProvider> getProvider)
+        private async Task SaveRAIDDeclusteredAsync(string key, Stream data, Func<int, IStorageBackend> getProvider)
         {
             if (_config.ProviderCount < 4)
                 throw new InvalidOperationException("Declustered RAID requires at least 4 providers");
@@ -1425,7 +1425,7 @@ namespace DataWarehouse.Kernel.Storage
             _context.LogInfo($"[Declustered-RAID] Saved {key} with distributed parity layout");
         }
 
-        private async Task<Stream> LoadRAIDDeclusteredAsync(string key, Func<int, IStorageProvider> getProvider)
+        private async Task<Stream> LoadRAIDDeclusteredAsync(string key, Func<int, IStorageBackend> getProvider)
         {
             return await LoadRAID6Async(key, getProvider);
         }
@@ -1466,14 +1466,14 @@ namespace DataWarehouse.Kernel.Storage
             return ms;
         }
 
-        private async Task SaveChunkAsync(IStorageProvider provider, string key, byte[] chunk)
+        private async Task SaveChunkAsync(IStorageBackend provider, string key, byte[] chunk)
         {
             var uri = new Uri($"{provider.Scheme}://{key}");
             var stream = new MemoryStream(chunk);
             await provider.SaveAsync(uri, stream);
         }
 
-        private async Task<byte[]> LoadChunkAsync(IStorageProvider provider, string key)
+        private async Task<byte[]> LoadChunkAsync(IStorageBackend provider, string key)
         {
             var uri = new Uri($"{provider.Scheme}://{key}");
             var stream = await provider.LoadAsync(uri);

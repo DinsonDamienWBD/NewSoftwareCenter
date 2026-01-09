@@ -8,48 +8,17 @@ namespace DataWarehouse.Kernel.Storage
     /// Production-Ready Storage Pool Manager with Multi-Mode Support.
     /// Supports: Independent, Cache (write-through/write-back), Tiered (hot/warm/cold), Pool (RAID-like).
     /// Thread-safe, fault-tolerant, with automatic failover and background migration.
+    /// Internal infrastructure component - not a plugin.
     /// </summary>
-    public class StoragePoolManager : IStorageProvider, IDisposable
+    public class StoragePoolManager : IStorageBackend, IDisposable
     {
         public static string Id => "kernel-storage-pool";
         public static string Version => "1.0.0";
         public static string Name => "Storage Pool Manager";
         public string Scheme => "pool";
 
-        /// <summary>
-        /// Handshake implementation for IPlugin
-        /// </summary>
-        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
-        {
-            return Task.FromResult(HandshakeResponse.Success(
-                pluginId: Id,
-                name: Name,
-                version: new Version(Version),
-                category: PluginCategory.Storage,
-                capabilities:
-                [
-                    new PluginCapabilityDescriptor
-                    {
-                        CapabilityId = "storage.pool.manager",
-                        DisplayName = "Storage Pool Manager",
-                        Description = "Manages storage pools with RAID, caching, and tiering support",
-                        Category = CapabilityCategory.Storage
-                    }
-                ],
-                initDuration: TimeSpan.Zero
-            ));
-        }
-
-        /// <summary>
-        /// Message handler (optional)
-        /// </summary>
-        public Task OnMessageAsync(PluginMessage message)
-        {
-            return Task.CompletedTask;
-        }
-
         private readonly IKernelContext _context;
-        private readonly ConcurrentDictionary<string, IStorageProvider> _providers;
+        private readonly ConcurrentDictionary<string, IStorageBackend> _providers;
         private readonly StoragePoolConfig _config;
         private readonly ConcurrentDictionary<string, TierMetadata> _tierMetadata; // URI -> Tier info
         private readonly Timer? _backgroundWorker;
@@ -111,7 +80,7 @@ namespace DataWarehouse.Kernel.Storage
         {
             _context = context;
             _config = config;
-            _providers = new ConcurrentDictionary<string, IStorageProvider>();
+            _providers = new ConcurrentDictionary<string, IStorageBackend>();
             _tierMetadata = new ConcurrentDictionary<string, TierMetadata>();
 
             // Initialize RAID engine if configured
@@ -136,7 +105,7 @@ namespace DataWarehouse.Kernel.Storage
         /// <summary>
         /// Register a storage provider with the pool.
         /// </summary>
-        public void RegisterProvider(string id, IStorageProvider provider)
+        public void RegisterProvider(string id, IStorageBackend provider)
         {
             if (_providers.TryAdd(id, provider))
             {
@@ -508,7 +477,7 @@ namespace DataWarehouse.Kernel.Storage
                 _context?.LogInfo($"[StoragePool] Migrating {uri} from {fromTier} to {toTier}");
 
                 // Find source provider
-                IStorageProvider? sourceProvider = null;
+                IStorageBackend? sourceProvider = null;
                 foreach (var provider in _providers.Values)
                 {
                     if (await provider.ExistsAsync(uri))
@@ -653,7 +622,7 @@ namespace DataWarehouse.Kernel.Storage
         /// <summary>
         /// Get pool provider by index for RAID engine.
         /// </summary>
-        private IStorageProvider GetPoolProviderByIndex(int index)
+        private IStorageBackend GetPoolProviderByIndex(int index)
         {
             if (index >= _config.PoolProviderIds.Count)
             {
@@ -665,7 +634,7 @@ namespace DataWarehouse.Kernel.Storage
 
         // ==================== HELPER METHODS ====================
 
-        private IStorageProvider GetPrimaryProvider()
+        private IStorageBackend GetPrimaryProvider()
         {
             if (string.IsNullOrEmpty(_config.PrimaryProviderId))
             {
@@ -676,7 +645,7 @@ namespace DataWarehouse.Kernel.Storage
             return GetProvider(_config.PrimaryProviderId);
         }
 
-        private IStorageProvider GetProvider(string id)
+        private IStorageBackend GetProvider(string id)
         {
             if (_providers.TryGetValue(id, out var provider))
                 return provider;
@@ -684,7 +653,7 @@ namespace DataWarehouse.Kernel.Storage
             throw new InvalidOperationException($"Storage provider '{id}' not found");
         }
 
-        private IStorageProvider GetTierProvider(int tierIndex)
+        private IStorageBackend GetTierProvider(int tierIndex)
         {
             if (tierIndex >= _config.TierProviderIds.Count)
             {
