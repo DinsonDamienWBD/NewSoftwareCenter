@@ -237,7 +237,12 @@ namespace DataWarehouse.SDK.Contracts
         /// <summary>
         /// Advanced features (tiering, deduplication, etc.).
         /// </summary>
-        Feature
+        Feature,
+
+        /// <summary>
+        /// Default catch-all category.
+        /// </summary>
+        Other
     }
 
     /// <summary>
