@@ -32,11 +32,13 @@ namespace DataWarehouse.Kernel.Security
 
         private void InitializeDefaultRoles()
         {
+#pragma warning disable CS0618 // Permissions is obsolete but kept for backward compatibility
             // Admin role - full access
             _roles["admin"] = new Role
             {
                 RoleId = "admin",
                 Name = "Administrator",
+                Tier = RoleTier.Admin,
                 Permissions = [
                     Permission.Read,
                     Permission.Write,
@@ -52,6 +54,7 @@ namespace DataWarehouse.Kernel.Security
             {
                 RoleId = "power_user",
                 Name = "Power User",
+                Tier = RoleTier.PowerUser,
                 Permissions = [
                     Permission.Read,
                     Permission.Write,
@@ -64,6 +67,7 @@ namespace DataWarehouse.Kernel.Security
             {
                 RoleId = "user",
                 Name = "User",
+                Tier = RoleTier.User,
                 Permissions = [
                     Permission.Read,
                     Permission.Write
@@ -75,8 +79,10 @@ namespace DataWarehouse.Kernel.Security
             {
                 RoleId = "readonly",
                 Name = "Read-Only",
+                Tier = RoleTier.ReadOnly,
                 Permissions = [Permission.Read]
             };
+#pragma warning restore CS0618
 
             _context.LogInfo("[Auth] Initialized default roles");
         }
@@ -185,6 +191,7 @@ namespace DataWarehouse.Kernel.Security
             key.UsageCount++;
 
             // Create session from API key
+#pragma warning disable CS0618 // Permissions is obsolete but still used for backward compatibility
             var session = new UserSession
             {
                 SessionId = Guid.NewGuid().ToString(),
@@ -196,6 +203,7 @@ namespace DataWarehouse.Kernel.Security
                 ExpiresAt = DateTime.UtcNow + _sessionExpiration,
                 AuthMethod = AuthenticationMethod.ApiKey
             };
+#pragma warning restore CS0618
 
             _context.LogDebug($"[Auth] API key authenticated: {key.Name}");
 
@@ -226,6 +234,7 @@ namespace DataWarehouse.Kernel.Security
         /// <summary>
         /// Check if user has required permission.
         /// </summary>
+        [Obsolete("Use AuthorizeWithAclAsync instead")]
         public bool HasPermission(UserSession session, Permission requiredPermission)
         {
             return session.Permissions.Contains(requiredPermission) ||
@@ -235,12 +244,15 @@ namespace DataWarehouse.Kernel.Security
         /// <summary>
         /// Authorize an operation.
         /// </summary>
+        [Obsolete("Use AuthorizeWithAclAsync instead")]
         public async Task<AuthorizationResult> AuthorizeAsync(
             UserSession session,
             Permission requiredPermission,
             string? resource = null)
         {
+#pragma warning disable CS0618 // HasPermission is obsolete
             if (!HasPermission(session, requiredPermission))
+#pragma warning restore CS0618
             {
                 _context.LogWarning($"[Auth] Permission denied for {session.Username}: {requiredPermission}");
                 return AuthorizationResult.Denied($"User lacks {requiredPermission} permission");
@@ -252,6 +264,79 @@ namespace DataWarehouse.Kernel.Security
                 // Future: Check resource-specific ACLs
             }
 
+            await Task.CompletedTask;
+            return AuthorizationResult.Allowed();
+        }
+
+        /// <summary>
+        /// Get the role tier for a given role ID.
+        /// </summary>
+        public RoleTier GetRoleTier(string roleId)
+        {
+            if (_roles.TryGetValue(roleId, out var role))
+                return role.Tier;
+            return RoleTier.ReadOnly;
+        }
+
+        /// <summary>
+        /// Check if a role tier allows a specific permission.
+        /// </summary>
+        private bool RoleTierAllowsOperation(RoleTier tier, Permission permission)
+        {
+            return tier switch
+            {
+                RoleTier.ReadOnly => permission == Permission.Read,
+                RoleTier.User => permission is Permission.Read or Permission.Write,
+                RoleTier.PowerUser => permission is Permission.Read or Permission.Write or Permission.Delete,
+                RoleTier.Admin => true,
+                _ => false
+            };
+        }
+
+        /// <summary>
+        /// Authorize an operation using integrated role tier + ACL approach.
+        /// This is the preferred authorization method going forward.
+        /// </summary>
+        /// <param name="session">The user session</param>
+        /// <param name="resource">The resource being accessed (e.g., "data/users/damien")</param>
+        /// <param name="requestedPermission">The permission being requested</param>
+        /// <param name="aclEngine">Optional ACL engine for fine-grained checks (if null, only role tier is checked)</param>
+        /// <returns>Authorization result indicating whether access is allowed</returns>
+        public async Task<AuthorizationResult> AuthorizeWithAclAsync(
+            UserSession session,
+            string resource,
+            Permission requestedPermission,
+            IACLSecurityEngine? aclEngine = null)
+        {
+            // Step 1: Check role tier (coarse-grained gate)
+            var roleTier = GetRoleTier(session.RoleId);
+
+            // Admin bypasses all ACLs
+            if (roleTier == RoleTier.Admin)
+            {
+                _context.LogDebug($"[Auth] Admin access granted for {session.Username} on {resource}");
+                return AuthorizationResult.Allowed();
+            }
+
+            // Check if role tier allows this operation at all
+            if (!RoleTierAllowsOperation(roleTier, requestedPermission))
+            {
+                _context.LogWarning($"[Auth] Role tier {roleTier} denies {requestedPermission} for {session.Username}");
+                return AuthorizationResult.Denied($"Role {session.RoleId} cannot perform {requestedPermission}");
+            }
+
+            // Step 2: Check resource-level ACL (fine-grained check) if engine is provided
+            if (aclEngine != null)
+            {
+                if (!aclEngine.HasAccess(resource, session.Username, requestedPermission))
+                {
+                    _context.LogWarning($"[Auth] ACL denies {requestedPermission} on {resource} for {session.Username}");
+                    return AuthorizationResult.Denied($"ACL denies {requestedPermission} on {resource}");
+                }
+            }
+
+            // Both checks passed
+            _context.LogDebug($"[Auth] Access granted for {session.Username} on {resource} ({requestedPermission})");
             await Task.CompletedTask;
             return AuthorizationResult.Allowed();
         }
@@ -317,9 +402,9 @@ namespace DataWarehouse.Kernel.Security
         }
 
         /// <summary>
-        /// Create custom role.
+        /// Create custom role with role tier.
         /// </summary>
-        public async Task CreateRoleAsync(string roleId, string name, List<Permission> permissions)
+        public async Task CreateRoleAsync(string roleId, string name, RoleTier tier)
         {
             if (_roles.ContainsKey(roleId))
                 throw new InvalidOperationException($"Role '{roleId}' already exists");
@@ -328,11 +413,45 @@ namespace DataWarehouse.Kernel.Security
             {
                 RoleId = roleId,
                 Name = name,
-                Permissions = permissions
+                Tier = tier
             };
 
             _roles[roleId] = role;
-            _context.LogInfo($"[Auth] Created role: {name} with {permissions.Count} permissions");
+            _context.LogInfo($"[Auth] Created role: {name} with tier: {tier}");
+
+            await Task.CompletedTask;
+        }
+
+        /// <summary>
+        /// Create custom role with permissions list (obsolete).
+        /// </summary>
+        [Obsolete("Use CreateRoleAsync(roleId, name, RoleTier) instead")]
+        public async Task CreateRoleAsync(string roleId, string name, List<Permission> permissions)
+        {
+            if (_roles.ContainsKey(roleId))
+                throw new InvalidOperationException($"Role '{roleId}' already exists");
+
+            // Map permissions to tier (best effort)
+            var tier = RoleTier.ReadOnly;
+            if (permissions.Contains(Permission.Admin))
+                tier = RoleTier.Admin;
+            else if (permissions.Contains(Permission.Delete))
+                tier = RoleTier.PowerUser;
+            else if (permissions.Contains(Permission.Write))
+                tier = RoleTier.User;
+
+#pragma warning disable CS0618 // Permissions is obsolete
+            var role = new Role
+            {
+                RoleId = roleId,
+                Name = name,
+                Tier = tier,
+                Permissions = permissions
+            };
+#pragma warning restore CS0618
+
+            _roles[roleId] = role;
+            _context.LogInfo($"[Auth] Created role: {name} with {permissions.Count} permissions (mapped to tier: {tier})");
 
             await Task.CompletedTask;
         }
@@ -372,6 +491,7 @@ namespace DataWarehouse.Kernel.Security
         private UserSession CreateSession(UserAccount user)
         {
             var role = _roles[user.RoleId];
+#pragma warning disable CS0618 // Permissions is obsolete but still used for backward compatibility
             return new UserSession
             {
                 SessionId = Guid.NewGuid().ToString(),
@@ -383,6 +503,7 @@ namespace DataWarehouse.Kernel.Security
                 ExpiresAt = DateTime.UtcNow + _sessionExpiration,
                 AuthMethod = AuthenticationMethod.Password
             };
+#pragma warning restore CS0618
         }
 
         private static string HashPassword(string password)
@@ -482,7 +603,10 @@ namespace DataWarehouse.Kernel.Security
     {
         public required string RoleId { get; init; }
         public required string Name { get; init; }
-        public required List<Permission> Permissions { get; init; }
+        public required RoleTier Tier { get; init; }
+
+        [Obsolete("Use RoleTier + ACLSecurityEngine instead")]
+        public List<Permission>? Permissions { get; init; }
     }
 
     public enum AuthenticationMethod
@@ -491,6 +615,17 @@ namespace DataWarehouse.Kernel.Security
         ApiKey,
         OAuth,
         Certificate
+    }
+
+    /// <summary>
+    /// Coarse-grained role tiers for global authorization checks.
+    /// </summary>
+    public enum RoleTier
+    {
+        ReadOnly = 0,
+        User = 1,
+        PowerUser = 2,
+        Admin = 3
     }
 
     public class AuthenticationResult
@@ -516,5 +651,21 @@ namespace DataWarehouse.Kernel.Security
 
         public static AuthorizationResult Denied(string reason) =>
             new() { IsAllowed = false, Reason = reason };
+    }
+
+    /// <summary>
+    /// Interface for ACL security engine integration.
+    /// This allows AuthenticationManager to perform fine-grained resource-level authorization.
+    /// </summary>
+    public interface IACLSecurityEngine
+    {
+        /// <summary>
+        /// Check if a subject has access to a resource with the requested permission.
+        /// </summary>
+        /// <param name="resource">The resource path (e.g., "data/users/damien")</param>
+        /// <param name="subject">The subject (usually username)</param>
+        /// <param name="requestedPermission">The permission being requested</param>
+        /// <returns>True if access is granted, false otherwise</returns>
+        bool HasAccess(string resource, string subject, Permission requestedPermission);
     }
 }
