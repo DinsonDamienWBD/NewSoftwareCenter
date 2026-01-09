@@ -2,6 +2,7 @@
 using Amazon.S3.Transfer;
 using DataWarehouse.SDK.Attributes;
 using DataWarehouse.SDK.Contracts;
+using System;
 
 namespace DataWarehouse.Plugins.Storage.S3.Engine
 {

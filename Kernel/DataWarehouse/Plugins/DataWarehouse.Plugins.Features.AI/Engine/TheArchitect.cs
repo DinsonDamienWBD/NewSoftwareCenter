@@ -94,7 +94,7 @@ namespace DataWarehouse.Plugins.Features.AI.Engine
 
                     var response = plugin.OnHandshakeAsync(handshakeRequest).GetAwaiter().GetResult();
 
-                    if (!response.Success)
+                    if (!response.IsSuccess)
                     {
                         throw new InvalidOperationException($"Plugin handshake failed: {response.ErrorMessage}");
                     }

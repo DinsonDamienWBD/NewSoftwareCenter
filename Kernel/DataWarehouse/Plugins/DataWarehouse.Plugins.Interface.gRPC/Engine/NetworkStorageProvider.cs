@@ -167,7 +167,7 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Engine
                     await call.RequestStream.CompleteAsync();
                     var response = await call.ResponseAsync;
 
-                    if (!response.Success)
+                    if (!response.IsSuccess)
                     {
                         throw new IOException($"Remote write failed: {response.Message}");
                     }
