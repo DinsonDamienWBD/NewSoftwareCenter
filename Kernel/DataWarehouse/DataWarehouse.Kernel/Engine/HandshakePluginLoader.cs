@@ -170,7 +170,7 @@ namespace DataWarehouse.Kernel.Engine
                 }
 
                 // 9. Register plugin and capabilities
-                _registry.Register(plugin);
+                _registry.Register(plugin, response);
 
                 // TODO: Register capabilities when capability system is implemented
                 // foreach (var capability in response.Capabilities)
