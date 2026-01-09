@@ -75,6 +75,12 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
                 entries = [];
             }
 
+            // Null check for entries
+            if (entries == null)
+            {
+                entries = [];
+            }
+
             // Set or update the ACL entry for this subject
             entries[subject] = new AclEntry
             {
@@ -199,7 +205,7 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         {
             resource = NormalizeResourcePath(resource);
 
-            if (_store.TryGet(resource, out var entries))
+            if (_store.TryGet(resource, out var entries) && entries != null)
             {
                 if (entries.TryGetValue(subject, out var entry))
                 {
@@ -219,7 +225,7 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         {
             resource = NormalizeResourcePath(resource);
 
-            if (_store.TryGet(resource, out var entries))
+            if (_store.TryGet(resource, out var entries) && entries != null)
             {
                 return new Dictionary<string, AclEntry>(entries);
             }
@@ -274,7 +280,7 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         /// </summary>
         private bool CheckResourcePermissions(string resource, string subject, Permission requested)
         {
-            if (!_store.TryGet(resource, out var entries))
+            if (!_store.TryGet(resource, out var entries) || entries == null)
             {
                 return false;
             }
@@ -283,14 +289,14 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
             Permission effectiveDeny = Permission.None;
 
             // Check subject-specific rule
-            if (entries.TryGetValue(subject, out var userRule))
+            if (entries.TryGetValue(subject, out var userRule) && userRule != null)
             {
                 effectiveAllow |= userRule.Allow;
                 effectiveDeny |= userRule.Deny;
             }
 
             // Check wildcard rule
-            if (entries.TryGetValue("*", out var wildcardRule))
+            if (entries.TryGetValue("*", out var wildcardRule) && wildcardRule != null)
             {
                 effectiveAllow |= wildcardRule.Allow;
                 effectiveDeny |= wildcardRule.Deny;

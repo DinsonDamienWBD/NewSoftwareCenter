@@ -9,6 +9,13 @@ namespace DataWarehouse.Plugins.Storage.IpfsNew.Bootstrapper
     ///
     /// The engine implementation is in IPFSStorageEngine.cs.
     /// </summary>
+    [PluginInfo(
+        name: "IPFS Distributed Storage",
+        description: "Distributed content-addressed storage on the IPFS network with automatic deduplication",
+        author: "DataWarehouse Team",
+        version: "1.0.0",
+        category: PluginCategory.Storage
+    )]
     public class IPFSStoragePlugin
     {
         /// <summary>

@@ -10,6 +10,13 @@ namespace DataWarehouse.Plugins.Storage.S3New.Bootstrapper
     /// Supports AWS S3 and S3-compatible storage (MinIO, DigitalOcean Spaces, Wasabi, etc.).
     /// The engine implementation is in S3StorageEngine.cs.
     /// </summary>
+    [PluginInfo(
+        name: "AWS S3 Cloud Storage",
+        description: "AWS S3 and S3-compatible cloud storage with 99.999999999% durability and unlimited scalability",
+        author: "DataWarehouse Team",
+        version: "1.0.0",
+        category: PluginCategory.Storage
+    )]
     public class S3StoragePlugin
     {
         /// <summary>

@@ -10,6 +10,13 @@ namespace DataWarehouse.Plugins.Metadata.Postgres.Bootstrapper
     ///
     /// The engine implementation is in PostgresMetadataEngine.cs.
     /// </summary>
+    [PluginInfo(
+        name: "PostgreSQL Metadata Index",
+        description: "Production-grade metadata indexing with PostgreSQL, JSONB support, and high availability",
+        author: "DataWarehouse Team",
+        version: "1.0.0",
+        category: PluginCategory.Metadata
+    )]
     public class PostgresMetadataPlugin
     {
         /// <summary>

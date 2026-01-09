@@ -9,6 +9,13 @@ namespace DataWarehouse.Plugins.Metadata.SQLite.Bootstrapper
     ///
     /// The engine implementation is in SQLiteMetadataEngine.cs.
     /// </summary>
+    [PluginInfo(
+        name: "SQLite Metadata Index",
+        description: "Local file-based metadata indexing with SQL support and ACID transactions",
+        author: "DataWarehouse Team",
+        version: "1.0.0",
+        category: PluginCategory.Metadata
+    )]
     public class SQLiteMetadataPlugin
     {
         /// <summary>

@@ -146,6 +146,8 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Engine
 
                     // gRPC Client Streaming
                     using var call = _client?.UploadBlob();
+                    if (call == null)
+                        throw new InvalidOperationException("gRPC client not initialized");
 
                     // 1. Send Header
                     await call.RequestStream.WriteAsync(new UploadRequest
