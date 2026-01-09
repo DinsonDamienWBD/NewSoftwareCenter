@@ -14,7 +14,7 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Bootstrapper
         // Services
         private NetworkStorageProvider? _networkProvider;
         private IKernelContext? _context;
-        private string _pluginId = "DataWarehouse.Interface.gRPC";
+        private readonly string _pluginId = "DataWarehouse.Interface.gRPC";
 
         /// <summary>
         /// Plugin ID - matches _pluginId
@@ -58,7 +58,7 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Bootstrapper
                 };
 
                 var netResponse = await _networkProvider.OnHandshakeAsync(netRequest);
-                if (!netResponse.Success)
+                if (!netResponse.IsSuccess)
                 {
                     return HandshakeResponse.Failure(
                         _pluginId,
@@ -81,10 +81,10 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Bootstrapper
         }
 
         // Helper class to wrap HandshakeRequest as IKernelContext
-        private class KernelContextFromRequest : IKernelContext
+        private class KernelContextFromRequest(HandshakeRequest request) : IKernelContext
         {
-            private readonly HandshakeRequest _request;
-            public KernelContextFromRequest(HandshakeRequest request) => _request = request;
+            private readonly HandshakeRequest _request = request;
+
             public OperatingMode Mode => _request.Mode;
             public string RootPath => _request.RootPath;
             public void LogInfo(string message) => Console.WriteLine($"[INFO] {message}");
@@ -92,7 +92,7 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Bootstrapper
             public void LogWarning(string message) => Console.WriteLine($"[WARN] {message}");
             public void LogDebug(string message) => Console.WriteLine($"[DEBUG] {message}");
             public T? GetPlugin<T>() where T : class, IPlugin => null;
-            public System.Collections.Generic.IEnumerable<T> GetPlugins<T>() where T : class, IPlugin => Enumerable.Empty<T>();
+            public System.Collections.Generic.IEnumerable<T> GetPlugins<T>() where T : class, IPlugin => [];
         }
 
         /// <summary>

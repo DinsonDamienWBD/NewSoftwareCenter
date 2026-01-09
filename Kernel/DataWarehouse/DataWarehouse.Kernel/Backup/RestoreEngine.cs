@@ -9,24 +9,16 @@ namespace DataWarehouse.Kernel.Backup
     /// Time Machine-style restore engine with 7 granularity levels.
     /// Supports point-in-time restore with permission validation.
     /// </summary>
-    public class RestoreEngine
+    public class RestoreEngine(
+        IKernelContext context,
+        SnapshotManager snapshotManager,
+        IMetadataIndex index,
+        ISecurityProvider? securityProvider = null)
     {
-        private readonly IKernelContext _context;
-        private readonly SnapshotManager _snapshotManager;
-        private readonly ISecurityProvider? _securityProvider;
-        private readonly IMetadataIndex _index;
-
-        public RestoreEngine(
-            IKernelContext context,
-            SnapshotManager snapshotManager,
-            IMetadataIndex index,
-            ISecurityProvider? securityProvider = null)
-        {
-            _context = context ?? throw new ArgumentNullException(nameof(context));
-            _snapshotManager = snapshotManager ?? throw new ArgumentNullException(nameof(snapshotManager));
-            _index = index ?? throw new ArgumentNullException(nameof(index));
-            _securityProvider = securityProvider;
-        }
+        private readonly IKernelContext _context = context ?? throw new ArgumentNullException(nameof(context));
+        private readonly SnapshotManager _snapshotManager = snapshotManager ?? throw new ArgumentNullException(nameof(snapshotManager));
+        private readonly ISecurityProvider? _securityProvider = securityProvider;
+        private readonly IMetadataIndex _index = index ?? throw new ArgumentNullException(nameof(index));
 
         /// <summary>
         /// Restore from snapshot with permission validation.
@@ -159,7 +151,7 @@ namespace DataWarehouse.Kernel.Backup
 
             if (!string.IsNullOrEmpty(targetId))
             {
-                snapshots = snapshots.Where(s => s.TargetId == targetId).ToList();
+                snapshots = [.. snapshots.Where(s => s.TargetId == targetId)];
             }
 
             return snapshots;
@@ -188,9 +180,7 @@ namespace DataWarehouse.Kernel.Backup
             // Filter by path if provided
             if (!string.IsNullOrEmpty(path))
             {
-                manifests = manifests
-                    .Where(m => m.RelativePath.StartsWith(path, StringComparison.OrdinalIgnoreCase))
-                    .ToList();
+                manifests = [.. manifests.Where(m => m.RelativePath.StartsWith(path, StringComparison.OrdinalIgnoreCase))];
             }
 
             return new SnapshotBrowseResult
@@ -201,13 +191,13 @@ namespace DataWarehouse.Kernel.Backup
                 Timestamp = snapshot.Timestamp,
                 TotalFiles = manifests.Count,
                 TotalBytes = manifests.Sum(m => m.SizeBytes),
-                Files = manifests.Select(m => new SnapshotFileInfo
+                Files = [.. manifests.Select(m => new SnapshotFileInfo
                 {
                     Path = m.RelativePath,
                     SizeBytes = m.SizeBytes,
                     Hash = m.Hash,
                     Timestamp = m.Timestamp
-                }).ToList()
+                })]
             };
         }
 
@@ -415,7 +405,7 @@ namespace DataWarehouse.Kernel.Backup
             await CopyDirectoryAsync(sourceMetadataPath, targetMetadataPath, options.OverwriteExisting, cancellationToken);
         }
 
-        private async Task CopyDirectoryAsync(string sourceDir, string targetDir, bool overwrite, CancellationToken cancellationToken)
+        private static async Task CopyDirectoryAsync(string sourceDir, string targetDir, bool overwrite, CancellationToken cancellationToken)
         {
             foreach (var file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
             {
@@ -451,10 +441,10 @@ namespace DataWarehouse.Kernel.Backup
                 RestoreGranularity.Compartment => Permission.Read,
                 RestoreGranularity.Partition => Permission.Write,
                 RestoreGranularity.StorageLayer => Permission.Write,
-                RestoreGranularity.StoragePool => Permission.Admin,
-                RestoreGranularity.MultiplePools => Permission.Admin,
-                RestoreGranularity.CompleteInstance => Permission.Admin,
-                _ => Permission.Admin
+                RestoreGranularity.StoragePool => Permission.FullControl,
+                RestoreGranularity.MultiplePools => Permission.FullControl,
+                RestoreGranularity.CompleteInstance => Permission.FullControl,
+                _ => Permission.FullControl
             };
 
             var result = await _securityProvider.CheckPermissionAsync(
@@ -609,7 +599,7 @@ namespace DataWarehouse.Kernel.Backup
         public DateTime Timestamp { get; init; }
         public int TotalFiles { get; init; }
         public long TotalBytes { get; init; }
-        public List<SnapshotFileInfo> Files { get; init; } = new();
+        public List<SnapshotFileInfo> Files { get; init; } = [];
     }
 
     public class SnapshotFileInfo

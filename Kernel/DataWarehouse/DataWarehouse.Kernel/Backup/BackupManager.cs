@@ -240,7 +240,7 @@ namespace DataWarehouse.Kernel.Backup
                 backups = backups.Where(b => b.Type == type.Value);
             }
 
-            return backups.OrderByDescending(b => b.Timestamp).ToList();
+            return [.. backups.OrderByDescending(b => b.Timestamp)];
         }
 
         /// <summary>
@@ -356,7 +356,7 @@ namespace DataWarehouse.Kernel.Backup
             metadata.FileCount = Directory.GetFiles(targetDataPath, "*", SearchOption.AllDirectories).Length;
         }
 
-        private async Task CopyDirectoryAsync(string sourceDir, string targetDir, CancellationToken cancellationToken)
+        private static async Task CopyDirectoryAsync(string sourceDir, string targetDir, CancellationToken cancellationToken)
         {
             foreach (var file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
             {
@@ -372,7 +372,7 @@ namespace DataWarehouse.Kernel.Backup
             await Task.CompletedTask;
         }
 
-        private async Task CopyModifiedFilesAsync(
+        private static async Task CopyModifiedFilesAsync(
             string sourceDir,
             string targetDir,
             DateTime since,
@@ -396,10 +396,10 @@ namespace DataWarehouse.Kernel.Backup
             await Task.CompletedTask;
         }
 
-        private async Task CompressBackupAsync(string backupPath, CancellationToken cancellationToken)
+        private static async Task CompressBackupAsync(string backupPath, CancellationToken cancellationToken)
         {
             var zipPath = $"{backupPath}.zip";
-            ZipFile.CreateFromDirectory(backupPath, zipPath, CompressionLevel.Optimal, includeBaseDirectory: false);
+            ZipFile.CreateFromDirectory(backupPath, zipPath, System.IO.Compression.CompressionLevel.Optimal, includeBaseDirectory: false);
 
             // Delete uncompressed directory
             Directory.Delete(backupPath, recursive: true);
@@ -407,7 +407,7 @@ namespace DataWarehouse.Kernel.Backup
             await Task.CompletedTask;
         }
 
-        private async Task DecompressBackupAsync(string backupPath, CancellationToken cancellationToken)
+        private static async Task DecompressBackupAsync(string backupPath, CancellationToken cancellationToken)
         {
             var zipPath = $"{backupPath}.zip";
             if (File.Exists(zipPath))
@@ -513,7 +513,7 @@ namespace DataWarehouse.Kernel.Backup
             return $"{len:0.##} {sizes[order]}";
         }
 
-        private async Task SaveBackupMetadataAsync(string backupPath, BackupMetadata metadata)
+        private static async Task SaveBackupMetadataAsync(string backupPath, BackupMetadata metadata)
         {
             var metadataFile = Path.Combine(backupPath, "metadata.json");
             var json = JsonSerializer.Serialize(metadata, new JsonSerializerOptions { WriteIndented = true });
