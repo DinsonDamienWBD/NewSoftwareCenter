@@ -35,7 +35,7 @@ namespace DataWarehouse.Kernel.Indexing
                 pluginId: Id,
                 name: Name,
                 version: new Version(Version),
-                category: PluginCategory.Indexing,
+                category: PluginCategory.Metadata,
                 capabilities: new List<PluginCapabilityDescriptor>
                 {
                     new PluginCapabilityDescriptor
@@ -43,7 +43,7 @@ namespace DataWarehouse.Kernel.Indexing
                         CapabilityId = "indexing.memory.metadata",
                         DisplayName = "In-Memory Metadata Index",
                         Description = "Provides in-memory metadata indexing for laptop mode",
-                        Category = CapabilityCategory.Indexing
+                        Category = CapabilityCategory.Metadata
                     }
                 },
                 initDuration: TimeSpan.Zero

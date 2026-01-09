@@ -242,7 +242,15 @@ namespace DataWarehouse.SDK.Contracts
         /// <summary>
         /// Default catch-all category.
         /// </summary>
-        Other
+        Other,
+
+        /// <summary>
+        /// Provides functionality for sending, receiving, and managing messages within the application.
+        /// </summary>
+        /// <remarks>Use this class to interact with the application's messaging infrastructure. It may
+        /// include features such as message queuing, delivery tracking, or message formatting, depending on the
+        /// implementation.</remarks>
+        Messaging
     }
 
     /// <summary>
@@ -366,7 +374,8 @@ namespace DataWarehouse.SDK.Contracts
         Query,
         Maintenance,
         Diagnostic,
-        Configuration
+        Configuration,
+        Messaging
     }
 
     // ============================================================================

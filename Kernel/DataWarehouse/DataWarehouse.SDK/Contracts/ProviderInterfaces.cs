@@ -29,7 +29,7 @@
         /// Scheme
         /// // "file", "s3", "azure"
         /// </summary>
-        string Scheme { get; } 
+        string Scheme { get; }
 
         /// <summary>
         /// Save
@@ -59,16 +59,6 @@
         /// <param name="uri"></param>
         /// <returns></returns>
         Task<bool> ExistsAsync(Uri uri);
-    }
-
-    /// <summary>
-    /// Extended storage plugin interface with enhanced metadata and capabilities.
-    /// Provides additional plugin-specific functionality beyond basic IStorageProvider.
-    /// </summary>
-    public interface IStoragePlugin : IStorageProvider, IFeaturePlugin
-    {
-        // Marker interface for enhanced storage plugins
-        // Inherits both storage operations and feature lifecycle management
     }
 
     /// <summary>
