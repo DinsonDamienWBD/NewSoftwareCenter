@@ -18,6 +18,7 @@ namespace DataWarehouse.Plugins.Security.ACL.Bootstrapper
         /// </summary>
         public async Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
         {
+            var startTime = DateTime.UtcNow;
             _context = request as IKernelContext;
 
             // Initialize engine
@@ -25,112 +26,55 @@ namespace DataWarehouse.Plugins.Security.ACL.Bootstrapper
 
             _context?.LogInfo("[ACL] Enhanced ACL Security Engine initialized with hierarchical permissions, wildcards, and deny rules");
 
-            return new HandshakeResponse
+            var capabilities = new List<PluginCapabilityDescriptor>
             {
-                PluginId = "DataWarehouse.Security.ACL",
-                Name = "Enhanced ACL Security Provider",
-                Version = "3.0.0",
-                ProtocolVersion = request.ProtocolVersion,
-                State = PluginState.Ready,
-                Capabilities = new List<string>
+                new PluginCapabilityDescriptor
                 {
-                    "access-control",
-                    "hierarchical-permissions",
-                    "wildcard-users",
-                    "deny-rules",
-                    "persistent-storage",
-                    "role-based-access",
-                    "resource-isolation"
+                    CapabilityId = "security.acl.hierarchical",
+                    DisplayName = "Hierarchical Path Permissions",
+                    Description = "Grant permissions on parent paths that automatically apply to children. " +
+                                 "Supports fine-grained resource-level permissions with parent path inheritance.",
+                    Category = CapabilityCategory.Security,
+                    RequiredPermission = Permission.Admin,
+                    Tags = ["security", "acl", "hierarchical", "permissions"]
                 },
-                Dependencies = new List<string>(),
-                SemanticDescription = "Production-grade access control with hierarchical path permissions, wildcard user support, " +
-                                     "explicit deny rules, and persistent storage. Supports fine-grained resource-level permissions " +
-                                     "with parent path inheritance and deny-trumps-allow logic for maximum security.",
-                SemanticTags = new List<string>
+                new PluginCapabilityDescriptor
                 {
-                    "security", "acl", "access-control", "permissions",
-                    "authorization", "rbac", "hierarchical", "deny-rules"
+                    CapabilityId = "security.acl.wildcards",
+                    DisplayName = "Wildcard User Permissions",
+                    Description = "Use '*' wildcard to grant permissions to all users on specific resources.",
+                    Category = CapabilityCategory.Security,
+                    RequiredPermission = Permission.Admin,
+                    Tags = ["security", "acl", "wildcards"]
                 },
-                PerformanceProfile = new PerformanceProfile
+                new PluginCapabilityDescriptor
                 {
-                    Category = "Security",
-                    Latency = "< 5ms (permission check)",
-                    Throughput = "10,000+ checks/sec",
-                    MemoryFootprint = "Low (persistent to disk)",
-                    CpuUsage = "Very Low"
+                    CapabilityId = "security.acl.deny",
+                    DisplayName = "Explicit Deny Rules",
+                    Description = "Deny-trumps-allow logic for maximum security. Explicit deny overrides any allow permissions.",
+                    Category = CapabilityCategory.Security,
+                    RequiredPermission = Permission.Admin,
+                    Tags = ["security", "acl", "deny-rules"]
                 },
-                ConfigurationSchema = new Dictionary<string, string>
+                new PluginCapabilityDescriptor
                 {
-                    ["DW_ACL_STORAGE_PATH"] = "Path to ACL database file (default: {RootPath}/Security/acl.db)"
-                },
-                UsageExamples = new List<PluginUsageExample>
-                {
-                    new() {
-                        Title = "Hierarchical Path Permissions",
-                        Description = "Grant permissions on parent path, automatically applies to children",
-                        Code = @"
-// Grant read access to entire 'users/damien' subtree
-_acl.SetPermissions(""users/damien"", ""damien"", Permission.Read, Permission.None);
-
-// Check access to nested file - automatically checks parent paths
-bool canRead = _acl.HasAccess(""users/damien/docs/resume.pdf"", ""damien"", Permission.Read);
-// Returns: true (inherited from parent path)"
-                    },
-                    new() {
-                        Title = "Wildcard User Permissions",
-                        Description = "Use '*' to grant permissions to all users",
-                        Code = @"
-// Grant read access to all users
-_acl.SetPermissions(""public/announcements"", ""*"", Permission.Read, Permission.None);
-
-// Any user can read
-bool canRead = _acl.HasAccess(""public/announcements/notice.txt"", ""alice"", Permission.Read);
-// Returns: true (matches wildcard)"
-                    },
-                    new() {
-                        Title = "Deny Rules (Deny Trumps Allow)",
-                        Description = "Explicit deny overrides any allow permissions",
-                        Code = @"
-// Allow write, but deny delete
-_acl.SetPermissions(""users/damien/docs"", ""damien"", Permission.Write, Permission.Delete);
-
-// Can write
-bool canWrite = _acl.HasAccess(""users/damien/docs/file.txt"", ""damien"", Permission.Write);
-// Returns: true
-
-// Cannot delete (deny trumps allow)
-bool canDelete = _acl.HasAccess(""users/damien/docs/file.txt"", ""damien"", Permission.Delete);
-// Returns: false (explicit deny)"
-                    },
-                    new() {
-                        Title = "Multi-Tenant Isolation",
-                        Description = "Create isolated scopes for different tenants/projects",
-                        Code = @"
-// Create isolated scope for ProjectA
-_acl.CreateScope(""projects/project-a"", ""user-alice"");
-_acl.SetPermissions(""projects/project-a"", ""user-alice"", Permission.FullControl, Permission.None);
-_acl.SetPermissions(""projects/project-a"", ""user-bob"", Permission.Read, Permission.None);
-
-// Create isolated scope for ProjectB
-_acl.CreateScope(""projects/project-b"", ""user-charlie"");
-_acl.SetPermissions(""projects/project-b"", ""user-charlie"", Permission.FullControl, Permission.None);
-
-// user-bob cannot access ProjectB
-bool canAccess = _acl.HasAccess(""projects/project-b/data.txt"", ""user-bob"", Permission.Read);
-// Returns: false (no permissions granted)"
-                    }
-                },
-                HealthStatus = new HealthStatus
-                {
-                    Status = "Healthy",
-                    LastCheck = DateTime.UtcNow,
-                    Details = new Dictionary<string, string>
-                    {
-                        ["engine"] = "initialized",
-                        ["storage"] = "persistent"
-                    }
+                    CapabilityId = "security.acl.isolation",
+                    DisplayName = "Multi-Tenant Resource Isolation",
+                    Description = "Create isolated scopes for different tenants/projects with separate permission boundaries.",
+                    Category = CapabilityCategory.Security,
+                    RequiredPermission = Permission.Admin,
+                    Tags = ["security", "acl", "multi-tenant", "isolation"]
                 }
             };
+
+            return HandshakeResponse.Success(
+                pluginId: "DataWarehouse.Security.ACL",
+                name: "Enhanced ACL Security Provider",
+                version: new Version("3.0.0"),
+                category: PluginCategory.Security,
+                capabilities: capabilities,
+                initDuration: DateTime.UtcNow - startTime
+            );
         }
 
         /// <summary>

@@ -15,6 +15,29 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Engine
         public static string Name => "RAMDisk Storage";
         public string Scheme => "ramdisk";
 
+        /// <summary>
+        /// Handshake implementation for IPlugin.
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Storage,
+                capabilities: [],
+                initDuration: TimeSpan.Zero
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
         private readonly ConcurrentDictionary<string, byte[]> _storage;
         private readonly ConcurrentDictionary<string, AccessInfo> _accessTracking;
         private readonly Lock _evictionLock = new();
