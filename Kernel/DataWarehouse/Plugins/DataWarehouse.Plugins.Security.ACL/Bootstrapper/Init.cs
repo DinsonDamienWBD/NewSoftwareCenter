@@ -28,41 +28,37 @@ namespace DataWarehouse.Plugins.Security.ACL.Bootstrapper
 
             var capabilities = new List<PluginCapabilityDescriptor>
             {
-                new PluginCapabilityDescriptor
-                {
+                new() {
                     CapabilityId = "security.acl.hierarchical",
                     DisplayName = "Hierarchical Path Permissions",
                     Description = "Grant permissions on parent paths that automatically apply to children. " +
                                  "Supports fine-grained resource-level permissions with parent path inheritance.",
                     Category = CapabilityCategory.Security,
-                    RequiredPermission = Permission.Admin,
+                    RequiredPermission = Permission.FullControl,
                     Tags = ["security", "acl", "hierarchical", "permissions"]
                 },
-                new PluginCapabilityDescriptor
-                {
+                new() {
                     CapabilityId = "security.acl.wildcards",
                     DisplayName = "Wildcard User Permissions",
                     Description = "Use '*' wildcard to grant permissions to all users on specific resources.",
                     Category = CapabilityCategory.Security,
-                    RequiredPermission = Permission.Admin,
+                    RequiredPermission = Permission.FullControl,
                     Tags = ["security", "acl", "wildcards"]
                 },
-                new PluginCapabilityDescriptor
-                {
+                new() {
                     CapabilityId = "security.acl.deny",
                     DisplayName = "Explicit Deny Rules",
                     Description = "Deny-trumps-allow logic for maximum security. Explicit deny overrides any allow permissions.",
                     Category = CapabilityCategory.Security,
-                    RequiredPermission = Permission.Admin,
+                    RequiredPermission = Permission.FullControl,
                     Tags = ["security", "acl", "deny-rules"]
                 },
-                new PluginCapabilityDescriptor
-                {
+                new() {
                     CapabilityId = "security.acl.isolation",
                     DisplayName = "Multi-Tenant Resource Isolation",
                     Description = "Create isolated scopes for different tenants/projects with separate permission boundaries.",
                     Category = CapabilityCategory.Security,
-                    RequiredPermission = Permission.Admin,
+                    RequiredPermission = Permission.FullControl,
                     Tags = ["security", "acl", "multi-tenant", "isolation"]
                 }
             };

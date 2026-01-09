@@ -16,6 +16,6 @@ namespace DataWarehouse.Plugins.Intelligence.Governance.Bootstrapper
             Tags = new[] { "intelligence", "governance", "compliance", "policy", "audit" }
         };
 
-        public static GovernanceEngine CreateInstance() => new GovernanceEngine();
+        public static GovernanceEngine CreateInstance() => new();
     }
 }

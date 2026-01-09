@@ -1,3 +1,4 @@
+using DataWarehouse.SDK.AI.Math;
 using DataWarehouse.SDK.Contracts;
 using System.Collections.Concurrent;
 
@@ -10,9 +11,9 @@ namespace DataWarehouse.Kernel.Storage
     /// </summary>
     public class StoragePoolManager : IStorageProvider, IDisposable
     {
-        public string Id => "kernel-storage-pool";
-        public string Version => "1.0.0";
-        public string Name => "Storage Pool Manager";
+        public static string Id => "kernel-storage-pool";
+        public static string Version => "1.0.0";
+        public static string Name => "Storage Pool Manager";
         public string Scheme => "pool";
 
         /// <summary>
@@ -25,16 +26,16 @@ namespace DataWarehouse.Kernel.Storage
                 name: Name,
                 version: new Version(Version),
                 category: PluginCategory.Storage,
-                capabilities: new List<PluginCapabilityDescriptor>
-                {
+                capabilities:
+                [
                     new PluginCapabilityDescriptor
                     {
                         CapabilityId = "storage.pool.manager",
-                        DisplayName: "Storage Pool Manager",
+                        DisplayName = "Storage Pool Manager",
                         Description = "Manages storage pools with RAID, caching, and tiering support",
                         Category = CapabilityCategory.Storage
                     }
-                },
+                ],
                 initDuration: TimeSpan.Zero
             ));
         }
@@ -64,8 +65,8 @@ namespace DataWarehouse.Kernel.Storage
             public PoolMode Mode { get; set; } = PoolMode.Independent;
             public string PrimaryProviderId { get; set; } = string.Empty;
             public string CacheProviderId { get; set; } = string.Empty;
-            public List<string> TierProviderIds { get; set; } = new(); // Hot -> Warm -> Cold
-            public List<string> PoolProviderIds { get; set; } = new(); // For RAID-like
+            public List<string> TierProviderIds { get; set; } = []; // Hot -> Warm -> Cold
+            public List<string> PoolProviderIds { get; set; } = []; // For RAID-like
             public CacheStrategy CacheStrategy { get; set; } = CacheStrategy.WriteThrough;
             public int HotTierAccessThreshold { get; set; } = 10; // Access count for hot tier
             public int WarmTierAccessThreshold { get; set; } = 3; // Access count for warm tier
@@ -165,7 +166,7 @@ namespace DataWarehouse.Kernel.Storage
         /// <summary>
         /// Initialize (no-op for pool manager).
         /// </summary>
-        public void Initialize(IKernelContext context)
+        public static void Initialize(IKernelContext context)
         {
             // Context already set in constructor
         }
@@ -203,23 +204,14 @@ namespace DataWarehouse.Kernel.Storage
         /// </summary>
         public async Task<Stream> LoadAsync(Uri uri)
         {
-            switch (_config.Mode)
+            return _config.Mode switch
             {
-                case PoolMode.Independent:
-                    return await LoadIndependentAsync(uri);
-
-                case PoolMode.Cache:
-                    return await LoadCacheAsync(uri);
-
-                case PoolMode.Tiered:
-                    return await LoadTieredAsync(uri);
-
-                case PoolMode.Pool:
-                    return await LoadPoolAsync(uri);
-
-                default:
-                    throw new NotSupportedException($"Pool mode {_config.Mode} not supported");
-            }
+                PoolMode.Independent => await LoadIndependentAsync(uri),
+                PoolMode.Cache => await LoadCacheAsync(uri),
+                PoolMode.Tiered => await LoadTieredAsync(uri),
+                PoolMode.Pool => await LoadPoolAsync(uri),
+                _ => throw new NotSupportedException($"Pool mode {_config.Mode} not supported"),
+            };
         }
 
         /// <summary>
@@ -745,6 +737,7 @@ namespace DataWarehouse.Kernel.Storage
 
             _providers.Clear();
             _disposed = true;
+            GC.SuppressFinalize(this);
         }
     }
 }

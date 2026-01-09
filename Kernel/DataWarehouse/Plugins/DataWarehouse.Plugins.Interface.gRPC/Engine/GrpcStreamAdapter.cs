@@ -1,4 +1,5 @@
 using DataWarehouse.Plugins.Interface.gRPC.Protos;
+using DataWarehouse.SDK.AI.Math;
 using Grpc.Core;
 
 namespace DataWarehouse.Plugins.Interface.gRPC.Engine

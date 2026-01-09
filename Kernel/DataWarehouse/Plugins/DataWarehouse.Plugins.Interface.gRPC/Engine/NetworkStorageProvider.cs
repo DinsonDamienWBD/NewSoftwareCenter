@@ -1,4 +1,5 @@
 using DataWarehouse.Plugins.Interface.gRPC.Protos;
+using DataWarehouse.SDK.AI.Math;
 using DataWarehouse.SDK.Contracts;
 using Grpc.Net.Client;
 
@@ -11,8 +12,8 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Engine
     public class NetworkStorageProvider : IStorageProvider, IDisposable
     {
         public string Id { get; private set; }
-        public string Version => "3.0.0";
-        public string Name => "gRPC Network Storage";
+        public static string Version => "3.0.0";
+        public static string Name => "gRPC Network Storage";
         public string Scheme => "grpc";
 
         private string _address;
@@ -167,7 +168,7 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Engine
                     await call.RequestStream.CompleteAsync();
                     var response = await call.ResponseAsync;
 
-                    if (!response.IsSuccess)
+                    if (!response.Success)
                     {
                         throw new IOException($"Remote write failed: {response.Message}");
                     }
