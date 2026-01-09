@@ -32,6 +32,54 @@ namespace DataWarehouse.Plugins.Storage.LocalFileSystem.Bootstrapper
         private IStorageEngine? _activeEngine;
         private IKernelContext? _context;
 
+        /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+            string dataRoot = Path.Combine(_context?.RootPath ?? "", "Data");
+            Directory.CreateDirectory(dataRoot);
+
+            var options = new LocalStorageOptions();
+
+            if (File.Exists(Path.Combine(dataRoot, "main.vdi")))
+            {
+                options.Mode = StorageMode.Vdi;
+            }
+
+            if (_context?.Mode == OperatingMode.Hyperscale)
+            {
+                _context?.LogInfo($"[{Id}] Mode: PLATINUM (Sharded VDI)");
+                _activeEngine = new ShardedStorageEngine(dataRoot, 16, options, _context!);
+            }
+            else if (options.Mode == StorageMode.Vdi)
+            {
+                _context?.LogInfo($"[{Id}] Initializing VDI Engine (Block-Based)...");
+                _activeEngine = new VirtualDiskEngine(dataRoot, options, _context!);
+            }
+            else
+            {
+                _context?.LogInfo($"[{Id}] Initializing Physical Folder Engine...");
+                _activeEngine = new PhysicalFolderEngine(dataRoot);
+            }
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Storage
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
         /// <inheritdoc />
         public void Initialize(IKernelContext context)
         {

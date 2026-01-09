@@ -57,6 +57,14 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
         }
 
         /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Save data
         /// </summary>
         /// <param name="uri"></param>

@@ -30,6 +30,41 @@ namespace DataWarehouse.Plugins.Features.AI.Bootstrapper
         private CancellationTokenSource? _cts;
 
         /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+            _context?.LogInfo($"[{Id}] Initializing HNSW Neural Engine...");
+
+            // 1. Create the Logger Bridge
+            var engineLogger = new ContextLoggerAdapter<GraphVectorIndex>(_context!);
+
+            // 2. Initialize the Engine (HNSW Graph)
+            _vectorIndex = new GraphVectorIndex(engineLogger);
+
+            // 3. Initialize the Service (Hydrator)
+            _hydrator = new NeuralHydrator(_vectorIndex, _context!);
+
+            _context?.LogInfo($"[{Id}] Engine & Hydrator linked.");
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Feature
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Initialize
         /// </summary>
         /// <param name="context"></param>

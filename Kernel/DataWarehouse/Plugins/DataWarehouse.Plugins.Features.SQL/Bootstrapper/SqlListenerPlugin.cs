@@ -26,6 +26,41 @@ namespace DataWarehouse.Plugins.Features.SQL.Bootstrapper
 
         private PostgresInterface? _interface;
         private PostgresWireProtocol? _protocol;
+        private IKernelContext? _context;
+
+        /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+            var index = _context?.GetPlugin<IMetadataIndex>();
+            if (index == null)
+            {
+                return Task.FromResult(HandshakeResponse.Failure(
+                    Id,
+                    Name,
+                    "IMetadataIndex not found. SQL Listener cannot function."));
+            }
+
+            _interface = new PostgresInterface(index, new PostgresInterface.ContextLoggerAdapter<PostgresInterface>(_context!));
+            _protocol = new PostgresWireProtocol(_interface, _context!);
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Feature
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
 
         /// <summary>
         /// Initialize

@@ -31,6 +31,49 @@ namespace DataWarehouse.Plugins.Indexing.Postgres.Bootstrapper
         private IKernelContext? _context;
 
         /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+
+            string connString = Environment.GetEnvironmentVariable("DW_POSTGRES_CONN")
+                                ?? "Host=localhost;Port=5432;Database=datawarehouse;Username=postgres;Password=postgres";
+
+            _context?.LogInfo($"[{Id}] Connecting to PostgreSQL at {connString.Split(';')[0]}...");
+
+            try
+            {
+                _engine = new PostgresMetadataIndex(connString, _context!);
+                _engine.InitializeSchema();
+                _context?.LogInfo($"[{Id}] Connection established. Schema verified.");
+
+                return Task.FromResult(HandshakeResponse.Success(
+                    pluginId: Id,
+                    name: Name,
+                    version: new Version(Version),
+                    category: PluginCategory.Feature
+                ));
+            }
+            catch (Exception ex)
+            {
+                _context?.LogError($"[{Id}] Failed to connect to PostgreSQL. Plugin will fail commands.", ex);
+                return Task.FromResult(HandshakeResponse.Failure(
+                    Id,
+                    Name,
+                    $"Failed to connect to PostgreSQL: {ex.Message}"));
+            }
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Initializes the plugin and brings the database online.
         /// </summary>
         /// <param name="context">The kernel context.</param>

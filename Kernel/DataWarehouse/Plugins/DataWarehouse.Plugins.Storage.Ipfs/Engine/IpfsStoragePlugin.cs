@@ -20,6 +20,33 @@ namespace DataWarehouse.Plugins.Storage.Ipfs.Engine
         // Default IPFS API port
         private string _gatewayUrl = "http://127.0.0.1:5001/api/v0";
 
+        /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+            var envUrl = Environment.GetEnvironmentVariable("IPFS_GATEWAY");
+            if (!string.IsNullOrEmpty(envUrl)) _gatewayUrl = envUrl;
+
+            _context?.LogInfo($"[IPFS] Linked to node {_gatewayUrl}");
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Storage
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
         public void Initialize(IKernelContext context)
         {
             _context = context;

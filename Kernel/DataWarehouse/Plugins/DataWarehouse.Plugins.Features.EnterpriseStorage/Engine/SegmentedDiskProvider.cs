@@ -62,6 +62,31 @@ namespace DataWarehouse.Plugins.Features.EnterpriseStorage.Engine
         }
 
         /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            var context = request as IKernelContext;
+            _rootPath = Path.Combine(context?.RootPath ?? "", "SegmentedData");
+            Directory.CreateDirectory(_rootPath);
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Storage
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Initialize
         /// </summary>
         /// <param name="context"></param>

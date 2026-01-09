@@ -17,6 +17,34 @@ namespace DataWarehouse.Plugins.Indexing.Sqlite.Bootstrapper
         private SqliteMetadataIndex? _engine;
         private IKernelContext? _context;
 
+        /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+            string dbPath = Path.Combine(_context?.RootPath ?? "", "Index", "metadata.db");
+            Directory.CreateDirectory(Path.GetDirectoryName(dbPath)!);
+
+            _engine = new SqliteMetadataIndex(dbPath);
+            _context?.LogInfo($"[{Id}] SQLite Index initialized at {dbPath}");
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Feature
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
         public void Initialize(IKernelContext context)
         {
             _context = context;

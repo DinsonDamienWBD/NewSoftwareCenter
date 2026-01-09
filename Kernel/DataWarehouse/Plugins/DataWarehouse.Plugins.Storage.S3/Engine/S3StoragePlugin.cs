@@ -21,6 +21,48 @@ namespace DataWarehouse.Plugins.Storage.S3.Engine
         private AmazonS3Client? _s3Client;
         private TransferUtility? _transferUtility;
 
+        /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+
+            var accessKey = Environment.GetEnvironmentVariable("AWS_ACCESS_KEY_ID");
+            var secretKey = Environment.GetEnvironmentVariable("AWS_SECRET_ACCESS_KEY");
+            var region = Environment.GetEnvironmentVariable("AWS_REGION") ?? "us-east-1";
+
+            if (string.IsNullOrEmpty(accessKey) || string.IsNullOrEmpty(secretKey))
+            {
+                _context?.LogWarning("[S3] Credentials missing. Plugin dormant.");
+                return Task.FromResult(HandshakeResponse.Failure(
+                    Id,
+                    Name,
+                    "AWS credentials missing. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment variables."));
+            }
+
+            var config = new AmazonS3Config { RegionEndpoint = Amazon.RegionEndpoint.GetBySystemName(region) };
+            _s3Client = new AmazonS3Client(accessKey, secretKey, config);
+            _transferUtility = new TransferUtility(_s3Client);
+
+            _context?.LogInfo($"[S3] Connected to {region}");
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Storage
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
         public void Initialize(IKernelContext context)
         {
             _context = context;

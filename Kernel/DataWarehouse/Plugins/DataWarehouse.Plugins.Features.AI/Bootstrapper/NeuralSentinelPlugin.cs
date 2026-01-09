@@ -19,6 +19,37 @@ namespace DataWarehouse.Plugins.Features.AI.Bootstrapper
         // The Live Registry: Maps "CommandName" -> Executable Delegate & Metadata
         private readonly Dictionary<string, SkillDefinition> _skillRegistry = new();
 
+        /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+
+            // Load Assemblies
+            LoadModuleAssemblies(_context?.RootPath ?? "");
+
+            // Reflection Discovery
+            DiscoverSkills();
+
+            _context?.LogInfo($"[{Id}] Brain Online. Indexing complete: {_modules.Count} Modules, {_skillRegistry.Count} AI Skills.");
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Feature
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
         public void Initialize(IKernelContext context)
         {
             _context = context;

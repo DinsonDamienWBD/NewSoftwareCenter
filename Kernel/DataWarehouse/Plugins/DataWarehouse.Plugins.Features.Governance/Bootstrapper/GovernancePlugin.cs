@@ -40,6 +40,63 @@ namespace DataWarehouse.Plugins.Features.Governance.Bootstrapper
         private IKernelContext? _context;
 
         /// <summary>
+        /// Handshake protocol handler
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+            _context?.LogInfo($"[{Id}] Initializing Governance Suite...");
+
+            string metadataPath = Path.Combine(_context?.RootPath ?? "", "Metadata");
+            string logsPath = Path.Combine(_context?.RootPath ?? "", "AuditLogs");
+            Directory.CreateDirectory(metadataPath);
+            Directory.CreateDirectory(logsPath);
+
+            byte[] systemSecret = Encoding.UTF8.GetBytes((_context?.RootPath ?? "") + "_WORM_SECRET");
+
+            _governor = new WormGovernor(metadataPath, systemSecret);
+            _recorder = new FlightRecorder(logsPath);
+
+            var metadataIndex = _context?.GetPlugin<IMetadataIndex>();
+            if (metadataIndex == null)
+            {
+                return Task.FromResult(HandshakeResponse.Failure(
+                    Id,
+                    Name,
+                    "IMetadataIndex not found. Governance cannot function."));
+            }
+
+            _tracker = new AccessTracker(metadataIndex, new ContextLoggerAdapter<AccessTracker>(_context!));
+
+            var config = new ConfigurationBuilder()
+                .AddJsonFile(Path.Combine(_context?.RootPath ?? "", "appsettings.json"), optional: true)
+                .AddEnvironmentVariables()
+                .Build();
+
+            var loggerFactory = LoggerFactory.Create(b => b.AddConsole());
+            var logger = loggerFactory.CreateLogger<LifecyclePolicyEngine>();
+
+            _ilm = new LifecyclePolicyEngine(metadataIndex, _context!, config, logger);
+
+            _context?.LogInfo($"[{Id}] WORM Governor, Flight Recorder, Access Tracker & ILM ready.");
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Feature
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Initialize
         /// </summary>
         /// <param name="context"></param>
