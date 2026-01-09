@@ -17,20 +17,6 @@ namespace DataWarehouse.Plugins.Storage.RAMDisk.Bootstrapper
     public class RAMDiskStoragePlugin
     {
         /// <summary>
-        /// Plugin metadata and registration.
-        /// </summary>
-        public static PluginInfo PluginInfo => new()
-        {
-            Id = "storage.RAMDisk",
-            Name = "RAMDisk Storage",
-            Version = new Version(1, 0, 0),
-            Author = "DataWarehouse SDK",
-            Description = "RAMDisk for blazing fast storage",
-            Category = PluginCategory.Storage,
-            Tags = new[] { "storage", "filesystem", "local", "RAM", "memory", "development", "caching" }
-        };
-
-        /// <summary>
         /// Creates an instance of the storage engine.
         /// </summary>
         public static RAMDiskStoragePlugin CreateInstance()

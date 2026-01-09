@@ -13,11 +13,11 @@ namespace DataWarehouse.Kernel.Backup
         IKernelContext context,
         SnapshotManager snapshotManager,
         IMetadataIndex index,
-        ISecurityProvider? securityProvider = null)
+        IPlugin? securityProvider = null)
     {
         private readonly IKernelContext _context = context ?? throw new ArgumentNullException(nameof(context));
         private readonly SnapshotManager _snapshotManager = snapshotManager ?? throw new ArgumentNullException(nameof(snapshotManager));
-        private readonly ISecurityProvider? _securityProvider = securityProvider;
+        private readonly IPlugin? _securityProvider = securityProvider;
         private readonly IMetadataIndex _index = index ?? throw new ArgumentNullException(nameof(index));
 
         /// <summary>
@@ -370,14 +370,13 @@ namespace DataWarehouse.Kernel.Backup
                 var newManifest = new Manifest
                 {
                     Id = Guid.NewGuid().ToString(),
-                    RelativePath = manifest.RelativePath,
+                    BlobUri = manifest.RelativePath,
                     SizeBytes = manifest.SizeBytes,
-                    ContentHash = manifest.Hash,
-                    CreatedAt = DateTime.UtcNow,
-                    ModifiedAt = DateTime.UtcNow
+                    Checksum = manifest.Hash,
+                    CreatedAt = DateTimeOffset.UtcNow.ToUnixTimeSeconds()
                 };
 
-                await _index.IndexAsync(newManifest, cancellationToken);
+                await _index.IndexManifestAsync(newManifest);
             }
         }
 
@@ -428,9 +427,12 @@ namespace DataWarehouse.Kernel.Backup
         private async Task<bool> ValidateRestorePermissionAsync(
             Snapshot snapshot,
             RestoreOptions options,
-            ISecurityContext securityContext,
+            ISecurityContext? securityContext,
             CancellationToken cancellationToken)
         {
+            if (securityContext == null)
+                return true;
+
             // TODO: Implement permission validation when ISecurityProvider interface is available
             // For now, allow all restore operations
             // Check restore permission based on granularity

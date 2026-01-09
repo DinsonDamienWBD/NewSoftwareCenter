@@ -20,20 +20,6 @@ namespace DataWarehouse.Plugins.Storage.LocalNew.Bootstrapper
     public class LocalStoragePlugin
     {
         /// <summary>
-        /// Plugin metadata and registration.
-        /// </summary>
-        public static PluginInfo PluginInfo => new()
-        {
-            Id = "storage.local",
-            Name = "Local Filesystem Storage",
-            Version = new Version(1, 0, 0),
-            Author = "DataWarehouse SDK",
-            Description = "Cross-platform local filesystem storage with atomic writes and subdirectory support",
-            Category = PluginCategory.Storage,
-            Tags = new[] { "storage", "filesystem", "local", "development", "caching" }
-        };
-
-        /// <summary>
         /// Creates an instance of the storage engine.
         /// </summary>
         public static LocalStorageEngine CreateInstance()

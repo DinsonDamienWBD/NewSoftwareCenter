@@ -20,20 +20,6 @@ namespace DataWarehouse.Plugins.Storage.S3New.Bootstrapper
     public class S3StoragePlugin
     {
         /// <summary>
-        /// Plugin metadata and registration.
-        /// </summary>
-        public static PluginInfo PluginInfo => new()
-        {
-            Id = "storage.s3",
-            Name = "AWS S3 Cloud Storage",
-            Version = new Version(1, 0, 0),
-            Author = "DataWarehouse SDK",
-            Description = "AWS S3 and S3-compatible cloud storage with 99.999999999% durability and unlimited scalability",
-            Category = PluginCategory.Storage,
-            Tags = new[] { "storage", "cloud", "s3", "aws", "production", "scalable" }
-        };
-
-        /// <summary>
         /// Creates an instance of the storage engine.
         /// </summary>
         public static S3StorageEngine CreateInstance()
