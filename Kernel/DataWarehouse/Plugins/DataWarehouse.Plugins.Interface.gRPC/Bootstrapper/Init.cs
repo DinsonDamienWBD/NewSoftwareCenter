@@ -17,6 +17,26 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Bootstrapper
         private string _pluginId = "DataWarehouse.Interface.gRPC";
 
         /// <summary>
+        /// Plugin ID - matches _pluginId
+        /// </summary>
+        public string Id => _pluginId;
+
+        /// <summary>
+        /// Protocol name
+        /// </summary>
+        public string Protocol => "gRPC";
+
+        /// <summary>
+        /// Endpoint (derived from network provider)
+        /// </summary>
+        public string Endpoint => _networkProvider?.Id ?? "https://localhost:5000";
+
+        /// <summary>
+        /// Whether this interface is listening for connections
+        /// </summary>
+        public bool IsListening => _networkProvider != null;
+
+        /// <summary>
         /// Handshake protocol handler
         /// </summary>
         public async Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
@@ -73,6 +93,14 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Bootstrapper
             public void LogDebug(string message) => Console.WriteLine($"[DEBUG] {message}");
             public T? GetPlugin<T>() where T : class, IPlugin => null;
             public System.Collections.Generic.IEnumerable<T> GetPlugins<T>() where T : class, IPlugin => Enumerable.Empty<T>();
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
         }
 
         /// <summary>

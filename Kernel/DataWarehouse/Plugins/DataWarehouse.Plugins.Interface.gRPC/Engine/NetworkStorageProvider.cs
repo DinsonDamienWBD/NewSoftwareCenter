@@ -41,6 +41,37 @@ namespace DataWarehouse.Plugins.Interface.gRPC.Engine
         }
 
         /// <summary>
+        /// Handshake implementation for IPlugin.
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            _context = request as IKernelContext;
+
+            if (_channel == null)
+            {
+                // Get target address from environment or config
+                _address = Environment.GetEnvironmentVariable("DW_NETWORK_TARGET") ?? "https://localhost:5000";
+                Id = $"net-{Uri.EscapeDataString(_address)}";
+                InitializeChannel();
+            }
+
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Storage
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional).
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Initialize the provider with kernel context.
         /// </summary>
         public void Initialize(IKernelContext context)
