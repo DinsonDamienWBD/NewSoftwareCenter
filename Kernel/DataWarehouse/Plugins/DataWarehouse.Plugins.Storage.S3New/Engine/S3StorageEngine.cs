@@ -64,75 +64,81 @@ namespace DataWarehouse.Plugins.Storage.S3New.Engine
         public S3StorageEngine()
             : base("storage.s3", "AWS S3 Cloud Storage", new Version(1, 0, 0))
         {
-            // AI-Native metadata
-            SemanticDescription = "Store and retrieve data from AWS S3 or S3-compatible cloud storage with 99.999999999% durability and unlimited scalability";
-
-            SemanticTags = new List<string>
-            {
-                "storage", "cloud", "s3", "aws", "object-storage",
-                "scalable", "durable", "production", "backup",
-                "cdn", "minio", "spaces", "wasabi", "compatible"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 50.0,
-                ThroughputMBps = 200.0,
-                CostPerExecution = 0.0004m, // ~$0.0004 per 1000 requests (PUT/POST)
-                MemoryUsageMB = 20.0,
-                ScalabilityRating = ScalabilityLevel.Unlimited, // Cloud-native scaling
-                ReliabilityRating = ReliabilityLevel.VeryHigh, // 11 nines durability
-                ConcurrencySafe = true // S3 handles concurrent access
-            };
-
-            CapabilityRelationships = new List<CapabilityRelationship>
-            {
-                new()
-                {
-                    RelatedCapabilityId = "transform.gzip.apply",
-                    RelationType = RelationType.CanPipeline,
-                    Description = "Compress data before uploading to S3 to reduce storage costs"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "transform.aes.apply",
-                    RelationType = RelationType.CanPipeline,
-                    Description = "Encrypt data before uploading to S3 for client-side encryption"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "metadata.postgres.index",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Use PostgreSQL to index S3 objects for fast queries"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "storage.local.save",
-                    RelationType = RelationType.AlternativeTo,
-                    Description = "Use local storage for development, S3 for production"
-                }
-            };
-
-            UsageExamples = new List<PluginUsageExample>
-            {
-                new()
-                {
-                    Scenario = "Upload file to S3",
-                    NaturalLanguageRequest = "Upload this file to S3 cloud storage",
-                    ExpectedCapabilityChain = new[] { "storage.s3.save" },
-                    EstimatedDurationMs = 200.0,
-                    EstimatedCost = 0.0004m
-                },
-                new()
-                {
-                    Scenario = "Compress and upload to S3",
-                    NaturalLanguageRequest = "Compress and upload this large file to S3",
-                    ExpectedCapabilityChain = new[] { "transform.gzip.apply", "storage.s3.save" },
-                    EstimatedDurationMs = 500.0,
-                    EstimatedCost = 0.0004m
-                }
-            };
         }
+
+        /// <summary>AI-Native semantic description</summary>
+        protected override string SemanticDescription =>
+            "Store and retrieve data from AWS S3 or S3-compatible cloud storage with 99.999999999% durability and unlimited scalability";
+
+        /// <summary>AI-Native semantic tags</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "storage", "cloud", "s3", "aws", "object-storage",
+            "scalable", "durable", "production", "backup",
+            "cdn", "minio", "spaces", "wasabi", "compatible"
+        };
+
+        /// <summary>AI-Native performance profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 50.0,
+            ThroughputMBps = 200.0,
+            CostPerExecution = 0.0004m, // ~$0.0004 per 1000 requests (PUT/POST)
+            MemoryUsageMB = 20.0,
+            ScalabilityRating = ScalabilityLevel.Unlimited, // Cloud-native scaling
+            ReliabilityRating = ReliabilityLevel.VeryHigh, // 11 nines durability
+            ConcurrencySafe = true // S3 handles concurrent access
+        };
+
+        /// <summary>AI-Native capability relationships</summary>
+        protected override CapabilityRelationship[] CapabilityRelationships => new[]
+        {
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "transform.gzip.apply",
+                RelationType = RelationType.CanPipeline,
+                Description = "Compress data before uploading to S3 to reduce storage costs"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "transform.aes.apply",
+                RelationType = RelationType.CanPipeline,
+                Description = "Encrypt data before uploading to S3 for client-side encryption"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "metadata.postgres.index",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Use PostgreSQL to index S3 objects for fast queries"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "storage.local.save",
+                RelationType = RelationType.AlternativeTo,
+                Description = "Use local storage for development, S3 for production"
+            }
+        };
+
+        /// <summary>AI-Native usage examples</summary>
+        protected override PluginUsageExample[] UsageExamples => new[]
+        {
+            new PluginUsageExample
+            {
+                Scenario = "Upload file to S3",
+                NaturalLanguageRequest = "Upload this file to S3 cloud storage",
+                ExpectedCapabilityChain = new[] { "storage.s3.save" },
+                EstimatedDurationMs = 200.0,
+                EstimatedCost = 0.0004m
+            },
+            new PluginUsageExample
+            {
+                Scenario = "Compress and upload to S3",
+                NaturalLanguageRequest = "Compress and upload this large file to S3",
+                ExpectedCapabilityChain = new[] { "transform.gzip.apply", "storage.s3.save" },
+                EstimatedDurationMs = 500.0,
+                EstimatedCost = 0.0004m
+            }
+        };
 
         /// <summary>
         /// Mounts S3 storage by configuring endpoint and credentials.

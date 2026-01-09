@@ -31,40 +31,45 @@ namespace DataWarehouse.Plugins.Intelligence.Governance.Engine
         public GovernanceEngine()
             : base("intelligence.governance", "Governance & Compliance", new Version(1, 0, 0))
         {
-            SemanticDescription = "Enforce governance policies and monitor compliance automatically with AI-driven analysis";
-
-            SemanticTags = new List<string>
-            {
-                "intelligence", "governance", "compliance", "policy",
-                "audit", "gdpr", "hipaa", "soc2", "monitoring"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 8.0,
-                CostPerExecution = 0.0m,
-                MemoryUsageMB = 40.0,
-                ScalabilityRating = ScalabilityLevel.High,
-                ReliabilityRating = ReliabilityLevel.VeryHigh,
-                ConcurrencySafe = true
-            };
-
-            CapabilityRelationships = new List<CapabilityRelationship>
-            {
-                new()
-                {
-                    RelatedCapabilityId = "metadata.postgres.index",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Store compliance audit logs in PostgreSQL"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "security.acl.check",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Enforce access policies with ACL security"
-                }
-            };
         }
+
+        /// <summary>AI-Native semantic description for governance and compliance</summary>
+        protected override string SemanticDescription => "Enforce governance policies and monitor compliance automatically with AI-driven analysis";
+
+        /// <summary>AI-Native semantic tags for discovery and categorization</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "intelligence", "governance", "compliance", "policy",
+            "audit", "gdpr", "hipaa", "soc2", "monitoring"
+        };
+
+        /// <summary>AI-Native performance characteristics profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 8.0,
+            CostPerExecution = 0.0m,
+            MemoryUsageMB = 40.0,
+            ScalabilityRating = ScalabilityLevel.High,
+            ReliabilityRating = ReliabilityLevel.VeryHigh,
+            ConcurrencySafe = true
+        };
+
+        /// <summary>AI-Native capability relationships for orchestration</summary>
+        protected override CapabilityRelationship[] CapabilityRelationships => new[]
+        {
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "metadata.postgres.index",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Store compliance audit logs in PostgreSQL"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "security.acl.check",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Enforce access policies with ACL security"
+            }
+        };
 
         protected override async Task InitializeIntelligenceAsync(IKernelContext context)
         {

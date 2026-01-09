@@ -31,58 +31,64 @@ namespace DataWarehouse.Plugins.Feature.Tiering.Engine
         public TieringFeatureEngine()
             : base("feature.tiering", "Storage Tiering", new Version(1, 0, 0))
         {
-            SemanticDescription = "Automatically move data between storage tiers (hot/warm/cold) to optimize cost and performance";
-
-            SemanticTags = new List<string>
-            {
-                "feature", "tiering", "storage", "optimization",
-                "cost-reduction", "lifecycle", "archival", "glacier"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 50.0,
-                CostPerExecution = 0.0m,
-                MemoryUsageMB = 25.0,
-                ScalabilityRating = ScalabilityLevel.VeryHigh,
-                ReliabilityRating = ReliabilityLevel.High,
-                ConcurrencySafe = true
-            };
-
-            CapabilityRelationships = new List<CapabilityRelationship>
-            {
-                new()
-                {
-                    RelatedCapabilityId = "storage.local.save",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Use local storage as hot tier"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "storage.s3.save",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Use S3 Standard as warm tier, Glacier as cold tier"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "metadata.postgres.index",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Track access patterns in metadata for tiering decisions"
-                }
-            };
-
-            UsageExamples = new List<PluginUsageExample>
-            {
-                new()
-                {
-                    Scenario = "Archive old data",
-                    NaturalLanguageRequest = "Move data older than 90 days to cold storage",
-                    ExpectedCapabilityChain = new[] { "feature.tiering.migrate", "storage.s3.save" },
-                    EstimatedDurationMs = 5000.0,
-                    EstimatedCost = 0.001m
-                }
-            };
         }
+
+        /// <summary>AI-Native semantic description for storage tiering</summary>
+        protected override string SemanticDescription => "Automatically move data between storage tiers (hot/warm/cold) to optimize cost and performance";
+
+        /// <summary>AI-Native semantic tags for discovery and categorization</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "feature", "tiering", "storage", "optimization",
+            "cost-reduction", "lifecycle", "archival", "glacier"
+        };
+
+        /// <summary>AI-Native performance characteristics profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 50.0,
+            CostPerExecution = 0.0m,
+            MemoryUsageMB = 25.0,
+            ScalabilityRating = ScalabilityLevel.VeryHigh,
+            ReliabilityRating = ReliabilityLevel.High,
+            ConcurrencySafe = true
+        };
+
+        /// <summary>AI-Native capability relationships for orchestration</summary>
+        protected override CapabilityRelationship[] CapabilityRelationships => new[]
+        {
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "storage.local.save",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Use local storage as hot tier"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "storage.s3.save",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Use S3 Standard as warm tier, Glacier as cold tier"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "metadata.postgres.index",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Track access patterns in metadata for tiering decisions"
+            }
+        };
+
+        /// <summary>AI-Native usage examples for natural language understanding</summary>
+        protected override PluginUsageExample[] UsageExamples => new[]
+        {
+            new PluginUsageExample
+            {
+                Scenario = "Archive old data",
+                NaturalLanguageRequest = "Move data older than 90 days to cold storage",
+                ExpectedCapabilityChain = new[] { "feature.tiering.migrate", "storage.s3.save" },
+                EstimatedDurationMs = 5000.0,
+                EstimatedCost = 0.001m
+            }
+        };
 
         protected override async Task InitializeFeatureAsync(IKernelContext context)
         {

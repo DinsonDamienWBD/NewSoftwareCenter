@@ -30,24 +30,28 @@ namespace DataWarehouse.Plugins.Orchestration.Raft.Engine
         public RaftOrchestrationEngine()
             : base("orchestration.raft", "Raft Consensus", new Version(1, 0, 0))
         {
-            SemanticDescription = "Coordinate distributed nodes using Raft consensus algorithm for leader election and log replication";
-
-            SemanticTags = new List<string>
-            {
-                "orchestration", "raft", "consensus", "distributed",
-                "leader-election", "replication", "fault-tolerance"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 50.0,
-                CostPerExecution = 0.0m,
-                MemoryUsageMB = 30.0,
-                ScalabilityRating = ScalabilityLevel.High,
-                ReliabilityRating = ReliabilityLevel.VeryHigh,
-                ConcurrencySafe = true
-            };
         }
+
+        /// <summary>AI-Native semantic description for Raft consensus orchestration</summary>
+        protected override string SemanticDescription => "Coordinate distributed nodes using Raft consensus algorithm for leader election and log replication";
+
+        /// <summary>AI-Native semantic tags for discovery and categorization</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "orchestration", "raft", "consensus", "distributed",
+            "leader-election", "replication", "fault-tolerance"
+        };
+
+        /// <summary>AI-Native performance characteristics profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 50.0,
+            CostPerExecution = 0.0m,
+            MemoryUsageMB = 30.0,
+            ScalabilityRating = ScalabilityLevel.High,
+            ReliabilityRating = ReliabilityLevel.VeryHigh,
+            ConcurrencySafe = true
+        };
 
         protected override async Task InitializeOrchestrationAsync(IKernelContext context)
         {

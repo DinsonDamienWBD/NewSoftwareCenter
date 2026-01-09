@@ -56,69 +56,75 @@ namespace DataWarehouse.Plugins.Storage.IpfsNew.Engine
         public IPFSStorageEngine()
             : base("storage.ipfs", "IPFS Distributed Storage", new Version(1, 0, 0))
         {
-            // AI-Native metadata
-            SemanticDescription = "Store and retrieve data from the IPFS distributed network with content-addressing and automatic deduplication";
-
-            SemanticTags = new List<string>
-            {
-                "storage", "ipfs", "distributed", "p2p", "decentralized",
-                "content-addressed", "immutable", "web3", "blockchain",
-                "nft", "dapp", "censorship-resistant"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 500.0, // Varies significantly
-                ThroughputMBps = 20.0,
-                CostPerExecution = 0.00015m, // ~$0.15/GB/month for pinning
-                MemoryUsageMB = 15.0,
-                ScalabilityRating = ScalabilityLevel.VeryHigh, // Global network
-                ReliabilityRating = ReliabilityLevel.High, // Distributed
-                ConcurrencySafe = true
-            };
-
-            CapabilityRelationships = new List<CapabilityRelationship>
-            {
-                new()
-                {
-                    RelatedCapabilityId = "transform.gzip.apply",
-                    RelationType = RelationType.CanPipeline,
-                    Description = "Compress before storing on IPFS to reduce bandwidth"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "transform.aes.apply",
-                    RelationType = RelationType.CanPipeline,
-                    Description = "Encrypt before storing on IPFS for privacy"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "storage.s3.save",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Use IPFS for immutable content, S3 for mutable data"
-                }
-            };
-
-            UsageExamples = new List<PluginUsageExample>
-            {
-                new()
-                {
-                    Scenario = "Store NFT metadata on IPFS",
-                    NaturalLanguageRequest = "Upload NFT metadata to IPFS and pin it",
-                    ExpectedCapabilityChain = new[] { "storage.ipfs.save" },
-                    EstimatedDurationMs = 1000.0,
-                    EstimatedCost = 0.00015m
-                },
-                new()
-                {
-                    Scenario = "Retrieve content by CID",
-                    NaturalLanguageRequest = "Load this file from IPFS using its CID",
-                    ExpectedCapabilityChain = new[] { "storage.ipfs.load" },
-                    EstimatedDurationMs = 500.0,
-                    EstimatedCost = 0.0m
-                }
-            };
         }
+
+        /// <summary>AI-Native semantic description</summary>
+        protected override string SemanticDescription =>
+            "Store and retrieve data from the IPFS distributed network with content-addressing and automatic deduplication";
+
+        /// <summary>AI-Native semantic tags</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "storage", "ipfs", "distributed", "p2p", "decentralized",
+            "content-addressed", "immutable", "web3", "blockchain",
+            "nft", "dapp", "censorship-resistant"
+        };
+
+        /// <summary>AI-Native performance profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 500.0, // Varies significantly
+            ThroughputMBps = 20.0,
+            CostPerExecution = 0.00015m, // ~$0.15/GB/month for pinning
+            MemoryUsageMB = 15.0,
+            ScalabilityRating = ScalabilityLevel.VeryHigh, // Global network
+            ReliabilityRating = ReliabilityLevel.High, // Distributed
+            ConcurrencySafe = true
+        };
+
+        /// <summary>AI-Native capability relationships</summary>
+        protected override CapabilityRelationship[] CapabilityRelationships => new[]
+        {
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "transform.gzip.apply",
+                RelationType = RelationType.CanPipeline,
+                Description = "Compress before storing on IPFS to reduce bandwidth"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "transform.aes.apply",
+                RelationType = RelationType.CanPipeline,
+                Description = "Encrypt before storing on IPFS for privacy"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "storage.s3.save",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Use IPFS for immutable content, S3 for mutable data"
+            }
+        };
+
+        /// <summary>AI-Native usage examples</summary>
+        protected override PluginUsageExample[] UsageExamples => new[]
+        {
+            new PluginUsageExample
+            {
+                Scenario = "Store NFT metadata on IPFS",
+                NaturalLanguageRequest = "Upload NFT metadata to IPFS and pin it",
+                ExpectedCapabilityChain = new[] { "storage.ipfs.save" },
+                EstimatedDurationMs = 1000.0,
+                EstimatedCost = 0.00015m
+            },
+            new PluginUsageExample
+            {
+                Scenario = "Retrieve content by CID",
+                NaturalLanguageRequest = "Load this file from IPFS using its CID",
+                ExpectedCapabilityChain = new[] { "storage.ipfs.load" },
+                EstimatedDurationMs = 500.0,
+                EstimatedCost = 0.0m
+            }
+        };
 
         /// <summary>
         /// Mounts IPFS storage by connecting to IPFS daemon.

@@ -409,7 +409,198 @@ namespace DataWarehouse.Plugins.Compression.GZip.Engine
 
 ---
 
-### 6. AI-Native Integration
+### 6. CategoryBase Abstract Classes for Plugins
+
+**RULE:** All plugins MUST extend category-specific abstract base classes, NOT implement interfaces directly.
+
+**Architecture Pattern:**
+- ✅ Storage plugins extend `StorageProviderBase`
+- ✅ Feature plugins extend `FeaturePluginBase`
+- ✅ Interface plugins extend `InterfacePluginBase`
+- ✅ Metadata plugins extend `MetadataProviderBase`
+- ✅ Intelligence plugins extend `IntelligencePluginBase`
+- ✅ Orchestration plugins extend `OrchestrationPluginBase`
+- ✅ Security plugins extend `SecurityProviderBase`
+- ✅ Pipeline plugins extend `PipelinePluginBase`
+
+**CategoryBase Benefits:**
+- **Maximum Code Reuse:** Common CRUD operations implemented once in base class
+- **Consistency:** All plugins in same category have identical behavior patterns
+- **Reduced Boilerplate:** Plugins only implement backend-specific logic (5-15 methods vs 50+ methods)
+- **AI-Native Support:** Base classes handle metadata patterns correctly
+
+**Available CategoryBase Classes:**
+
+| CategoryBase | Plugin Type | Abstract Methods | What Plugin Implements |
+|---|---|---|---|
+| `StorageProviderBase` | Storage (S3, Local, IPFS) | `MountInternalAsync`, `ReadBytesAsync`, `WriteBytesAsync`, `DeleteBytesAsync`, `ExistsBytesAsync`, `ListKeysAsync` | Backend-specific storage logic |
+| `FeaturePluginBase` | Features (Tiering, Caching) | `InitializeFeatureAsync`, `StartFeatureAsync`, `StopFeatureAsync` | Feature-specific background tasks |
+| `InterfacePluginBase` | Interfaces (REST, SQL, gRPC) | `InitializeInterfaceAsync`, `StartListeningAsync`, `StopListeningAsync` | Protocol-specific listeners |
+| `MetadataProviderBase` | Metadata (SQLite, Postgres) | `InitializeIndexAsync`, `UpsertIndexEntryAsync`, `GetIndexEntryAsync`, `DeleteIndexEntryAsync`, `ExecuteSearchAsync` | Index backend operations |
+| `IntelligencePluginBase` | AI/Governance | `InitializeIntelligenceAsync`, `StartIntelligenceAsync`, `StopIntelligenceAsync` | AI/governance logic |
+| `OrchestrationPluginBase` | Orchestration (Raft) | `InitializeOrchestrationAsync`, `StartOrchestrationAsync`, `StopOrchestrationAsync` | Distributed coordination |
+| `SecurityProviderBase` | Security/ACL | `InitializeSecurityAsync`, `CheckPermissionInternalAsync`, `GrantPermissionInternalAsync`, `RevokePermissionInternalAsync` | Security backend operations |
+| `PipelinePluginBase` | Pipeline (GZip, AES) | `ApplyTransformAsync`, `ReverseTransformAsync` | Transform logic |
+
+**Property Override Pattern:**
+
+AI-Native metadata properties in `PluginBase` are **virtual getters** (read-only). Plugins must **override** them, NOT assign to them.
+
+**WRONG (CS0200 Error):**
+```csharp
+public class MyPlugin : StorageProviderBase
+{
+    public MyPlugin() : base(...)
+    {
+        // ❌ WRONG: Trying to assign to read-only property
+        SemanticDescription = "My description";
+        SemanticTags = new List<string> { "tag1", "tag2" };
+        PerformanceProfile = new PerformanceCharacteristics { ... };
+        CapabilityRelationships = new List<CapabilityRelationship> { ... };
+        UsageExamples = new List<PluginUsageExample> { ... };
+    }
+}
+```
+
+**CORRECT (Property Override):**
+```csharp
+public class MyPlugin : StorageProviderBase
+{
+    public MyPlugin() : base(...)
+    {
+        // Constructor is empty or contains only other initialization
+    }
+
+    /// <summary>AI-Native semantic description</summary>
+    protected override string SemanticDescription =>
+        "Store and retrieve data from cloud storage with high availability";
+
+    /// <summary>AI-Native semantic tags</summary>
+    protected override string[] SemanticTags => new[]
+    {
+        "storage", "cloud", "scalable", "production"
+    };
+
+    /// <summary>AI-Native performance profile</summary>
+    protected override PerformanceCharacteristics PerformanceProfile => new()
+    {
+        AverageLatencyMs = 50.0,
+        ThroughputMBps = 200.0,
+        CostPerExecution = 0.0004m,
+        MemoryUsageMB = 20.0,
+        ScalabilityRating = ScalabilityLevel.VeryHigh,
+        ReliabilityRating = ReliabilityLevel.VeryHigh,
+        ConcurrencySafe = true
+    };
+
+    /// <summary>AI-Native capability relationships</summary>
+    protected override CapabilityRelationship[] CapabilityRelationships => new[]
+    {
+        new CapabilityRelationship
+        {
+            RelatedCapabilityId = "transform.gzip.apply",
+            RelationType = RelationType.CanPipeline,
+            Description = "Compress data before uploading"
+        }
+    };
+
+    /// <summary>AI-Native usage examples</summary>
+    protected override PluginUsageExample[] UsageExamples => new[]
+    {
+        new PluginUsageExample
+        {
+            Scenario = "Upload file to cloud storage",
+            NaturalLanguageRequest = "Upload this file to S3",
+            ExpectedCapabilityChain = new[] { "storage.s3.save" },
+            EstimatedDurationMs = 200.0,
+            EstimatedCost = 0.0004m
+        }
+    };
+}
+```
+
+**Key Differences:**
+- **Arrays not Lists:** Use `string[]` not `List<string>`, use `new[] { ... }` syntax
+- **Expression-bodied properties:** Use `=>` not `{ get; set; }`
+- **Override modifier:** Use `protected override` not assignment
+- **Property placement:** Define AFTER constructor, not inside it
+- **XML doc comments:** Add `/// <summary>` to each override
+
+**Example (Complete Plugin):**
+```csharp
+/// <summary>
+/// Local filesystem storage provider.
+/// Stores data in a directory on the local filesystem.
+/// </summary>
+public class LocalStorageEngine : StorageProviderBase
+{
+    private string _basePath = string.Empty;
+
+    protected override string StorageType => "local";
+
+    public LocalStorageEngine()
+        : base("storage.local", "Local Filesystem Storage", new Version(1, 0, 0))
+    {
+    }
+
+    // AI-Native metadata (property overrides)
+    protected override string SemanticDescription =>
+        "Store and retrieve data from the local filesystem with atomic writes";
+
+    protected override string[] SemanticTags => new[]
+    {
+        "storage", "filesystem", "local", "development"
+    };
+
+    // ... other property overrides ...
+
+    // Plugin-specific implementation
+    protected override async Task MountInternalAsync(IKernelContext context)
+    {
+        _basePath = context.GetConfigValue("storage.local.basePath")
+            ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".datawarehouse");
+
+        if (!Directory.Exists(_basePath))
+        {
+            Directory.CreateDirectory(_basePath);
+        }
+
+        context.LogInfo($"Mounted local storage at: {_basePath}");
+        await Task.CompletedTask;
+    }
+
+    protected override async Task<byte[]> ReadBytesAsync(string key)
+    {
+        var filePath = Path.Combine(_basePath, key);
+        if (!File.Exists(filePath))
+            throw new FileNotFoundException($"File not found: {key}");
+
+        return await File.ReadAllBytesAsync(filePath);
+    }
+
+    // ... other backend-specific methods ...
+}
+```
+
+**Migration from Interface-Based to CategoryBase:**
+
+If you have an existing plugin implementing `IStorageProvider` directly:
+
+1. **Change base class:** `public class MyPlugin : IStorageProvider` → `public class MyPlugin : StorageProviderBase`
+2. **Remove interface methods:** Delete `SaveAsync`, `LoadAsync`, `DeleteAsync`, `ExistsAsync` - base class handles these
+3. **Implement abstract methods:** Add `MountInternalAsync`, `ReadBytesAsync`, `WriteBytesAsync`, etc.
+4. **Override properties:** Convert metadata assignments to property overrides
+5. **Set StorageType:** Override `protected override string StorageType => "mytype";`
+
+**Why This Matters:**
+- **Prevents CS0200 errors:** Property override pattern is required by C# language
+- **Enforces consistency:** All plugins in category behave identically
+- **Reduces code by 80%:** Plugin only implements backend logic, not boilerplate
+- **Future-proof:** Base class enhancements automatically benefit all plugins
+
+---
+
+### 7. AI-Native Integration
 
 **RULE:** Every component must be designed for AI integration from the start.
 
@@ -481,7 +672,7 @@ protected override PluginUsageExample[] UsageExamples => new[]
 
 ---
 
-### 7. Error Handling & Resilience
+### 8. Error Handling & Resilience
 
 **RULE:** All error conditions must be handled gracefully.
 
@@ -577,7 +768,7 @@ public async Task<ApiResponse> CallExternalApiAsync(string endpoint)
 
 ---
 
-### 8. Performance & Scalability
+### 9. Performance & Scalability
 
 **RULE:** All code must be performant and scalable.
 
@@ -623,7 +814,7 @@ foreach (var capability in capabilities)
 
 ---
 
-### 9. Testing & Validation
+### 10. Testing & Validation
 
 **RULE:** All code must be testable and include validation.
 
@@ -680,7 +871,7 @@ public void SelectOptimalPlan_MinimizeCost_ReturnsLowestCost()
 
 ---
 
-### 10. Security & Safety
+### 11. Security & Safety
 
 **RULE:** Security must be built in, not bolted on.
 
@@ -748,7 +939,7 @@ Before submitting any code, verify:
 
 ---
 
-### 11. Task Tracking & Documentation
+### 12. Task Tracking & Documentation
 
 **RULE:** All tasks must be documented in TODO.md before implementation begins.
 

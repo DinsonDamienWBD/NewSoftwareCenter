@@ -33,52 +33,58 @@ namespace DataWarehouse.Plugins.Interface.REST.Engine
         public RESTInterfaceEngine()
             : base("interface.rest", "REST API Interface", new Version(1, 0, 0))
         {
-            SemanticDescription = "Access data through REST API with JSON request/response and OpenAPI documentation";
-
-            SemanticTags = new List<string>
-            {
-                "interface", "rest", "api", "http", "json",
-                "openapi", "swagger", "web", "microservices"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 15.0,
-                CostPerExecution = 0.0m,
-                MemoryUsageMB = 40.0,
-                ScalabilityRating = ScalabilityLevel.VeryHigh,
-                ReliabilityRating = ReliabilityLevel.High,
-                ConcurrencySafe = true
-            };
-
-            CapabilityRelationships = new List<CapabilityRelationship>
-            {
-                new()
-                {
-                    RelatedCapabilityId = "storage.s3.save",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Upload files via REST API to S3 storage"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "security.acl.check",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Secure REST API endpoints with ACL permissions"
-                }
-            };
-
-            UsageExamples = new List<PluginUsageExample>
-            {
-                new()
-                {
-                    Scenario = "Upload file via API",
-                    NaturalLanguageRequest = "Upload this file using the REST API",
-                    ExpectedCapabilityChain = new[] { "interface.rest.upload", "storage.s3.save" },
-                    EstimatedDurationMs = 200.0,
-                    EstimatedCost = 0.0004m
-                }
-            };
         }
+
+        /// <summary>AI-Native semantic description for REST API interface</summary>
+        protected override string SemanticDescription => "Access data through REST API with JSON request/response and OpenAPI documentation";
+
+        /// <summary>AI-Native semantic tags for discovery and categorization</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "interface", "rest", "api", "http", "json",
+            "openapi", "swagger", "web", "microservices"
+        };
+
+        /// <summary>AI-Native performance characteristics profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 15.0,
+            CostPerExecution = 0.0m,
+            MemoryUsageMB = 40.0,
+            ScalabilityRating = ScalabilityLevel.VeryHigh,
+            ReliabilityRating = ReliabilityLevel.High,
+            ConcurrencySafe = true
+        };
+
+        /// <summary>AI-Native capability relationships for orchestration</summary>
+        protected override CapabilityRelationship[] CapabilityRelationships => new[]
+        {
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "storage.s3.save",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Upload files via REST API to S3 storage"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "security.acl.check",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Secure REST API endpoints with ACL permissions"
+            }
+        };
+
+        /// <summary>AI-Native usage examples for natural language understanding</summary>
+        protected override PluginUsageExample[] UsageExamples => new[]
+        {
+            new PluginUsageExample
+            {
+                Scenario = "Upload file via API",
+                NaturalLanguageRequest = "Upload this file using the REST API",
+                ExpectedCapabilityChain = new[] { "interface.rest.upload", "storage.s3.save" },
+                EstimatedDurationMs = 200.0,
+                EstimatedCost = 0.0004m
+            }
+        };
 
         protected override async Task InitializeInterfaceAsync(IKernelContext context)
         {

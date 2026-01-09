@@ -62,69 +62,74 @@ namespace DataWarehouse.Plugins.Metadata.Postgres.Engine
         public PostgresMetadataEngine()
             : base("metadata.postgres", "PostgreSQL Metadata Index", new Version(1, 0, 0))
         {
-            // AI-Native metadata
-            SemanticDescription = "Index and search metadata using PostgreSQL production database with advanced SQL, JSON support, and high availability";
-
-            SemanticTags = new List<string>
-            {
-                "metadata", "indexing", "postgresql", "postgres", "sql",
-                "production", "acid", "transactional", "scalable",
-                "json", "fulltext-search", "high-availability"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 15.0,
-                ThroughputMBps = 100.0,
-                CostPerExecution = 0.00001m, // ~$0.10/GB/month
-                MemoryUsageMB = 50.0,
-                ScalabilityRating = ScalabilityLevel.VeryHigh, // Billions of entries
-                ReliabilityRating = ReliabilityLevel.VeryHigh, // ACID, HA
-                ConcurrencySafe = true // Full MVCC support
-            };
-
-            CapabilityRelationships = new List<CapabilityRelationship>
-            {
-                new()
-                {
-                    RelatedCapabilityId = "storage.s3.save",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "PostgreSQL pairs perfectly with S3 for production metadata indexing"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "metadata.sqlite.index",
-                    RelationType = RelationType.AlternativeTo,
-                    Description = "Use SQLite for development, PostgreSQL for production"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "intelligence.governance.audit",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Store audit logs and compliance records in PostgreSQL"
-                }
-            };
-
-            UsageExamples = new List<PluginUsageExample>
-            {
-                new()
-                {
-                    Scenario = "Index production data",
-                    NaturalLanguageRequest = "Index this data's metadata in PostgreSQL",
-                    ExpectedCapabilityChain = itemArray,
-                    EstimatedDurationMs = 15.0,
-                    EstimatedCost = 0.00001m
-                },
-                new()
-                {
-                    Scenario = "Complex metadata search",
-                    NaturalLanguageRequest = "Find all files larger than 1GB created in the last week",
-                    ExpectedCapabilityChain = item,
-                    EstimatedDurationMs = 50.0,
-                    EstimatedCost = 0.00001m
-                }
-            };
         }
+
+        /// <summary>AI-Native semantic description for PostgreSQL metadata indexing</summary>
+        protected override string SemanticDescription => "Index and search metadata using PostgreSQL production database with advanced SQL, JSON support, and high availability";
+
+        /// <summary>AI-Native semantic tags for discovery and categorization</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "metadata", "indexing", "postgresql", "postgres", "sql",
+            "production", "acid", "transactional", "scalable",
+            "json", "fulltext-search", "high-availability"
+        };
+
+        /// <summary>AI-Native performance characteristics profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 15.0,
+            ThroughputMBps = 100.0,
+            CostPerExecution = 0.00001m, // ~$0.10/GB/month
+            MemoryUsageMB = 50.0,
+            ScalabilityRating = ScalabilityLevel.VeryHigh, // Billions of entries
+            ReliabilityRating = ReliabilityLevel.VeryHigh, // ACID, HA
+            ConcurrencySafe = true // Full MVCC support
+        };
+
+        /// <summary>AI-Native capability relationships for orchestration</summary>
+        protected override CapabilityRelationship[] CapabilityRelationships => new[]
+        {
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "storage.s3.save",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "PostgreSQL pairs perfectly with S3 for production metadata indexing"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "metadata.sqlite.index",
+                RelationType = RelationType.AlternativeTo,
+                Description = "Use SQLite for development, PostgreSQL for production"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "intelligence.governance.audit",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Store audit logs and compliance records in PostgreSQL"
+            }
+        };
+
+        /// <summary>AI-Native usage examples for natural language understanding</summary>
+        protected override PluginUsageExample[] UsageExamples => new[]
+        {
+            new PluginUsageExample
+            {
+                Scenario = "Index production data",
+                NaturalLanguageRequest = "Index this data's metadata in PostgreSQL",
+                ExpectedCapabilityChain = itemArray,
+                EstimatedDurationMs = 15.0,
+                EstimatedCost = 0.00001m
+            },
+            new PluginUsageExample
+            {
+                Scenario = "Complex metadata search",
+                NaturalLanguageRequest = "Find all files larger than 1GB created in the last week",
+                ExpectedCapabilityChain = item,
+                EstimatedDurationMs = 50.0,
+                EstimatedCost = 0.00001m
+            }
+        };
 
         /// <summary>
         /// Initializes PostgreSQL connection and creates schema.

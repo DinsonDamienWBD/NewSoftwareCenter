@@ -52,77 +52,83 @@ namespace DataWarehouse.Plugins.Storage.LocalNew.Engine
         public LocalStorageEngine()
             : base("storage.local", "Local Filesystem Storage", new Version(1, 0, 0))
         {
-            // AI-Native metadata
-            SemanticDescription = "Store and retrieve data from the local filesystem with atomic writes and cross-platform compatibility";
-
-            SemanticTags = new List<string>
-            {
-                "storage", "filesystem", "local", "disk",
-                "cross-platform", "atomic-writes", "development",
-                "caching", "backup", "edge-computing"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 1.0,
-                ThroughputMBps = 1000.0, // Conservative estimate (varies by disk)
-                CostPerExecution = 0.0m, // Free (local storage)
-                MemoryUsageMB = 10.0, // Minimal memory overhead
-                ScalabilityRating = ScalabilityLevel.Medium, // Limited by disk size
-                ReliabilityRating = ReliabilityLevel.High, // Local storage is reliable
-                ConcurrencySafe = true // Thread-safe with file locking
-            };
-
-            CapabilityRelationships = new List<CapabilityRelationship>
-            {
-                new()
-                {
-                    RelatedCapabilityId = "metadata.sqlite.index",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Local storage pairs well with SQLite indexing for development"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "transform.gzip.apply",
-                    RelationType = RelationType.CanPipeline,
-                    Description = "Compress data before storing locally to save disk space"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "storage.s3.save",
-                    RelationType = RelationType.AlternativeTo,
-                    Description = "Use S3 for production, local storage for development"
-                }
-            };
-
-            UsageExamples = new List<PluginUsageExample>
-            {
-                new()
-                {
-                    Scenario = "Save user file to local storage",
-                    NaturalLanguageRequest = "Save this file to local storage",
-                    ExpectedCapabilityChain = new[] { "storage.local.save" },
-                    EstimatedDurationMs = 10.0,
-                    EstimatedCost = 0.0m
-                },
-                new()
-                {
-                    Scenario = "Load file from local storage",
-                    NaturalLanguageRequest = "Load the file from local storage",
-                    ExpectedCapabilityChain = new[] { "storage.local.load" },
-                    EstimatedDurationMs = 5.0,
-                    EstimatedCost = 0.0m
-                },
-                new()
-                {
-                    Scenario = "Save compressed file locally",
-                    NaturalLanguageRequest = "Compress and save this large file to local storage",
-                    ExpectedCapabilityChain = new[] { "transform.gzip.apply", "storage.local.save" },
-                    EstimatedDurationMs = 100.0,
-                    EstimatedCost = 0.0m
-                }
-            };
         }
+
+        /// <summary>AI-Native semantic description</summary>
+        protected override string SemanticDescription =>
+            "Store and retrieve data from the local filesystem with atomic writes and cross-platform compatibility";
+
+        /// <summary>AI-Native semantic tags</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "storage", "filesystem", "local", "disk",
+            "cross-platform", "atomic-writes", "development",
+            "caching", "backup", "edge-computing"
+        };
+
+        /// <summary>AI-Native performance profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 1.0,
+            ThroughputMBps = 1000.0, // Conservative estimate (varies by disk)
+            CostPerExecution = 0.0m, // Free (local storage)
+            MemoryUsageMB = 10.0, // Minimal memory overhead
+            ScalabilityRating = ScalabilityLevel.Medium, // Limited by disk size
+            ReliabilityRating = ReliabilityLevel.High, // Local storage is reliable
+            ConcurrencySafe = true // Thread-safe with file locking
+        };
+
+        /// <summary>AI-Native capability relationships</summary>
+        protected override CapabilityRelationship[] CapabilityRelationships => new[]
+        {
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "metadata.sqlite.index",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Local storage pairs well with SQLite indexing for development"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "transform.gzip.apply",
+                RelationType = RelationType.CanPipeline,
+                Description = "Compress data before storing locally to save disk space"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "storage.s3.save",
+                RelationType = RelationType.AlternativeTo,
+                Description = "Use S3 for production, local storage for development"
+            }
+        };
+
+        /// <summary>AI-Native usage examples</summary>
+        protected override PluginUsageExample[] UsageExamples => new[]
+        {
+            new PluginUsageExample
+            {
+                Scenario = "Save user file to local storage",
+                NaturalLanguageRequest = "Save this file to local storage",
+                ExpectedCapabilityChain = new[] { "storage.local.save" },
+                EstimatedDurationMs = 10.0,
+                EstimatedCost = 0.0m
+            },
+            new PluginUsageExample
+            {
+                Scenario = "Load file from local storage",
+                NaturalLanguageRequest = "Load the file from local storage",
+                ExpectedCapabilityChain = new[] { "storage.local.load" },
+                EstimatedDurationMs = 5.0,
+                EstimatedCost = 0.0m
+            },
+            new PluginUsageExample
+            {
+                Scenario = "Save compressed file locally",
+                NaturalLanguageRequest = "Compress and save this large file to local storage",
+                ExpectedCapabilityChain = new[] { "transform.gzip.apply", "storage.local.save" },
+                EstimatedDurationMs = 100.0,
+                EstimatedCost = 0.0m
+            }
+        };
 
         /// <summary>
         /// Mounts the local filesystem storage.

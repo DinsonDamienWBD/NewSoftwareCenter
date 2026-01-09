@@ -32,34 +32,39 @@ namespace DataWarehouse.Plugins.Interface.SQL.Engine
         public SQLInterfaceEngine()
             : base("interface.sql", "SQL Query Interface", new Version(1, 0, 0))
         {
-            SemanticDescription = "Query data using SQL or natural language with PostgreSQL wire protocol compatibility";
-
-            SemanticTags = new List<string>
-            {
-                "interface", "sql", "query", "postgresql",
-                "natural-language", "database", "analytics"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 30.0,
-                CostPerExecution = 0.0m,
-                MemoryUsageMB = 50.0,
-                ScalabilityRating = ScalabilityLevel.High,
-                ReliabilityRating = ReliabilityLevel.High,
-                ConcurrencySafe = true
-            };
-
-            CapabilityRelationships = new List<CapabilityRelationship>
-            {
-                new()
-                {
-                    RelatedCapabilityId = "metadata.postgres.query",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "Execute SQL queries against PostgreSQL metadata index"
-                }
-            };
         }
+
+        /// <summary>AI-Native semantic description for SQL query interface</summary>
+        protected override string SemanticDescription => "Query data using SQL or natural language with PostgreSQL wire protocol compatibility";
+
+        /// <summary>AI-Native semantic tags for discovery and categorization</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "interface", "sql", "query", "postgresql",
+            "natural-language", "database", "analytics"
+        };
+
+        /// <summary>AI-Native performance characteristics profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 30.0,
+            CostPerExecution = 0.0m,
+            MemoryUsageMB = 50.0,
+            ScalabilityRating = ScalabilityLevel.High,
+            ReliabilityRating = ReliabilityLevel.High,
+            ConcurrencySafe = true
+        };
+
+        /// <summary>AI-Native capability relationships for orchestration</summary>
+        protected override CapabilityRelationship[] CapabilityRelationships => new[]
+        {
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "metadata.postgres.query",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "Execute SQL queries against PostgreSQL metadata index"
+            }
+        };
 
         protected override async Task InitializeInterfaceAsync(IKernelContext context)
         {

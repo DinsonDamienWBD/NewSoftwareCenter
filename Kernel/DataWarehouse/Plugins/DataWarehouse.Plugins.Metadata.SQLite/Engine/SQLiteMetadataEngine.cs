@@ -59,63 +59,68 @@ namespace DataWarehouse.Plugins.Metadata.SQLite.Engine
         public SQLiteMetadataEngine()
             : base("metadata.sqlite", "SQLite Metadata Index", new Version(1, 0, 0))
         {
-            // AI-Native metadata
-            SemanticDescription = "Index and search metadata using local SQLite database with full SQL support and ACID guarantees";
-
-            SemanticTags = new List<string>
-            {
-                "metadata", "indexing", "sqlite", "sql", "local",
-                "embedded", "acid", "transactional", "development",
-                "edge-computing", "serverless"
-            };
-
-            PerformanceProfile = new PerformanceCharacteristics
-            {
-                AverageLatencyMs = 5.0,
-                ThroughputMBps = 50.0,
-                CostPerExecution = 0.0m, // Free (local storage)
-                MemoryUsageMB = 20.0,
-                ScalabilityRating = ScalabilityLevel.Medium, // Up to 10M entries
-                ReliabilityRating = ReliabilityLevel.High, // ACID transactions
-                ConcurrencySafe = true // SQLite supports concurrent reads
-            };
-
-            CapabilityRelationships = new List<CapabilityRelationship>
-            {
-                new()
-                {
-                    RelatedCapabilityId = "storage.local.save",
-                    RelationType = RelationType.ComplementaryWith,
-                    Description = "SQLite pairs perfectly with local filesystem storage for development"
-                },
-                new()
-                {
-                    RelatedCapabilityId = "metadata.postgres.index",
-                    RelationType = RelationType.AlternativeTo,
-                    Description = "Use PostgreSQL for production, SQLite for development"
-                }
-            };
-
-            UsageExamples = new List<PluginUsageExample>
-            {
-                new()
-                {
-                    Scenario = "Index file metadata",
-                    NaturalLanguageRequest = "Index this file's metadata in SQLite",
-                    ExpectedCapabilityChain = new[] { "metadata.sqlite.index" },
-                    EstimatedDurationMs = 5.0,
-                    EstimatedCost = 0.0m
-                },
-                new()
-                {
-                    Scenario = "Search for files",
-                    NaturalLanguageRequest = "Find all files with extension .pdf",
-                    ExpectedCapabilityChain = new[] { "metadata.sqlite.search" },
-                    EstimatedDurationMs = 10.0,
-                    EstimatedCost = 0.0m
-                }
-            };
         }
+
+        /// <summary>AI-Native semantic description for SQLite metadata indexing</summary>
+        protected override string SemanticDescription => "Index and search metadata using local SQLite database with full SQL support and ACID guarantees";
+
+        /// <summary>AI-Native semantic tags for discovery and categorization</summary>
+        protected override string[] SemanticTags => new[]
+        {
+            "metadata", "indexing", "sqlite", "sql", "local",
+            "embedded", "acid", "transactional", "development",
+            "edge-computing", "serverless"
+        };
+
+        /// <summary>AI-Native performance characteristics profile</summary>
+        protected override PerformanceCharacteristics PerformanceProfile => new()
+        {
+            AverageLatencyMs = 5.0,
+            ThroughputMBps = 50.0,
+            CostPerExecution = 0.0m, // Free (local storage)
+            MemoryUsageMB = 20.0,
+            ScalabilityRating = ScalabilityLevel.Medium, // Up to 10M entries
+            ReliabilityRating = ReliabilityLevel.High, // ACID transactions
+            ConcurrencySafe = true // SQLite supports concurrent reads
+        };
+
+        /// <summary>AI-Native capability relationships for orchestration</summary>
+        protected override CapabilityRelationship[] CapabilityRelationships => new[]
+        {
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "storage.local.save",
+                RelationType = RelationType.ComplementaryWith,
+                Description = "SQLite pairs perfectly with local filesystem storage for development"
+            },
+            new CapabilityRelationship
+            {
+                RelatedCapabilityId = "metadata.postgres.index",
+                RelationType = RelationType.AlternativeTo,
+                Description = "Use PostgreSQL for production, SQLite for development"
+            }
+        };
+
+        /// <summary>AI-Native usage examples for natural language understanding</summary>
+        protected override PluginUsageExample[] UsageExamples => new[]
+        {
+            new PluginUsageExample
+            {
+                Scenario = "Index file metadata",
+                NaturalLanguageRequest = "Index this file's metadata in SQLite",
+                ExpectedCapabilityChain = new[] { "metadata.sqlite.index" },
+                EstimatedDurationMs = 5.0,
+                EstimatedCost = 0.0m
+            },
+            new PluginUsageExample
+            {
+                Scenario = "Search for files",
+                NaturalLanguageRequest = "Find all files with extension .pdf",
+                ExpectedCapabilityChain = new[] { "metadata.sqlite.search" },
+                EstimatedDurationMs = 10.0,
+                EstimatedCost = 0.0m
+            }
+        };
 
         /// <summary>
         /// Initializes SQLite database and creates schema.
