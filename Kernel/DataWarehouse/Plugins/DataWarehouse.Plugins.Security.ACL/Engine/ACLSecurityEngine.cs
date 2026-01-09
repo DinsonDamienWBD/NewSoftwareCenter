@@ -10,7 +10,7 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
     /// - Hierarchical Path Expansion: Permissions on parent paths apply to children
     /// - Wildcard User Support: Use "*" to grant permissions to all users
     /// - Deny-Trumps-Allow: Explicit deny rules override any allow permissions
-    /// - Persistent Storage: Uses DurableState for disk-based persistence
+    /// - Persistent Storage: Uses DurableStateV2 for storage-agnostic persistence
     ///
     /// Example:
     ///   SetPermissions("users/damien", "damien", Permission.Read, Permission.None);
@@ -19,13 +19,13 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
     /// Performance:
     /// - Permission checks: <5ms (hierarchical path traversal)
     /// - Throughput: 10,000+ checks/sec
-    /// - Memory: Low (disk-backed with in-memory cache)
+    /// - Memory: Low (storage-backed with in-memory cache)
     /// </summary>
     public class ACLSecurityEngine
     {
         // Persistent Store: ResourcePath -> Dictionary<Subject, AclEntry>
         // Subject can be a username or "*" for wildcard (all users)
-        private readonly DurableState<Dictionary<string, AclEntry>> _store;
+        private readonly DurableStateV2<Dictionary<string, AclEntry>> _store;
         private readonly string _storagePath;
 
         /// <summary>
@@ -38,8 +38,13 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
             var securityDir = Path.Combine(rootPath, "Security");
             Directory.CreateDirectory(securityDir);
 
-            _storagePath = Path.Combine(securityDir, "acl_enhanced.db");
-            _store = new DurableState<Dictionary<string, AclEntry>>(_storagePath);
+            _storagePath = Path.Combine(securityDir, "acl_enhanced.journal");
+
+            // Create simple local storage provider for internal use
+            var storageProvider = new SimpleLocalStorageProvider(securityDir);
+
+            // Initialize DurableStateV2 with ACL journal
+            _store = new DurableStateV2<Dictionary<string, AclEntry>>(storageProvider, "acl_enhanced.journal");
         }
 
         /// <summary>
@@ -54,7 +59,7 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         }
 
         /// <summary>
-        /// Sets permissions for a subject (user or wildcard "*") on a resource.
+        /// Sets permissions for a subject (user or wildcard "*") on a resource (asynchronous).
         /// </summary>
         /// <param name="resource">The resource path (e.g., "users/damien/docs")</param>
         /// <param name="subject">The username or "*" for all users</param>
@@ -62,9 +67,9 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         /// <param name="deny">Permissions to explicitly deny (OR combination of Permission flags)</param>
         /// <example>
         /// // Grant read and write, but deny delete
-        /// SetPermissions("users/damien/docs", "damien", Permission.Read | Permission.Write, Permission.Delete);
+        /// await SetPermissionsAsync("users/damien/docs", "damien", Permission.Read | Permission.Write, Permission.Delete);
         /// </example>
-        public void SetPermissions(string resource, string subject, Permission allow, Permission deny)
+        public async Task SetPermissionsAsync(string resource, string subject, Permission allow, Permission deny)
         {
             // Normalize resource path (remove trailing slashes)
             resource = NormalizeResourcePath(resource);
@@ -88,8 +93,16 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
                 Deny = deny
             };
 
-            // Persist to disk
-            _store.Set(resource, entries);
+            // Persist to storage
+            await _store.SetAsync(resource, entries);
+        }
+
+        /// <summary>
+        /// Sets permissions for a subject (user or wildcard "*") on a resource (synchronous wrapper).
+        /// </summary>
+        public void SetPermissions(string resource, string subject, Permission allow, Permission deny)
+        {
+            SetPermissionsAsync(resource, subject, allow, deny).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -171,11 +184,11 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         }
 
         /// <summary>
-        /// Removes all permissions for a subject on a resource.
+        /// Removes all permissions for a subject on a resource (asynchronous).
         /// </summary>
         /// <param name="resource">The resource path</param>
         /// <param name="subject">The username or "*"</param>
-        public void RemovePermissions(string resource, string subject)
+        public async Task RemovePermissionsAsync(string resource, string subject)
         {
             resource = NormalizeResourcePath(resource);
 
@@ -186,13 +199,21 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
                 if (entries.Count == 0)
                 {
                     // Remove the resource entirely if no entries remain
-                    _store.Remove(resource, out _);
+                    await _store.RemoveAsync(resource);
                 }
                 else
                 {
-                    _store.Set(resource, entries);
+                    await _store.SetAsync(resource, entries);
                 }
             }
+        }
+
+        /// <summary>
+        /// Removes all permissions for a subject on a resource (synchronous wrapper).
+        /// </summary>
+        public void RemovePermissions(string resource, string subject)
+        {
+            RemovePermissionsAsync(resource, subject).GetAwaiter().GetResult();
         }
 
         /// <summary>
@@ -234,16 +255,19 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         }
 
         /// <summary>
-        /// Clears all ACL entries from storage. USE WITH CAUTION!
+        /// Clears all ACL entries from storage (asynchronous). USE WITH CAUTION!
+        /// </summary>
+        public async Task ClearAllAsync()
+        {
+            await _store.ClearAsync();
+        }
+
+        /// <summary>
+        /// Clears all ACL entries from storage (synchronous wrapper). USE WITH CAUTION!
         /// </summary>
         public void ClearAll()
         {
-            // Get all keys and remove them one by one
-            var keys = _store.GetAllKeyValues().Select(kvp => kvp.Key).ToList();
-            foreach (var key in keys)
-            {
-                _store.Remove(key, out _);
-            }
+            ClearAllAsync().GetAwaiter().GetResult();
         }
 
         /// <summary>
