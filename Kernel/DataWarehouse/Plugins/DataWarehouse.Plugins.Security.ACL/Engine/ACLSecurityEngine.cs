@@ -134,17 +134,17 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
                 currentPath = string.IsNullOrEmpty(currentPath) ? part : $"{currentPath}/{part}";
 
                 // Check if ACL rules exist for this path level
-                if (_store.TryGet(currentPath, out var entries))
+                if (_store.TryGet(currentPath, out var entries) && entries != null)
                 {
                     // 1. Check subject-specific rule
-                    if (entries.TryGetValue(subject, out AclEntry? userRule))
+                    if (entries.TryGetValue(subject, out AclEntry? userRule) && userRule != null)
                     {
                         effectiveAllow |= userRule.Allow;
                         effectiveDeny |= userRule.Deny;
                     }
 
                     // 2. Check wildcard rule ("*" applies to all users)
-                    if (entries.TryGetValue("*", out var wildcardRule))
+                    if (entries.TryGetValue("*", out var wildcardRule) && wildcardRule != null)
                     {
                         effectiveAllow |= wildcardRule.Allow;
                         effectiveDeny |= wildcardRule.Deny;
@@ -173,14 +173,14 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         {
             resource = NormalizeResourcePath(resource);
 
-            if (_store.TryGet(resource, out var entries))
+            if (_store.TryGet(resource, out var entries) && entries != null)
             {
                 entries.Remove(subject);
 
                 if (entries.Count == 0)
                 {
                     // Remove the resource entirely if no entries remain
-                    _store.Remove(resource);
+                    _store.Remove(resource, out _);
                 }
                 else
                 {
@@ -232,7 +232,12 @@ namespace DataWarehouse.Plugins.Security.ACL.Engine
         /// </summary>
         public void ClearAll()
         {
-            _store.Clear();
+            // Get all keys and remove them one by one
+            var keys = _store.GetAllKeyValues().Select(kvp => kvp.Key).ToList();
+            foreach (var key in keys)
+            {
+                _store.Remove(key, out _);
+            }
         }
 
         /// <summary>
