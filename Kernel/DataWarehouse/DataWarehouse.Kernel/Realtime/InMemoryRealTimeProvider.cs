@@ -25,6 +25,38 @@ namespace DataWarehouse.Kernel.Realtime
         /// </summary>
         public string Name => "In memory Realtime Provider";
 
+        /// <summary>
+        /// Handshake implementation for IPlugin
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Messaging,
+                capabilities: new List<PluginCapabilityDescriptor>
+                {
+                    new PluginCapabilityDescriptor
+                    {
+                        CapabilityId = "messaging.memory.realtime",
+                        DisplayName = "In-Memory Realtime Provider",
+                        Description = "Provides in-memory event messaging for laptop mode",
+                        Category = CapabilityCategory.Messaging
+                    }
+                },
+                initDuration: TimeSpan.Zero
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional)
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
         // Map: SubscriptionID -> Handler
         private readonly ConcurrentDictionary<Guid, Subscription> _subs = new();
         private readonly Channel<StorageEvent> _channel;

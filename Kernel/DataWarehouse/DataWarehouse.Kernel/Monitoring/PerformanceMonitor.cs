@@ -12,7 +12,6 @@ namespace DataWarehouse.Kernel.Monitoring
     {
         private readonly IKernelContext _context;
         private readonly ConcurrentDictionary<string, MetricTimeSeries> _metrics = new();
-        private readonly ConcurrentDictionary<string, PerformanceCounter> _counters = new();
         private readonly object _lock = new();
 
         // Metrics Configuration

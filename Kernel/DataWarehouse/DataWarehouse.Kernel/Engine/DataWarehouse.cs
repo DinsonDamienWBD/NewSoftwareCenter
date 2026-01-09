@@ -558,6 +558,20 @@ namespace DataWarehouse.Kernel.Engine
             public void CreateScope(string r, string o) { }
             public void SetPermissions(string r, string s, Permission a, Permission d) { }
             public bool HasAccess(string r, string s, Permission p) => true;
+
+            public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+            {
+                return Task.FromResult(HandshakeResponse.Success(
+                    pluginId: Id,
+                    name: Name,
+                    version: new Version("0.0.1"),
+                    category: PluginCategory.Security,
+                    capabilities: [],
+                    initDuration: TimeSpan.Zero
+                ));
+            }
+
+            public Task OnMessageAsync(PluginMessage message) => Task.CompletedTask;
         }
 
         private class PassiveSentinelFallback : INeuralSentinel
@@ -570,6 +584,20 @@ namespace DataWarehouse.Kernel.Engine
             public static Task StopAsync() => Task.CompletedTask;
             public Task<GovernanceJudgment> EvaluateAsync(SentinelContext c)
                 => Task.FromResult(new GovernanceJudgment { InterventionRequired = false });
+
+            public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+            {
+                return Task.FromResult(HandshakeResponse.Success(
+                    pluginId: Id,
+                    name: Name,
+                    version: new Version("0.0.1"),
+                    category: PluginCategory.Intelligence,
+                    capabilities: [],
+                    initDuration: TimeSpan.Zero
+                ));
+            }
+
+            public Task OnMessageAsync(PluginMessage message) => Task.CompletedTask;
         }
     }
 }

@@ -30,6 +30,39 @@ namespace DataWarehouse.Kernel.IO
         private readonly string _root = rootPath;
 
         /// <summary>
+        /// Handshake implementation for IPlugin
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            Directory.CreateDirectory(_root);
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Storage,
+                capabilities: new List<PluginCapabilityDescriptor>
+                {
+                    new PluginCapabilityDescriptor
+                    {
+                        CapabilityId = "storage.local.disk",
+                        DisplayName = "Local Disk Storage",
+                        Description = "Provides persistent local file system storage",
+                        Category = CapabilityCategory.Storage
+                    }
+                },
+                initDuration: TimeSpan.Zero
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional for storage providers)
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Initialize provider
         /// </summary>
         /// <param name="context"></param>

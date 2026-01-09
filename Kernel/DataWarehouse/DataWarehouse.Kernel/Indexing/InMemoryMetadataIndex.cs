@@ -27,6 +27,38 @@ namespace DataWarehouse.Kernel.Indexing
         private readonly ConcurrentDictionary<string, Manifest> _store = new();
 
         /// <summary>
+        /// Handshake implementation for IPlugin
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Indexing,
+                capabilities: new List<PluginCapabilityDescriptor>
+                {
+                    new PluginCapabilityDescriptor
+                    {
+                        CapabilityId = "indexing.memory.metadata",
+                        DisplayName = "In-Memory Metadata Index",
+                        Description = "Provides in-memory metadata indexing for laptop mode",
+                        Category = CapabilityCategory.Indexing
+                    }
+                },
+                initDuration: TimeSpan.Zero
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional)
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Initialize
         /// </summary>
         /// <param name="context"></param>

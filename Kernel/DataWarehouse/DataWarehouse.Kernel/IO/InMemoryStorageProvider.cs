@@ -34,6 +34,38 @@ namespace DataWarehouse.Kernel.IO
         private readonly ConcurrentDictionary<string, byte[]> _store = new();
 
         /// <summary>
+        /// Handshake implementation for IPlugin
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Storage,
+                capabilities: new List<PluginCapabilityDescriptor>
+                {
+                    new PluginCapabilityDescriptor
+                    {
+                        CapabilityId = "storage.inmemory.volatile",
+                        DisplayName = "Volatile RAM Storage",
+                        Description = "Provides in-memory storage that is lost on process exit",
+                        Category = CapabilityCategory.Storage
+                    }
+                },
+                initDuration: TimeSpan.Zero
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional for storage providers)
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
+        /// <summary>
         /// Initialize
         /// </summary>
         /// <param name="context"></param>

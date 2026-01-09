@@ -15,6 +15,38 @@ namespace DataWarehouse.Kernel.Storage
         public string Name => "Storage Pool Manager";
         public string Scheme => "pool";
 
+        /// <summary>
+        /// Handshake implementation for IPlugin
+        /// </summary>
+        public Task<HandshakeResponse> OnHandshakeAsync(HandshakeRequest request)
+        {
+            return Task.FromResult(HandshakeResponse.Success(
+                pluginId: Id,
+                name: Name,
+                version: new Version(Version),
+                category: PluginCategory.Storage,
+                capabilities: new List<PluginCapabilityDescriptor>
+                {
+                    new PluginCapabilityDescriptor
+                    {
+                        CapabilityId = "storage.pool.manager",
+                        DisplayName: "Storage Pool Manager",
+                        Description = "Manages storage pools with RAID, caching, and tiering support",
+                        Category = CapabilityCategory.Storage
+                    }
+                },
+                initDuration: TimeSpan.Zero
+            ));
+        }
+
+        /// <summary>
+        /// Message handler (optional)
+        /// </summary>
+        public Task OnMessageAsync(PluginMessage message)
+        {
+            return Task.CompletedTask;
+        }
+
         private readonly IKernelContext _context;
         private readonly ConcurrentDictionary<string, IStorageProvider> _providers;
         private readonly StoragePoolConfig _config;

@@ -495,15 +495,15 @@ namespace DataWarehouse.Kernel.Security
 
     public class AuthenticationResult
     {
-        public bool Success { get; init; }
+        public bool IsSuccess { get; init; }
         public UserSession? Session { get; init; }
         public string? Error { get; init; }
 
         public static AuthenticationResult Success(UserSession session) =>
-            new() { Success = true, Session = session };
+            new() { IsSuccess = true, Session = session };
 
         public static AuthenticationResult Failed(string error) =>
-            new() { Success = false, Error = error };
+            new() { IsSuccess = false, Error = error };
     }
 
     public class AuthorizationResult
