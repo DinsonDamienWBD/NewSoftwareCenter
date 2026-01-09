@@ -271,7 +271,7 @@ namespace DataWarehouse.SDK.Contracts.CategoryBases
             if (_currentSize + additionalBytes > _reservedSize)
             {
                 // Grow by 50% or required size, whichever is larger
-                var growthNeeded = Math.Max(additionalBytes, _reservedSize / 2);
+                var growthNeeded = MathUtils.Max(additionalBytes, _reservedSize / 2);
                 _reservedSize += growthNeeded;
                 Context?.LogInfo($"Storage grew to {_reservedSize / 1024 / 1024}MB");
             }
