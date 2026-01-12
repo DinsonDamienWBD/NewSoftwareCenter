@@ -24,7 +24,7 @@ namespace DataWarehouse.SDK.Primitives
         public string RootPath { get; init; } = string.Empty;
 
         // For dependency resolution
-        public List<PluginDescriptor> AlreadyLoadedPlugins { get; init; } = new();
+        public List<PluginDescriptor> AlreadyLoadedPlugins { get; init; } = [];
     }
 
     // SDK/Messaging/HandshakeResponse.cs
@@ -52,13 +52,13 @@ namespace DataWarehouse.SDK.Primitives
         public string? ErrorMessage { get; init; }
 
         // Capabilities
-        public List<PluginCapabilityDescriptor> Capabilities { get; init; } = new();
+        public List<PluginCapabilityDescriptor> Capabilities { get; init; } = [];
 
         // Dependencies
-        public List<PluginDependency> Dependencies { get; init; } = new();
+        public List<PluginDependency> Dependencies { get; init; } = [];
 
         // Metadata
-        public Dictionary<string, object> Metadata { get; init; } = new();
+        public Dictionary<string, object> Metadata { get; init; } = [];
 
         // Initialization time (for performance tracking)
         public TimeSpan InitializationDuration { get; init; }

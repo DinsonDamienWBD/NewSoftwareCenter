@@ -4,26 +4,17 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>OLD - DataWarehouse.Plugins.Features.Consensus</AssemblyName>
+    <AssemblyName>OLD - DataWarehouse.Plugins.Features.SQL</AssemblyName>
     <BaseOutputPath>C:\Users\ddamien\Downloads\Upgrade scripts\C# ASP.NET Kestrel Version\NewSoftwareCenter\Kernel\DataWarehouse\DataWarehouse.Kernel\bin\$(Configuration)\net10.0\Plugins</BaseOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Google.Protobuf" Version="3.33.2" />
-    <PackageReference Include="Grpc.Net.Client" Version="2.76.0" />
-    <PackageReference Include="Grpc.Tools" Version="2.76.0">
-      <PrivateAssets>all</PrivateAssets>
-      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-    </PackageReference>
     <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\DataWarehouse.SDK\DataWarehouse.SDK.csproj" />
   </ItemGroup>
-
-	<ItemGroup>
-		<Protobuf Include="Protos\storage.proto" GrpcServices="Both" />
-	</ItemGroup>
 
 </Project>

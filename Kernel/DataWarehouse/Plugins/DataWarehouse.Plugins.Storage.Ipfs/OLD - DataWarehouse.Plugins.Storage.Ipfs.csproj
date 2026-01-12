@@ -4,14 +4,12 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>OLD - DataWarehouse.Plugins.Storage.S3</AssemblyName>
+    <AssemblyName>OLD - DataWarehouse.Plugins.Storage.Ipfs</AssemblyName>
     <BaseOutputPath>C:\Users\ddamien\Downloads\Upgrade scripts\C# ASP.NET Kestrel Version\NewSoftwareCenter\Kernel\DataWarehouse\DataWarehouse.Kernel\bin\$(Configuration)\net10.0\Plugins</BaseOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AWSSDK.S3" Version="4.0.16.3" />
-    <PackageReference Include="AWSSDK.Transfer" Version="4.0.5.4" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>

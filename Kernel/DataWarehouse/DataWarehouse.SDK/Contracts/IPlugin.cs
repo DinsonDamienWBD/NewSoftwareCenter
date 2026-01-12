@@ -10,7 +10,7 @@ namespace DataWarehouse.SDK.Contracts
         /// <summary>
         /// Unique Plugin ID
         /// </summary>
-        Guid Id { get; }
+        string Id { get; }
 
         /// <summary>
         /// Gets the category of the plugin.

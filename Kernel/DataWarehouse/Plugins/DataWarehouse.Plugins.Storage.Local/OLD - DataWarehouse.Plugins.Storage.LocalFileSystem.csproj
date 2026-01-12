@@ -4,12 +4,13 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <AssemblyName>OLD - DataWarehouse.Plugins.Indexing.Postgres</AssemblyName>
+    <AssemblyName>OLD - DataWarehouse.Plugins.Storage.LocalFileSystem</AssemblyName>
     <BaseOutputPath>C:\Users\ddamien\Downloads\Upgrade scripts\C# ASP.NET Kestrel Version\NewSoftwareCenter\Kernel\DataWarehouse\DataWarehouse.Kernel\bin\$(Configuration)\net10.0\Plugins</BaseOutputPath>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Npgsql" Version="10.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.1" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
   <ItemGroup>

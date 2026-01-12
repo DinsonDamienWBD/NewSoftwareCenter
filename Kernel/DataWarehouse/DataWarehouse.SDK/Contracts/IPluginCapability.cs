@@ -9,7 +9,7 @@ using System.Threading;
 
 namespace DataWarehouse.SDK.Contracts
 {
-    public class IPluginCapability
+    public interface IPluginCapability
     {
         /// <summary>
         /// Gets the unique identifier of the capability represented by this instance.

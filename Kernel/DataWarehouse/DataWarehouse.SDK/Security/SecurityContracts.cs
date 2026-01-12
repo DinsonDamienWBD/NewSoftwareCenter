@@ -1,4 +1,5 @@
 ﻿using DataWarehouse.SDK.Contracts;
+using DataWarehouse.SDK.Primitives;
 
 namespace DataWarehouse.SDK.Security
 {

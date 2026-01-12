@@ -1,5 +1,6 @@
 ﻿using DataWarehouse.SDK.Attributes;
 using DataWarehouse.SDK.Contracts;
+using DataWarehouse.SDK.Primitives;
 using System.Collections.Concurrent;
 using System.Reflection;
 
