@@ -7,10 +7,11 @@
     public interface IDataTransformation : IPlugin
     {
         /// <summary>
-        /// Self-Identified Category.
+        /// Self-Identified Sub-Category.
         /// Examples: "Encryption", "Compression", "Sanitization", "Watermarking"
+        /// This provides more specific categorization beyond the plugin Category enum.
         /// </summary>
-        string Category { get; }
+        new string SubCategory { get; }
 
         /// <summary>
         /// A generic score (1-100) for sorting.
