@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>OLD - Core</AssemblyName>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
 	  <CopyDocumentationFileToOutputDirectory>true</CopyDocumentationFileToOutputDirectory>
   </PropertyGroup>

@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>OLD - Host</AssemblyName>
 	  <EnableDynamicLoading>true</EnableDynamicLoading>
 	  <GenerateDocumentationFile>True</GenerateDocumentationFile>
 	  <CopyDocumentationFileToOutputDirectory>true</CopyDocumentationFileToOutputDirectory>

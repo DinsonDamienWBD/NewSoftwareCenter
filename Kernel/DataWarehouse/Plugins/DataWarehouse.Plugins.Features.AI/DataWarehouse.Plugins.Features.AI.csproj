@@ -4,6 +4,7 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <AssemblyName>OLD - DataWarehouse.Plugins.Features.AI</AssemblyName>
     <BaseOutputPath>C:\Users\ddamien\Downloads\Upgrade scripts\C# ASP.NET Kestrel Version\NewSoftwareCenter\Kernel\DataWarehouse\DataWarehouse.Kernel\bin\$(Configuration)\net10.0\Plugins</BaseOutputPath>
   </PropertyGroup>
 
