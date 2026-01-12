@@ -2,41 +2,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.5.2.0
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.CLI", "DataWarehouse.CLI\DataWarehouse.CLI.csproj", "{C1F60BB8-7A8B-FA9D-8560-E9FE05C53D2C}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Kernel", "DataWarehouse.Kernel\DataWarehouse.Kernel.csproj", "{1F8908C7-54FB-535B-4FBE-38F20AF46BDE}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataWarehouse.SDK", "DataWarehouse.SDK\DataWarehouse.SDK.csproj", "{09F384B5-8F34-2A47-E177-BD50154FA7A1}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Plugins", "Plugins", "{07D57EEB-2F50-60C4-C011-FE4FA775C9A8}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Compression.Standard", "Plugins\DataWarehouse.Plugins.Compression.Standard\DataWarehouse.Plugins.Compression.Standard.csproj", "{38D3CFBC-6EEF-28A7-AE70-697A91DB364F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Crypto.Standard", "Plugins\DataWarehouse.Plugins.Crypto.Standard\DataWarehouse.Plugins.Crypto.Standard.csproj", "{4A9AF850-F3D1-F87E-8C00-8BD088251D32}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Features.AI", "Plugins\DataWarehouse.Plugins.Features.AI\DataWarehouse.Plugins.Features.AI.csproj", "{FA59EEC5-3FB8-5BF8-E3E7-CCA0A3C7C9F2}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Features.Consensus", "Plugins\DataWarehouse.Plugins.Features.Consensus\DataWarehouse.Plugins.Features.Consensus.csproj", "{AF3CB709-E770-8BDD-203C-7CFFFE97308F}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Features.EnterpriseStorage", "Plugins\DataWarehouse.Plugins.Features.EnterpriseStorage\DataWarehouse.Plugins.Features.EnterpriseStorage.csproj", "{8FA1A1DE-72BA-60B6-20F0-FE22AD22882D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Features.Governance", "Plugins\DataWarehouse.Plugins.Features.Governance\DataWarehouse.Plugins.Features.Governance.csproj", "{1A77D3C3-EE2C-4377-E43B-3D289BE93D12}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Features.SQL", "Plugins\DataWarehouse.Plugins.Features.SQL\DataWarehouse.Plugins.Features.SQL.csproj", "{96122C69-16D6-EAF2-6174-95BD338A64E0}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Indexing.Postgres", "Plugins\DataWarehouse.Plugins.Indexing.Postgres\DataWarehouse.Plugins.Indexing.Postgres.csproj", "{A68726FC-1670-F3D5-A5B6-86D88669476E}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Indexing.Sqlite", "Plugins\DataWarehouse.Plugins.Indexing.Sqlite\DataWarehouse.Plugins.Indexing.Sqlite.csproj", "{ECB0BDC7-51FE-13B4-E786-D0632BCF3396}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Security.Granular", "Plugins\DataWarehouse.Plugins.Security.Granular\DataWarehouse.Plugins.Security.Granular.csproj", "{B82FF8DA-A44E-06DB-BF38-CED93D49C035}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Storage.Ipfs", "Plugins\DataWarehouse.Plugins.Storage.Ipfs\DataWarehouse.Plugins.Storage.Ipfs.csproj", "{5D5DEC3F-340F-C10D-59CC-77331479A90A}"
-EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "DataWarehouse.Plugins.Storage.Local", "DataWarehouse.Plugins.Storage.Local", "{78C83685-47DB-BA90-BFB0-C0E02E488A1D}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Storage.LocalFileSystem", "Plugins\DataWarehouse.Plugins.Storage.Local\DataWarehouse.Plugins.Storage.LocalFileSystem.csproj", "{02080154-CFCE-7A20-6B57-3BB1D64FD26B}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OLD - DataWarehouse.Plugins.Storage.S3", "Plugins\DataWarehouse.Plugins.Storage.S3\DataWarehouse.Plugins.Storage.S3.csproj", "{D007B8D7-4B19-C057-567F-FFB77E56C28C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -44,89 +10,13 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{C1F60BB8-7A8B-FA9D-8560-E9FE05C53D2C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{C1F60BB8-7A8B-FA9D-8560-E9FE05C53D2C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{C1F60BB8-7A8B-FA9D-8560-E9FE05C53D2C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{C1F60BB8-7A8B-FA9D-8560-E9FE05C53D2C}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1F8908C7-54FB-535B-4FBE-38F20AF46BDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1F8908C7-54FB-535B-4FBE-38F20AF46BDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1F8908C7-54FB-535B-4FBE-38F20AF46BDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1F8908C7-54FB-535B-4FBE-38F20AF46BDE}.Release|Any CPU.Build.0 = Release|Any CPU
 		{09F384B5-8F34-2A47-E177-BD50154FA7A1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{09F384B5-8F34-2A47-E177-BD50154FA7A1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{09F384B5-8F34-2A47-E177-BD50154FA7A1}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{09F384B5-8F34-2A47-E177-BD50154FA7A1}.Release|Any CPU.Build.0 = Release|Any CPU
-		{38D3CFBC-6EEF-28A7-AE70-697A91DB364F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{38D3CFBC-6EEF-28A7-AE70-697A91DB364F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{38D3CFBC-6EEF-28A7-AE70-697A91DB364F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{38D3CFBC-6EEF-28A7-AE70-697A91DB364F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4A9AF850-F3D1-F87E-8C00-8BD088251D32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4A9AF850-F3D1-F87E-8C00-8BD088251D32}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4A9AF850-F3D1-F87E-8C00-8BD088251D32}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4A9AF850-F3D1-F87E-8C00-8BD088251D32}.Release|Any CPU.Build.0 = Release|Any CPU
-		{FA59EEC5-3FB8-5BF8-E3E7-CCA0A3C7C9F2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{FA59EEC5-3FB8-5BF8-E3E7-CCA0A3C7C9F2}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{FA59EEC5-3FB8-5BF8-E3E7-CCA0A3C7C9F2}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{FA59EEC5-3FB8-5BF8-E3E7-CCA0A3C7C9F2}.Release|Any CPU.Build.0 = Release|Any CPU
-		{AF3CB709-E770-8BDD-203C-7CFFFE97308F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{AF3CB709-E770-8BDD-203C-7CFFFE97308F}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{AF3CB709-E770-8BDD-203C-7CFFFE97308F}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{AF3CB709-E770-8BDD-203C-7CFFFE97308F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{8FA1A1DE-72BA-60B6-20F0-FE22AD22882D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8FA1A1DE-72BA-60B6-20F0-FE22AD22882D}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{8FA1A1DE-72BA-60B6-20F0-FE22AD22882D}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{8FA1A1DE-72BA-60B6-20F0-FE22AD22882D}.Release|Any CPU.Build.0 = Release|Any CPU
-		{1A77D3C3-EE2C-4377-E43B-3D289BE93D12}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{1A77D3C3-EE2C-4377-E43B-3D289BE93D12}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{1A77D3C3-EE2C-4377-E43B-3D289BE93D12}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{1A77D3C3-EE2C-4377-E43B-3D289BE93D12}.Release|Any CPU.Build.0 = Release|Any CPU
-		{96122C69-16D6-EAF2-6174-95BD338A64E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{96122C69-16D6-EAF2-6174-95BD338A64E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{96122C69-16D6-EAF2-6174-95BD338A64E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{96122C69-16D6-EAF2-6174-95BD338A64E0}.Release|Any CPU.Build.0 = Release|Any CPU
-		{A68726FC-1670-F3D5-A5B6-86D88669476E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A68726FC-1670-F3D5-A5B6-86D88669476E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A68726FC-1670-F3D5-A5B6-86D88669476E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A68726FC-1670-F3D5-A5B6-86D88669476E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{ECB0BDC7-51FE-13B4-E786-D0632BCF3396}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{ECB0BDC7-51FE-13B4-E786-D0632BCF3396}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{ECB0BDC7-51FE-13B4-E786-D0632BCF3396}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{ECB0BDC7-51FE-13B4-E786-D0632BCF3396}.Release|Any CPU.Build.0 = Release|Any CPU
-		{B82FF8DA-A44E-06DB-BF38-CED93D49C035}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B82FF8DA-A44E-06DB-BF38-CED93D49C035}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B82FF8DA-A44E-06DB-BF38-CED93D49C035}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B82FF8DA-A44E-06DB-BF38-CED93D49C035}.Release|Any CPU.Build.0 = Release|Any CPU
-		{5D5DEC3F-340F-C10D-59CC-77331479A90A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{5D5DEC3F-340F-C10D-59CC-77331479A90A}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{5D5DEC3F-340F-C10D-59CC-77331479A90A}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{5D5DEC3F-340F-C10D-59CC-77331479A90A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{02080154-CFCE-7A20-6B57-3BB1D64FD26B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{02080154-CFCE-7A20-6B57-3BB1D64FD26B}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{02080154-CFCE-7A20-6B57-3BB1D64FD26B}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{02080154-CFCE-7A20-6B57-3BB1D64FD26B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{D007B8D7-4B19-C057-567F-FFB77E56C28C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D007B8D7-4B19-C057-567F-FFB77E56C28C}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D007B8D7-4B19-C057-567F-FFB77E56C28C}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D007B8D7-4B19-C057-567F-FFB77E56C28C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(NestedProjects) = preSolution
-		{38D3CFBC-6EEF-28A7-AE70-697A91DB364F} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{4A9AF850-F3D1-F87E-8C00-8BD088251D32} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{FA59EEC5-3FB8-5BF8-E3E7-CCA0A3C7C9F2} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{AF3CB709-E770-8BDD-203C-7CFFFE97308F} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{8FA1A1DE-72BA-60B6-20F0-FE22AD22882D} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{1A77D3C3-EE2C-4377-E43B-3D289BE93D12} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{96122C69-16D6-EAF2-6174-95BD338A64E0} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{A68726FC-1670-F3D5-A5B6-86D88669476E} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{ECB0BDC7-51FE-13B4-E786-D0632BCF3396} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{B82FF8DA-A44E-06DB-BF38-CED93D49C035} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{5D5DEC3F-340F-C10D-59CC-77331479A90A} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{78C83685-47DB-BA90-BFB0-C0E02E488A1D} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
-		{02080154-CFCE-7A20-6B57-3BB1D64FD26B} = {78C83685-47DB-BA90-BFB0-C0E02E488A1D}
-		{D007B8D7-4B19-C057-567F-FFB77E56C28C} = {07D57EEB-2F50-60C4-C011-FE4FA775C9A8}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {6677317C-28CE-4939-8BDF-B2E0A28E1A32}
